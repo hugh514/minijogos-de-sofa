@@ -117,7 +117,7 @@ Ponha o arquivo em `jogos/` com o servidor ligado, e ele aparece na próxima rod
 ## Testes
 
 ```bash
-npm test          # cerca de 640 testes de lógica, sem navegador
+npm test          # cerca de 600 testes de lógica, sem navegador
 npm run e2e       # partidas completas no Chromium (precisa de npm install com dev)
 ```
 
