@@ -1,0 +1,6 @@
+node_modules/
+dist/
+e2e/fotos*/
+*.log
+.DS_Store
+Thumbs.db

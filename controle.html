@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Controle</title>
+<style>
+  :root{--cor:#2f7df6;--tinta:#fff;--ouro:#ffc531}
+  html,body{margin:0;height:100%;background:#0f1220;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  button{font-family:inherit;color:#fff;border:0;padding:0;background:none}
+  .ic{width:1.2em;height:1.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  .moeda{display:inline-block;width:1em;height:1em;border-radius:50%;flex:none;vertical-align:-.14em;background:radial-gradient(circle at 35% 30%,#fff6c2 0 16%,#ffc531 42%,#e09200 100%);box-shadow:inset 0 0 0 .08em #a86400,inset 0 0 0 .2em #ffd968}
+  .oculto{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+
+  /* ---------- escolha do jogador ---------- */
+  #escolha{display:flex;flex-direction:column;gap:18px;justify-content:center;align-items:center;height:100%;background:radial-gradient(120% 100% at 50% 0,#27305c,#0f1220 70%)}
+  #escolha h1{margin:0;font-size:26px;letter-spacing:.5px}
+  #escolha .dupla{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;width:88%}
+  #escolha button{flex:1 1 220px;max-width:320px;font-size:26px;font-weight:800;padding:22px 20px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,0) 50%),var(--c);box-shadow:inset 0 -6px 0 rgba(0,0,0,.25),0 6px 0 rgba(0,0,0,.5)}
+  .carinha{width:1.3em;height:1.3em;border-radius:50%;flex:none;position:relative;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--cor);box-shadow:0 0 0 2px rgba(255,255,255,.25)}
+  .carinha::before,.carinha::after{content:'';position:absolute;top:26%;width:32%;height:32%;border-radius:50%;background:radial-gradient(circle at 50% 45%,#111 0 34%,#fff 40%)}
+  .carinha::before{left:14%}.carinha::after{right:14%}
+  #escolha .carinha{--cor:rgba(255,255,255,.18)}
+  #escolha button.claro{color:#1a1400}
+  #escolha button.claro .carinha{--cor:rgba(0,0,0,.14)}
+  #escolha button{flex:1 1 40%;font-size:22px;padding:16px 14px}
+
+  /* ---------- controle ---------- */
+  #jogo{display:none;height:100%;flex-direction:column;background:radial-gradient(120% 90% at 50% 100%,#1b2140,#0f1220 70%)}
+  #topo{display:flex;align-items:center;gap:8px;padding:3px 10px;font-size:14px;background:linear-gradient(#232a4a,#191e36);border-bottom:1px solid #323a63;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  #topo .carinha{font-size:17px}
+  #meuNome{font-size:16px;white-space:nowrap}
+  .saldo{display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:15px;background:rgba(0,0,0,.4);border:1px solid rgba(255,197,49,.35);border-radius:99px;padding:3px 10px 3px 5px;color:#ffe08a;font-variant-numeric:tabular-nums}
+  .saldo.pulsa{animation:pulsa .5s}
+  @keyframes pulsa{40%{transform:scale(1.25);background:rgba(255,197,49,.35)}}
+  #topo .esp{flex:1;text-align:center;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;letter-spacing:.3px}
+  #abrePerfil,#pausar,#reagir{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:6px;min-width:48px;min-height:48px;box-sizing:border-box;background:linear-gradient(#46539a,#343f7c);border-radius:10px;padding:6px 12px;font-size:14px;font-weight:700;box-shadow:0 2px 0 #1b2147}
+  #pausar,#reagir{background:linear-gradient(#3a4166,#2a3052);box-shadow:0 2px 0 #141830}
+  #reagir{background:linear-gradient(#e0a52e,#b97f10);box-shadow:0 2px 0 #6b4604}
+  #pausar:active,#abrePerfil:active,#reagir:active{transform:translateY(2px);box-shadow:none}
+  /* na rodada, pausa e perfil pedem segurar 0,5 s: a barra enche enquanto o dedo fica */
+  #pausar::after,#abrePerfil::after{content:'';position:absolute;left:0;bottom:0;height:5px;width:0;background:#ffc531}
+  #pausar.segura::after,#abrePerfil.segura::after{width:100%;transition:width .5s linear}
+  .emoji{font-family:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif}
+  #barraRea{display:none;position:fixed;z-index:8;left:50%;transform:translateX(-50%);top:0;max-width:96vw;box-sizing:border-box;flex-wrap:wrap;justify-content:center;gap:6px;padding:8px;border-radius:18px;background:linear-gradient(#2a3158f5,#171c38f5);border:2px solid #4a58a6;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+  #barraRea.on{display:flex}
+  #barraRea button{width:52px;height:52px;border-radius:14px;font-size:30px;line-height:1;background:linear-gradient(#3d4780,#2b3360);box-shadow:0 3px 0 #0a0d1a}
+  #barraRea button:active{transform:translateY(2px);box-shadow:none}
+  .miniRea{display:grid;grid-template-columns:repeat(2,auto);gap:0 6px;height:40px;align-content:center;font-size:17px;line-height:1.15}
+  .bolinha.arco{animation:matiz 3s linear infinite}
+  @keyframes matiz{to{filter:hue-rotate(360deg)}}
+  .novo{display:none;position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:#ff4d5e;border:2px solid #191e36}
+  .temPremio .novo{display:block}
+  #texto{text-align:center;font-size:20px;font-weight:700;padding:4px 10px;min-height:0}
+  .area{flex:1;display:none;align-items:center;justify-content:space-around;min-height:0}
+  #base{width:46vmin;height:46vmin;border-radius:50%;background:radial-gradient(circle,#161a2e 0 45%,#252b4a 100%);border:4px solid #3c456f;position:relative;box-shadow:inset 0 6px 16px rgba(0,0,0,.6),0 0 0 6px rgba(255,255,255,.04)}
+  #base.ativo{border-color:var(--cor);box-shadow:inset 0 6px 16px rgba(0,0,0,.6),0 0 0 6px rgba(255,255,255,.04),0 0 22px var(--cor)}
+  #base{flex:none;margin:auto}
+  /* seta de direcao: so aparece com o dedo mexendo, aponta para onde o boneco vai */
+  #seta{position:absolute;inset:0;pointer-events:none;opacity:0}
+  #seta::after{content:'';position:absolute;left:41%;top:-11%;width:18%;height:13%;background:#fff;filter:drop-shadow(0 0 4px #000);clip-path:polygon(50% 0,100% 100%,0 100%)}
+  #base.ativo.mexe #seta{opacity:.85}
+  #bola{width:40%;height:40%;border-radius:50%;position:absolute;left:30%;top:30%;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--cor);box-shadow:0 4px 10px rgba(0,0,0,.6),inset 0 -5px 8px rgba(0,0,0,.3)}
+  /* #botoes e a metade direita inteira: qualquer toque ali vale A ou B, pela posicao (ver botaoNaPos) */
+  #botoes{flex:0 0 50%;align-self:stretch;display:flex;gap:4vmin;align-items:center;justify-content:center}
+  #padrao.semjoy #botoes{flex:1}
+  #btA,#btB,#btG{color:var(--tinta);box-shadow:inset 0 -1vmin 0 rgba(0,0,0,.25),0 1.2vmin 0 rgba(0,0,0,.55);transition:transform .05s}
+  #btA{width:32vmin;height:32vmin;border-radius:50%;font-size:20px;font-weight:bold;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.4),rgba(255,255,255,0) 50%),var(--cor)}
+  #btB{width:24vmin;height:24vmin;border-radius:50%;font-size:17px;font-weight:bold;color:#fff;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.3),rgba(255,255,255,0) 50%),#555c7c}
+  #padrao.semjoy #base{display:none}
+  #padrao.semjoy #btA,#padrao.semjoy #btB{width:36vmin;height:36vmin}
+  #btG{width:86%;height:82%;border-radius:28px;font-size:44px;font-weight:800;background:linear-gradient(rgba(255,255,255,.3),rgba(255,255,255,0) 45%),var(--cor)}
+  #btA.ap,#btB.ap,#btG.ap{transform:translateY(.9vmin) scale(.97);box-shadow:inset 0 -.3vmin 0 rgba(0,0,0,.25),0 .3vmin 0 rgba(0,0,0,.55),0 0 0 1.2vmin #fff;filter:brightness(1.3)}
+  #pad{width:92%;height:88%;border-radius:24px;background:radial-gradient(circle,#232949,#171b30);border:3px dashed #56609a;position:relative;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:600;color:#8f98c4;box-shadow:inset 0 6px 18px rgba(0,0,0,.5)}
+  #ponto{position:absolute;width:44px;height:44px;border-radius:50%;margin:-22px 0 0 -22px;display:none;pointer-events:none;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--cor);box-shadow:0 0 0 6px rgba(255,255,255,.15),0 4px 10px rgba(0,0,0,.6)}
+  #opcoes{flex-wrap:wrap;gap:10px;padding:10px;box-sizing:border-box;align-content:center}
+  #opcoes button{flex:1 1 40%;min-height:34%;border-radius:18px;font-size:24px;font-weight:700;background:linear-gradient(#3d4780,#2b3360);box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),0 4px 0 rgba(0,0,0,.5)}
+  #opcoes button.sel{outline:5px solid #fff;background:linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,0) 50%),var(--cor);color:var(--tinta)}
+  /* menu de modos: so o Jogador 1 (anfitriao) ve, na espera */
+  #menu{flex-direction:row;gap:10px;padding:6px 10px 10px;box-sizing:border-box;align-items:stretch;justify-content:stretch}
+  #menuLista{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  #menuLista button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 8px;border-radius:16px;font-size:19px;font-weight:800;line-height:1.1;text-align:center;
+    background:linear-gradient(#3d4780,#2b3360);box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),0 4px 0 rgba(0,0,0,.5);border:3px solid transparent}
+  #menuLista button small{font-size:13px;font-weight:600;opacity:.8}
+  #menuLista button.sel{border-color:#fff;background:linear-gradient(rgba(255,255,255,.22),rgba(255,255,255,0) 55%),var(--cor);color:var(--tinta)}
+  #menuLista button:disabled{opacity:.35;box-shadow:none}
+  #menuLado{width:30%;min-width:150px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
+  #menuConectados{display:flex;gap:6px;justify-content:center;align-items:center;font-size:13px;font-weight:700}
+  #menuConectados i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);color:rgba(255,255,255,.45);font-weight:900}
+  #menuConectados i.on{background:#35c26b;color:#06210f}
+  #menuGo{flex:1;border-radius:18px;font-size:26px;font-weight:900;letter-spacing:1px;color:#06210f;background:linear-gradient(#7af0a2,#2fbf68);box-shadow:inset 0 -6px 0 rgba(0,0,0,.2),0 5px 0 #0f6b39}
+  #menuGo:active{transform:translateY(4px);box-shadow:none}
+  #menuGo:disabled{filter:saturate(.2) brightness(.6)}
+  #menuDica{font-size:13px;font-weight:700;text-align:center;min-height:2.4em;opacity:.85}
+  @media (orientation:portrait){ #menu{flex-direction:column} #menuLado{width:auto} #menuGo{min-height:70px} }
+  #espera{font-size:22px;text-align:center;padding:0 20px;flex-direction:column;justify-content:center;gap:12px}
+  #esperaTx{display:flex;align-items:center;gap:12px;opacity:.75}
+  #espera .ic{width:44px;height:44px;stroke-width:1.5;animation:respira 2s ease-in-out infinite}
+  @keyframes respira{50%{transform:translateY(-5px);opacity:.6}}
+  /* torcer: alvo grande, afunda ao tocar e fica apagado na recarga */
+  #torcer{min-width:min(70vw,360px);min-height:64px;padding:10px 28px;border-radius:22px;font-size:26px;font-weight:900;letter-spacing:1px;color:#3a2600;
+    background:linear-gradient(#ffe07a,#ffb81f);box-shadow:inset 0 -5px 0 rgba(0,0,0,.18),0 6px 0 #a86400;transition:transform .06s,filter .2s}
+  #torcer.ap{transform:translateY(5px) scale(.97);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 1px 0 #a86400}
+  #torcer.recarga{filter:saturate(.3) brightness(.75)}
+  #provoca{display:none;justify-content:center;align-items:center;gap:10px;padding:4px 10px 6px}
+  #provoca.on{display:flex}
+  #provoca span{font-weight:900;font-size:15px;color:#ffe08a}
+  #provoca button{width:60px;height:60px;border-radius:16px;font-size:34px;line-height:1;background:linear-gradient(#ffd65a,#e0a52e);box-shadow:0 4px 0 #6b4604;animation:chamaRea 1s ease-in-out infinite alternate}
+  #provoca button:active{transform:translateY(3px);box-shadow:0 1px 0 #6b4604}
+  @keyframes chamaRea{to{box-shadow:0 4px 0 #6b4604,0 0 16px 3px rgba(255,214,90,.7)}}
+  #cartaChip{display:none;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-weight:900;font-size:14px;color:#141a36;white-space:nowrap;background:linear-gradient(#fff,var(--cc,#ffc531));box-shadow:0 0 10px var(--cc,#ffc531)}
+  #cartaChip.on{display:inline-flex}
+  #opcoes button:active{transform:translateY(3px);filter:brightness(1.2)}
+  #opcoes button.carta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 8px;border:3px solid var(--cc,#ffc531);flex:1 1 28%}
+  #opcoes button.carta small{font-size:14px;font-weight:600;opacity:.85;line-height:1.15}
+  #opcoes button.carta b{font-size:22px;color:var(--cc,#ffc531)}
+  #opcoes button.carta.sel b{color:var(--tinta)}
+  #opcoes button.carta ~ button:not(.carta){flex:1 1 100%;min-height:48px;font-size:18px;opacity:.9}
+
+  /* ---------- perfil e loja ---------- */
+  #perfil{position:fixed;inset:0;z-index:5;display:none;grid-template-columns:minmax(190px,30%) 1fr;gap:10px;padding:8px;box-sizing:border-box;background:radial-gradient(120% 100% at 0 0,#262e58,#0f1220 70%)}
+  #lado{display:flex;flex-direction:column;gap:6px;min-height:0;min-width:0}
+  #palco{flex:1;min-height:0;position:relative;border-radius:16px;overflow:hidden;background:radial-gradient(75% 60% at 50% 40%,#4a57a0,#1a1f3d 80%);border:1px solid #414b88;box-shadow:inset 0 0 30px rgba(0,0,0,.45)}
+  #palco.festa{animation:brilho .7s}
+  @keyframes brilho{30%{box-shadow:inset 0 0 40px rgba(255,214,90,.9);border-color:var(--ouro)}}
+  #previa{position:absolute;inset:0;width:100%;height:100%}
+  #saldoPerfil{position:absolute;left:8px;top:8px;font-size:17px}
+  #tagPrevia{display:none;position:absolute;right:8px;top:8px;align-items:center;gap:4px;font-size:12px;font-weight:700;background:#7fb0ff;color:#0d1330;border-radius:99px;padding:3px 9px}
+  .vendoPrevia #tagPrevia{display:flex}
+  #barraPrevia{display:none;gap:6px}
+  .vendoPrevia #barraPrevia{display:flex}
+  #comprar{flex:1;height:40px;border-radius:12px;font-size:16px;font-weight:800;color:#3a2600;display:flex;align-items:center;justify-content:center;gap:6px;background:linear-gradient(#ffe07a,#ffb81f);box-shadow:0 3px 0 #a86400;animation:chama 1.2s ease-in-out infinite}
+  @keyframes chama{50%{filter:brightness(1.15)}}
+  #comprar.nao{background:#2a3052;color:#ff9aa5;box-shadow:0 3px 0 #141830;animation:none}
+  #sairPrevia{width:40px;height:40px;border-radius:12px;background:#2a3052;box-shadow:0 3px 0 #141830;display:grid;place-items:center;font-size:16px}
+  #placa{display:flex;align-items:center;gap:6px;height:40px;padding:0 10px;border-radius:12px;background:#12162a;border:2px solid #3a4478;color:#8f98c4;box-sizing:border-box}
+  #placa:focus-within{border-color:var(--ouro);color:var(--ouro)}
+  #nome{flex:1;min-width:0;height:100%;background:none;border:0;outline:0;color:#fff;font:800 18px system-ui,sans-serif;text-align:center;user-select:text;-webkit-user-select:text}
+  #nome::placeholder{color:#5d668f;font-weight:600}
+  #conta{font-size:11px;font-variant-numeric:tabular-nums}
+  #trocar{align-self:center;display:flex;align-items:center;gap:5px;font-size:12px;color:#8f98c4;padding:3px 10px}
+  #direita{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
+  #cabeca{display:flex;gap:8px;align-items:center}
+  #abas{flex:1;display:flex;gap:3px;padding:3px;min-width:0;background:#12162a;border-radius:12px}
+  .aba{flex:1;height:36px;border-radius:9px;font-size:14px;font-weight:700;color:#8f98c4;position:relative}
+  .aba.ativa{background:linear-gradient(#4a58a6,#36418a);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 2px 0 #1b2147}
+  .aba .novo{top:4px;right:6px;border-color:#12162a}
+  #fechar{height:48px;padding:0 16px;border-radius:12px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:6px;background:linear-gradient(#45d683,#1fa158);box-shadow:0 3px 0 #0f6a37}
+  #fechar:active,.item:active,#comprar:active{transform:translateY(2px)}
+  #paineis{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;touch-action:pan-x pan-y;scrollbar-width:none;border-radius:14px;background:rgba(10,13,28,.55);border:1px solid #2b3360}
+  #paineis::-webkit-scrollbar{display:none}
+  .painel{flex:0 0 100%;min-width:0;scroll-snap-align:start;overflow-y:auto;touch-action:pan-x pan-y;box-sizing:border-box;padding:8px}
+  .grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}
+  .cartao{position:relative}
+  .item{width:100%;height:102px;border-radius:14px;box-sizing:border-box;border:2px solid #39427a;background:linear-gradient(#2a325c,#1d2344);box-shadow:0 3px 0 #0a0d1a;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px;font-size:12px;font-weight:600}
+  .item.sel{border-color:var(--ouro);background:linear-gradient(#4a4424,#2c2a1c);box-shadow:0 0 0 2px rgba(255,197,49,.3),0 3px 0 #0a0d1a}
+  .item.vendo{border-color:#7fb0ff;box-shadow:0 0 0 2px rgba(127,176,255,.35),0 3px 0 #0a0d1a}
+  .item.falta{background:#171b33;border-color:#262c50;color:#7d86b0}
+  .item.falta .bolinha,.item.falta .mini{filter:grayscale(.55) brightness(.6)}
+  .bolinha{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.55),rgba(255,255,255,0) 55%),var(--c);box-shadow:inset 0 -4px 6px rgba(0,0,0,.3),0 2px 4px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.15)}
+  .mini{width:56px;height:40px}
+  .etq{display:flex;align-items:center;gap:4px;height:20px;padding:0 8px;border-radius:99px;font-size:12px;font-weight:800;background:rgba(0,0,0,.4);white-space:nowrap}
+  .item.compra .etq{color:#ffe08a}
+  .item.sel .etq{background:var(--ouro);color:#3a2600}
+  .item.falta .etq{color:#ff9aa5;font-size:11px;padding:0 6px;gap:3px}
+  .olho{position:absolute;top:3px;right:3px;width:28px;height:28px;border-radius:50%;background:rgba(8,10,24,.7);color:#cfe0ff;display:grid;place-items:center;font-size:14px}
+  .vendo + .olho{background:#7fb0ff;color:#0d1330}
+
+  /* ---------- trofeus ---------- */
+  #resumo{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+  .num{flex:1 1 62px;background:#1d2344;border:1px solid #333c70;border-radius:12px;padding:5px 4px;text-align:center;font-size:10px;color:#a9b1d8;line-height:1.2}
+  .num b{display:block;font-size:18px;color:#fff}
+  #melhor{flex:1 1 100%;display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,#3a3a24,#1d2344);border:1px solid #6d6230;border-radius:12px;padding:7px 10px;font-size:13px;color:#e9dfb5}
+  #melhor .ic{color:var(--ouro);font-size:18px}
+  #melhor b{color:#fff}
+  #trofeus{display:grid;grid-template-columns:repeat(auto-fill,minmax(225px,1fr));gap:8px}
+  .trofeu{display:flex;align-items:center;gap:8px;text-align:left;padding:7px 8px;border-radius:14px;box-sizing:border-box;width:100%;background:#1a1f3d;border:2px solid #2b3360;font-size:12px;color:#fff}
+  .selo{width:38px;height:38px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:18px;background:#262c50;color:#6f78a6;box-shadow:inset 0 -3px 0 rgba(0,0,0,.3)}
+  .ganho .selo,.pegar .selo,#aviso .selo{background:radial-gradient(circle at 35% 28%,#fff3b0,#ffc531 45%,#d98a00);color:#5a3a00}
+  .trofeu .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .trofeu .tx b{font-size:13px}
+  .trofeu .tx small{color:#a9b1d8;font-size:11px}
+  .barra{height:6px;border-radius:99px;background:#0d1024;overflow:hidden;margin-top:2px}
+  .barra i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#4f8dff,#7fd0ff)}
+  .ganho .barra i,.pegar .barra i{background:linear-gradient(90deg,#ffb81f,#ffe07a)}
+  .premio{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-weight:800;font-size:12px;color:#ffe08a;font-variant-numeric:tabular-nums}
+  .premio em{font-style:normal;color:#a9b1d8;font-weight:600}
+  .premio span{display:flex;align-items:center;gap:3px}
+  .ganho{border-color:#6d6230}
+  .ganho .premio{color:#7fe0a5}
+  .pegar{border-color:var(--ouro);background:linear-gradient(#4a4424,#2c2a1c);animation:chama 1.2s ease-in-out infinite}
+  .pegar .premio{align-items:center;background:linear-gradient(#ffe07a,#ffb81f);color:#3a2600;border-radius:10px;padding:4px 10px;box-shadow:0 2px 0 #a86400}
+
+  /* ---------- avisos ---------- */
+  .voa{position:fixed;z-index:30;pointer-events:none;font-weight:900;font-size:22px;color:#ffe07a;text-shadow:0 2px 0 #7a4a00,0 0 10px rgba(0,0,0,.8);animation:voa 1.3s ease-out forwards;white-space:nowrap}
+  .voa.menos{color:#ff9aa5;text-shadow:0 2px 0 #6a0f1a,0 0 10px rgba(0,0,0,.8)}
+  @keyframes voa{0%{transform:translateY(14px) scale(.6);opacity:0}20%{transform:translateY(0) scale(1.15);opacity:1}100%{transform:translateY(-34px);opacity:0}}
+  #aviso{position:fixed;z-index:20;left:50%;top:8px;transform:translate(-50%,-140%);transition:transform .35s cubic-bezier(.2,1.4,.4,1);pointer-events:none;display:flex;align-items:center;gap:10px;max-width:92vw;box-sizing:border-box;padding:8px 16px 8px 8px;border-radius:99px;background:linear-gradient(#3b3520,#211f14);border:2px solid var(--ouro);box-shadow:0 8px 24px rgba(0,0,0,.6),0 0 20px rgba(255,197,49,.35)}
+  #aviso.on{transform:translate(-50%,0)}
+  #aviso .tx{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+  #aviso small{font-size:11px;color:var(--ouro);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+  #aviso b{font-size:16px;white-space:nowrap}
+  #aviso span span{font-size:12px;color:#e9dfb5}
+
+  @media (max-width:480px){ #abrePerfil span,#pausar span{display:none} #abrePerfil,#pausar,#reagir{padding:6px 9px;font-size:16px} #fechar{padding:0 12px} .aba{font-size:13px} }
+  @media (orientation:portrait){ #perfil{grid-template-columns:1fr;grid-template-rows:minmax(230px,42%) 1fr} 
+    /* em pe: joystick embaixo a esquerda, botoes empilhados embaixo a direita (dois polegares) */
+    #base{align-self:flex-end;margin:0 auto 9vh}
+    #botoes{flex-direction:column;justify-content:flex-end;padding-bottom:5vh;box-sizing:border-box}
+    #btA{width:40vmin;height:40vmin} #btB{width:30vmin;height:30vmin}
+    #padrao.semjoy #btA,#padrao.semjoy #btB{width:40vmin;height:40vmin}
+  }
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-perfil" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></symbol>
+  <symbol id="i-pausa" viewBox="0 0 24 24"><path d="M8.5 5v14M15.5 5v14" stroke-width="4"/></symbol>
+  <symbol id="i-olho" viewBox="0 0 24 24"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-cadeado" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" stroke-width="3"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke-width="3"/></symbol>
+  <symbol id="i-lapis" viewBox="0 0 24 24"><path d="M4 20l1-4L16 5l3 3L8 19z"/></symbol>
+  <symbol id="i-troca" viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></symbol>
+  <symbol id="i-tela" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="i-trofeu" viewBox="0 0 24 24"><path d="M7 4h10v5a5 5 0 0 1-10 0zM7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/></symbol>
+  <symbol id="i-estrela" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8z"/></symbol>
+  <symbol id="i-medalha" viewBox="0 0 24 24"><circle cx="12" cy="15" r="5"/><path d="M8.5 11L6 3h4l2 5 2-5h4l-2.5 8"/></symbol>
+  <symbol id="i-fogo" viewBox="0 0 24 24"><path d="M12 3c.5 3.5 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5.2 1.5 1 2.5 2 2.5 0-3-.5-5 1-8z"/></symbol>
+  <symbol id="i-coroa" viewBox="0 0 24 24"><path d="M4 18h16l1-10-5 4-4-7-4 7-5-4z"/></symbol>
+  <symbol id="i-controle" viewBox="0 0 24 24"><path d="M7 8h10a5 5 0 0 1 5 5v1a3 3 0 0 1-5.5 1.700L15 14H9l-1.5 1.700A3 3 0 0 1 2 14v-1a5 5 0 0 1 5-5zM7 10v3M5.5 11.500h3M16.5 11.500h.01"/></symbol>
+  <symbol id="i-cofre" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></symbol>
+  <symbol id="i-chapeu" viewBox="0 0 24 24"><path d="M3 18h18M7 18V7h10v11M7 14h10"/></symbol>
+  <symbol id="i-gota" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-carinha" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.500 14c1 1.600 2.200 2.300 3.500 2.300s2.500-.7 3.500-2.300"/><path d="M9 9.500h.01M15 9.500h.01" stroke-width="3"/></symbol>
+  <symbol id="i-igual" viewBox="0 0 24 24"><path d="M6 9.500h12M6 14.500h12" stroke-width="3"/></symbol>
+  <symbol id="i-raio" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
+</svg>
+
+<div id="escolha">
+  <h1>Quem é você?</h1>
+  <div class="dupla">
+    <button style="--c:#2f7df6" onclick="comecar(1)"><i class="carinha" aria-hidden="true"></i>Jogador 1</button>
+    <button style="--c:#f0458f" onclick="comecar(2)"><i class="carinha" aria-hidden="true"></i>Jogador 2</button>
+    <button style="--c:#35c26b" onclick="comecar(3)"><i class="carinha" aria-hidden="true"></i>Jogador 3</button>
+    <button style="--c:#ffc531" class="claro" onclick="comecar(4)"><i class="carinha" aria-hidden="true"></i>Jogador 4</button>
+  </div>
+</div>
+
+<div id="jogo">
+  <div id="topo">
+    <i class="carinha"></i><b id="meuNome"></b>
+    <span class="saldo" id="saldoTopo"><i class="moeda"></i><span id="moedasVis">0</span><b class="oculto" id="moedas">0</b></span>
+    <span id="cartaChip"></span>
+    <span class="esp" id="nomeJogo"></span>
+    <button id="reagir" aria-label="Reações" aria-expanded="false"><svg class="ic"><use href="#i-carinha"/></svg></button>
+    <button id="pausar" aria-label="Pausa"><svg class="ic"><use href="#i-pausa"/></svg><span>Pausa</span></button>
+    <button id="abrePerfil" aria-label="Perfil e loja"><svg class="ic"><use href="#i-perfil"/></svg><span>Perfil e loja</span><i class="novo"></i></button>
+  </div>
+  <div id="texto"></div>
+  <div id="provoca" aria-label="Reações rápidas"></div>
+  <div class="area" id="padrao">
+    <div id="base"><div id="bola"></div><div id="seta"></div></div>
+    <div id="botoes"><button id="btB">PULA</button><button id="btA">EMPURRA</button></div>
+  </div>
+  <div class="area" id="botao"><button id="btG">APERTA!</button></div>
+  <div class="area" id="toque"><div id="pad"><span id="padDica">arraste aqui</span><div id="ponto"></div></div></div>
+  <div class="area" id="opcoes"></div>
+  <div class="area" id="menu">
+    <div id="menuLista">
+      <button data-m="classico" style="--cor:#2f7df6;--tinta:#fff">Clássico (2 jogadores)</button>
+      <button data-m="vs" style="--cor:#f0458f;--tinta:#fff">Festa: todos contra todos</button>
+      <button data-m="times" style="--cor:#ff7a1a;--tinta:#1a0c00">Festa: times 2x2<small>só com 4 conectados</small></button>
+      <button data-m="coop" style="--cor:#35c26b;--tinta:#06210f">Festa: cooperativo</button>
+    </div>
+    <div id="menuLado"><div id="menuConectados" aria-label="Jogadores conectados"></div><button id="menuGo">COMEÇAR</button><div id="menuDica"></div></div>
+  </div>
+  <div class="area" id="espera"><div id="esperaTx"><svg class="ic"><use href="#i-tela"/></svg>Olhe para a tela do PC</div><button id="torcer">TORCER!</button></div>
+</div>
+
+<div id="barraRea" role="menu" aria-label="Reações"></div>
+<!-- iPhone: o Safari nao tem API de vibracao, mas da um toque haptico quando um "switch" muda -->
+<label id="haptico" aria-hidden="true" style="position:fixed;left:-200px;top:0;width:1px;height:1px;opacity:0;pointer-events:none"><input type="checkbox" switch tabindex="-1"></label>
+<div id="flash" style="position:fixed;inset:0;pointer-events:none;opacity:0;z-index:99;box-shadow:inset 0 0 0 10px #ff4d5e,inset 0 0 70px 20px #ff4d5e99"></div>
+
+<div id="perfil">
+  <div id="lado">
+    <div id="palco">
+      <canvas id="previa"></canvas>
+      <span class="saldo" id="saldoPerfil"><i class="moeda"></i><span id="saldo">0</span></span>
+      <span id="tagPrevia"><svg class="ic"><use href="#i-olho"/></svg>Prévia</span>
+    </div>
+    <div id="barraPrevia">
+      <button id="comprar"></button>
+      <button id="sairPrevia" aria-label="Fechar prévia"><svg class="ic"><use href="#i-x"/></svg></button>
+    </div>
+    <label id="placa">
+      <svg class="ic"><use href="#i-lapis"/></svg>
+      <input id="nome" maxlength="10" placeholder="Seu nome" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
+      <small id="conta">0/10</small>
+    </label>
+    <button id="trocar"><svg class="ic"><use href="#i-troca"/></svg>Trocar de jogador</button>
+  </div>
+  <div id="direita">
+    <div id="cabeca">
+      <div id="abas">
+        <button class="aba ativa">Cores</button>
+        <button class="aba">Chapéus</button>
+        <button class="aba">Reações</button>
+        <button class="aba">Troféus<i class="novo"></i></button>
+      </div>
+      <button id="fechar"><svg class="ic"><use href="#i-check"/></svg>Pronto</button>
+    </div>
+    <div id="paineis">
+      <div class="painel"><div class="grade" id="lojaCores"></div></div>
+      <div class="painel"><div class="grade" id="lojaChapeus"></div></div>
+      <div class="painel"><div class="grade" id="lojaReacoes"></div></div>
+      <div class="painel"><div id="resumo"></div><div id="trofeus"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="aviso"><span class="selo"><svg class="ic"><use id="avisoIc" href="#i-trofeu"/></svg></span><span class="tx"><small>Troféu conquistado</small><b id="avisoNome"></b><span id="avisoTx"></span></span></div>
+
+<script>
+// ---------- catalogo (a tela do PC usa os mesmos indices) ----------
+const CORES = [['#2f7df6', 0], ['#f0458f', 0], ['#35c26b', 15], ['#ffc531', 15], ['#9b5cf6', 15], ['#ff7a2f', 15], ['#22c7d6', 15], ['#e5383b', 15], ['#f2f2f2', 40], ['#30343f', 40],
+  // novas (sempre no final): o terceiro item e o fundo da bolinha da loja
+  ['#d4a017', 60, 'linear-gradient(135deg,#fff3b0,#e8b923 40%,#9a6a00 75%,#ffe27a)'],
+  ['#ff4fa3', 80, 'conic-gradient(#ff4d5e,#ffc531,#35c26b,#22c7d6,#2f7df6,#9b5cf6,#ff4d5e)'],
+  ['#5b3fd6', 70, 'radial-gradient(circle at 65% 35%,#ff5ac8 0 10%,#0000 35%),radial-gradient(circle at 25% 70%,#fff 0 4%,#0000 5%),radial-gradient(circle at 45% 25%,#fff 0 3%,#0000 4%),radial-gradient(circle at 75% 75%,#fff 0 3%,#0000 4%),radial-gradient(#6a35d0,#0d1a6b)'],
+  ['#39ff14', 50, 'radial-gradient(circle,#c9ffb8 0 20%,#39ff14 60%,#12a800)']];
+const NOMES_CORES = ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon'];
+const CHAPEUS = [['Nenhum', 0], ['Cartola', 20], ['Coroa', 50], ['Orelhas', 30], ['Chifres', 30], ['Hélice', 40], ['Cone', 20], ['Antenas', 25], ['Pirata', 40], ['Chef', 30], ['Auréola', 80], ['Viking', 45], ['Faixa ninja', 35]];
+// Reacoes: a tela usa a mesma lista de emojis na mesma ordem (so o indice viaja pela rede). 0 a 5 sao de graca.
+const REACOES = [['\u{1F604}', 'Risada'], ['\u{1F602}', 'Choro de rir'], ['\u{1F621}', 'Raiva'], ['❤️', 'Coração'], ['\u{1F44D}', 'Joinha'], ['\u{1F631}', 'Susto'],
+  ['\u{1F61B}', 'Língua'], ['\u{1F60E}', 'Óculos escuros'], ['\u{1F921}', 'Palhaço'], ['\u{1F634}', 'Dormindo'],
+  ['\u{1F525}', 'Fogo'], ['\u{1F31F}', 'Estrelas'], ['\u{1F3C6}', 'Troféu'], ['\u{1F451}', 'Coroa'],
+  ['\u{1F414}', 'Galinha'], ['\u{1F40D}', 'Cobra'], ['\u{1F422}', 'Tartaruga'], ['\u{1F40C}', 'Caracol']];
+const GRATIS = [0, 1, 2, 3, 4, 5];
+const PACOTES = [['Provocação', 25, [6, 7, 8, 9]], ['Festa', 35, [10, 11, 12, 13]], ['Bichos', 30, [14, 15, 16, 17]]];
+const LOJAS = { cor: [CORES, 'cores', 'lojaCores'], chapeu: [CHAPEUS, 'chapeus', 'lojaChapeus'], reacao: [PACOTES, 'pacotes', 'lojaReacoes'] };
+// Estatisticas guardadas no perfil a partir do premio de cada rodada. porJogo: { id: [nome, vitorias] }.
+const EST0 = { rodadas: 0, vitorias: 0, partidas: 0, empates: 0, seq: 0, maiorSeq: 0, ganho: 0, reacoes: 0, porJogo: {} };
+// id, icone, nome, descricao, meta, bonus em moedas, valor atual
+const TROFEUS = [
+  ['v1', 'estrela', 'Primeira vitória', 'Vença uma rodada', 1, 5, e => e.vitorias],
+  ['v10', 'medalha', 'Dez na conta', 'Vença 10 rodadas', 10, 10, e => e.vitorias],
+  ['v50', 'trofeu', 'Lenda da sala', 'Vença 50 rodadas', 50, 40, e => e.vitorias],
+  ['s3', 'fogo', 'Pegando fogo', 'Vença 3 rodadas seguidas', 3, 10, e => e.maiorSeq],
+  ['s5', 'fogo', 'Imparável', 'Vença 5 rodadas seguidas', 5, 20, e => e.maiorSeq],
+  ['p1', 'coroa', 'Campeão da noite', 'Vença uma partida', 1, 10, e => e.partidas],
+  ['p5', 'coroa', 'Dono do sofá', 'Vença 5 partidas', 5, 30, e => e.partidas],
+  ['d5', 'controle', 'Curioso', 'Vença em 5 minijogos diferentes', 5, 15, e => Object.keys(e.porJogo).length],
+  ['d10', 'controle', 'Mestre de tudo', 'Vença em 10 minijogos diferentes', 10, 30, e => Object.keys(e.porJogo).length],
+  ['m100', 'cofre', 'Cofrinho', 'Junte 100 moedas ao todo', 100, 5, e => e.ganho],
+  ['m500', 'cofre', 'Cofre cheio', 'Junte 500 moedas ao todo', 500, 20, e => e.ganho],
+  ['c1', 'chapeu', 'De chapéu novo', 'Compre o primeiro chapéu', 1, 5, () => perfil.chapeus.length - 1],
+  ['cT', 'chapeu', 'Chapelaria completa', 'Tenha todos os chapéus', CHAPEUS.length - 1, 40, () => perfil.chapeus.length - 1],
+  ['corT', 'gota', 'Arco-íris', 'Tenha todas as cores', CORES.length, 30, () => perfil.cores.length],
+  ['e3', 'igual', 'Empate técnico', 'Empate 3 rodadas', 3, 5, e => e.empates],
+  ['r30', 'raio', 'Veterano', 'Jogue 30 rodadas', 30, 10, e => e.rodadas],
+  ['rp1', 'carinha', 'Boca no mundo', 'Compre o primeiro pacote de reações', 1, 5, () => perfil.pacotes.length],
+  ['rpT', 'carinha', 'Coleção de emojis', 'Tenha todos os pacotes de reações', PACOTES.length, 25, () => perfil.pacotes.length],
+  ['rt50', 'carinha', 'Tagarela', 'Mande 50 reações', 50, 10, e => e.reacoes],
+];
+
+const $ = id => document.getElementById(id);
+
+// Vibra o celular. Android: API de vibracao (vale depois do primeiro toque na pagina). iPhone nao tem essa API:
+// o Safari 18 da um toque haptico ao virar um "switch", mas so durante um toque do dedo; o resto vira um clarao na borda.
+const temVibracao = typeof navigator.vibrate === 'function';
+function treme(padrao, forte = false, daRede = false) {
+  const lista = (Array.isArray(padrao) ? padrao : [padrao]).slice(0, 10).map(v => Math.max(0, Math.min(1000, Number(v) || 0)));
+  if (temVibracao) { try { navigator.vibrate(lista); } catch {} }
+  else $('haptico').click();
+  // clarao na borda: sempre em pancada forte; no iPhone tambem nas fracas (o haptico la so vale com o dedo na tela)
+  if (forte || (daRede && !temVibracao)) $('flash').animate([{ opacity: forte ? 1 : 0.45 }, { opacity: 0 }], { duration: forte ? 380 : 240, easing: 'ease-out' });
+}
+
+const ic = nome => `<svg class="ic"><use href="#i-${nome}"/></svg>`;
+const MOEDA = '<i class="moeda"></i>';
+function guarda(chave, v) { try { localStorage.setItem(chave, JSON.stringify(v)); } catch {} }
+function le(chave) { try { return JSON.parse(localStorage.getItem(chave)); } catch { return null; } }
+
+// ---------- estado enviado para a tela ----------
+// j: jogador; x/y: joystick ou toque; d/n: botao A e contador; b/nb: botao B; op/nop: escolha na tela do celular; r/nr: reacao; nt: torcida.
+// Os contadores garantem que toque curto nunca se perde.
+let j = 0, x = 0, y = 0, d = false, n = 0, b = false, nb = 0, op = -1, nop = 0, r = -1, nr = 0, nt = 0;      // r/nr: reacao (indice) e contador; nt: torcida
+let perfil = null, modo = '';
+let aberto = false, previa = null;      // perfil aberto; item sendo experimentado { campo, i }
+
+// Um envio por vez: enquanto um esta a caminho, o proximo espera e leva o estado mais novo.
+let enviando = false, pendente = false, ultimo = 0;
+// Caminho rapido: WebSocket (conexao aberta, sem cabecalho por mensagem, tudo em ordem).
+// Se nao conectar, cai no POST, um envio por vez.
+let ws = null;
+function conectaWs() {
+  try { ws = new WebSocket(`ws://${location.host}/ws`); } catch { ws = null; return; }
+  ws.onopen = () => envia();
+  ws.onclose = () => { ws = null; setTimeout(conectaWs, 1000); };
+  ws.onerror = () => {};
+}
+conectaWs();
+
+const SESSAO = Date.now();   // hora em que esta aba abriu: com duas abas no mesmo jogador, vale a mais nova
+let seq = 0;
+function envia() {
+  if (!j) return;
+  if (ws?.readyState === 1) { ultimo = Date.now(); ws.send(JSON.stringify({ j, x, y, d, n, b, nb, op, nop, r, nr, nt, s: SESSAO, q: ++seq })); return; }
+  if (enviando) { pendente = true; return; }
+  enviando = true; pendente = false; ultimo = Date.now();
+  fetch('/in', { method: 'POST', body: JSON.stringify({ j, x, y, d, n, b, nb, op, nop, r, nr, nt, s: SESSAO, q: ++seq }), signal: AbortSignal.timeout(1000) })
+    .catch(() => {})
+    .finally(() => { enviando = false; if (pendente) envia(); });
+}
+setInterval(() => { if (Date.now() - ultimo > 400) envia(); }, 200);   // sinal de vida
+
+// ---------- moedas: #moedas tem o saldo real na hora; o numero visivel sobe ou desce contando ----------
+let mostrado = null, animMoedas = 0;
+function mostraMoedas() {
+  $('moedas').textContent = perfil.moedas;
+  cancelAnimationFrame(animMoedas);
+  const de = mostrado ?? perfil.moedas, para = perfil.moedas, t0 = performance.now();
+  const pinta = v => { mostrado = v; $('moedasVis').textContent = $('saldo').textContent = v; };
+  if (de === para) return pinta(para);
+  for (const id of ['saldoTopo', 'saldoPerfil']) { $(id).classList.remove('pulsa'); void $(id).offsetWidth; $(id).classList.add('pulsa'); }
+  const passo = agora => {
+    const q = Math.min(1, (agora - t0) / 700);
+    pinta(Math.round(de + (para - de) * (1 - (1 - q) ** 3)));
+    if (q < 1) animMoedas = requestAnimationFrame(passo);
+  };
+  animMoedas = requestAnimationFrame(passo);
+}
+function flutua(txt) {                  // "+10" subindo ao lado do saldo
+  const r = $(aberto ? 'saldoPerfil' : 'saldoTopo').getBoundingClientRect();
+  const s = document.createElement('div');
+  s.className = 'voa' + (txt[0] === '-' ? ' menos' : '');
+  s.textContent = txt;
+  s.style.left = r.left + 8 + 'px'; s.style.top = r.bottom + 4 + 'px';
+  s.onanimationend = () => s.remove();
+  document.body.append(s);
+}
+
+const filaAvisos = [];
+let avisando = false;
+function aviso(icone, nome, txt) { filaAvisos.push([icone, nome, txt]); if (!avisando) proximoAviso(); }
+function proximoAviso() {
+  const a = filaAvisos.shift();
+  avisando = !!a;
+  if (!a) return;
+  $('avisoIc').setAttribute('href', '#i-' + a[0]); $('avisoNome').textContent = a[1]; $('avisoTx').textContent = a[2];
+  $('aviso').classList.add('on');
+  setTimeout(() => { $('aviso').classList.remove('on'); setTimeout(proximoAviso, 400); }, 2800);
+}
+
+// ---------- perfil, loja e trofeus ----------
+function confereTrofeus() {             // 1 = conquistado, falta pegar o bonus; 2 = bonus recebido
+  for (const [id, icone, nome, , meta, bonus, valor] of TROFEUS)
+    if (!perfil.trofeus[id] && valor(perfil.est) >= meta) {
+      perfil.trofeus[id] = 1;
+      aviso(icone, nome, `Pegue +${bonus} moedas na aba Troféus`);
+      treme([40, 40, 120]);
+    }
+  document.body.classList.toggle('temPremio', Object.values(perfil.trofeus).includes(1));
+}
+
+function salvaPerfil() {
+  confereTrofeus();
+  guarda('perfil' + j, perfil);
+  const cor = (CORES[perfil.cor] ?? CORES[j - 1])[0];
+  const [r, g, az] = [1, 3, 5].map(k => parseInt(cor.slice(k, k + 2), 16));
+  const raiz = document.documentElement.style;
+  raiz.setProperty('--cor', cor);
+  raiz.setProperty('--tinta', r * 299 + g * 587 + az * 114 > 160000 ? '#111' : '#fff');   // letra escura em cor clara
+  $('meuNome').textContent = perfil.nome || 'Jogador ' + j;
+  mostraMoedas();
+  if (aberto) { desenhaLoja(); desenhaTrofeus(); }
+  fetch('/perfil', { method: 'POST', body: JSON.stringify({ j, nome: perfil.nome, cor: perfil.cor, chapeu: perfil.chapeu }) }).catch(() => {});
+}
+
+// Um toque no cartao: usa se ja tem, compra e usa se o saldo da, senao mostra a previa com quanto falta.
+function toca(campo, i) {
+  const [lista, donos] = LOJAS[campo], preco = lista[i][1];
+  if (!perfil[donos].includes(i)) {
+    if (perfil.moedas < preco) return vePrevia(campo, i);
+    perfil.moedas -= preco; perfil[donos].push(i);
+    flutua('-' + preco); festa();
+  }
+  previa = null; if (campo !== 'reacao') perfil[campo] = i; salvaPerfil(); mostraPrevia();
+}
+function vePrevia(campo, i) {
+  previa = previa?.campo === campo && previa.i === i ? null : { campo, i };
+  mostraPrevia(); desenhaLoja();
+}
+function mostraPrevia() {
+  $('perfil').classList.toggle('vendoPrevia', !!previa);
+  if (!previa) return;
+  const falta = LOJAS[previa.campo][0][previa.i][1] - perfil.moedas;
+  $('comprar').className = falta > 0 ? 'nao' : '';
+  $('comprar').innerHTML = falta > 0 ? `${ic('cadeado')}Faltam ${MOEDA}${falta}` : `Comprar por ${MOEDA}${falta + perfil.moedas}`;
+}
+$('comprar').onclick = () => { if (previa && !$('comprar').className) toca(previa.campo, previa.i); };
+$('sairPrevia').onclick = () => { previa = null; mostraPrevia(); desenhaLoja(); };
+
+function loja(campo) {
+  const [lista, donos, idGrade] = LOJAS[campo], grade = $(idGrade);
+  grade.textContent = '';
+  lista.forEach(([rotulo, preco], i) => {
+    const tem = perfil[donos].includes(i), usando = perfil[campo] === i, falta = preco - perfil.moedas;
+    const vendo = previa?.campo === campo && previa.i === i;
+    const cartao = document.createElement('div'), bt = document.createElement('button');
+    cartao.className = 'cartao';
+    bt.className = 'item' + (usando ? ' sel' : '') + (tem ? '' : falta > 0 ? ' falta' : ' compra') + (vendo ? ' vendo' : '');
+    const nome = document.createElement('span'), etq = document.createElement('span');
+    if (campo === 'cor') {
+      const bola = document.createElement('span');
+      bola.className = 'bolinha' + (i === 11 ? ' arco' : ''); bola.style.setProperty('--c', rotulo);
+      if (CORES[i][2]) bola.style.background = `radial-gradient(circle at 35% 28%,rgba(255,255,255,.45),rgba(255,255,255,0) 55%),${CORES[i][2]}`;
+      bt.append(bola); nome.textContent = NOMES_CORES[i];
+    } else if (campo === 'reacao') {
+      const fila = document.createElement('span');
+      fila.className = 'miniRea emoji';
+      for (const k of PACOTES[i][2]) { const e = document.createElement('span'); e.textContent = REACOES[k][0]; fila.append(e); }
+      bt.append(fila); nome.textContent = rotulo;
+    } else { bt.append(miniChapeu(i)); nome.textContent = rotulo; }
+    etq.className = 'etq';
+    etq.innerHTML = usando ? ic('check') + 'Usando' : tem ? (campo === 'reacao' ? ic('check') + 'Seu' : 'Usar') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
+    bt.append(nome, etq);
+    bt.onclick = () => toca(campo, i);
+    cartao.append(bt);
+    if (!tem && campo !== 'reacao') {   // olho: experimenta no personagem sem comprar
+      const olho = document.createElement('button');
+      olho.className = 'olho'; olho.innerHTML = ic('olho');
+      olho.setAttribute('aria-label', 'Ver ' + nome.textContent + ' no personagem');
+      olho.onclick = () => vePrevia(campo, i);
+      cartao.append(olho);
+    }
+    grade.append(cartao);
+  });
+}
+function desenhaLoja() { loja('cor'); loja('chapeu'); loja('reacao'); }
+
+function desenhaTrofeus() {
+  const e = perfil.est, resumo = $('resumo'), lista = $('trofeus');
+  const ganhos = Object.keys(perfil.trofeus).length;
+  resumo.innerHTML = [[e.vitorias, 'rodadas vencidas'], [e.partidas, 'partidas vencidas'], [e.seq, 'vitórias seguidas'], [e.maiorSeq, 'maior sequência'], [e.empates, 'empates'], [`${ganhos}/${TROFEUS.length}`, 'troféus']]
+    .map(([v, t]) => `<div class="num"><b>${v}</b>${t}</div>`).join('') + `<div id="melhor">${ic('trofeu')}<span></span></div>`;
+  const melhor = Object.values(e.porJogo).sort((a, b) => b[1] - a[1])[0];
+  const frase = resumo.querySelector('#melhor span');
+  if (melhor) {
+    const forte = document.createElement('b');
+    forte.textContent = melhor[0];
+    frase.append('Seu melhor minijogo: ', forte, melhor[1] === 1 ? ', 1 vitória' : `, ${melhor[1]} vitórias`);
+  } else frase.textContent = 'Vença uma rodada para descobrir seu melhor minijogo';
+  lista.textContent = '';
+  for (const [id, icone, nome, desc, meta, bonus, valor] of TROFEUS) {
+    const estado = perfil.trofeus[id] | 0, v = Math.max(0, Math.min(meta, valor(e) | 0));
+    const t = document.createElement(estado === 1 ? 'button' : 'div');
+    t.className = 'trofeu' + ['', ' pegar', ' ganho'][estado];
+    t.innerHTML = `<span class="selo">${ic(icone)}</span><span class="tx"><b>${nome}</b><small>${desc}</small><span class="barra"><i style="width:${v / meta * 100}%"></i></span></span><span class="premio">`
+      + (estado === 2 ? `<span>${ic('check')}Recebido</span>` : estado === 1 ? `Pegar<span>${MOEDA}+${bonus}</span>` : `<em>${v}/${meta}</em><span>${MOEDA}${bonus}</span>`) + '</span>';
+    if (estado === 1) t.onclick = () => {
+      perfil.trofeus[id] = 2; perfil.moedas += bonus; perfil.est.ganho += bonus;
+      flutua('+' + bonus); festa(); salvaPerfil();
+    };
+    lista.append(t);
+  }
+}
+
+// abas: os tres paineis ficam lado a lado e deslizam (toque na aba ou arrastando para o lado)
+const paineis = $('paineis'), abas = [...document.querySelectorAll('.aba')];
+abas.forEach((a, i) => { a.onclick = () => paineis.scrollTo({ left: i * paineis.clientWidth, behavior: 'smooth' }); });
+paineis.addEventListener('scroll', () => {
+  const atual = Math.round(paineis.scrollLeft / paineis.clientWidth);
+  abas.forEach((a, i) => a.classList.toggle('ativa', i === atual));
+});
+
+$('nome').oninput = () => { $('conta').textContent = $('nome').value.length + '/10'; };
+seguraNaRodada($('abrePerfil'), () => {
+  $('nome').value = perfil.nome; $('nome').oninput();
+  fechaBarra(); previa = null; aberto = true; mostraPrevia();
+  $('perfil').style.display = 'grid';
+  desenhaLoja(); desenhaTrofeus(); mostraMoedas(); soltaTudo();
+  requestAnimationFrame(quadro);
+});
+$('fechar').onclick = () => {
+  perfil.nome = $('nome').value.trim().slice(0, 10);
+  aberto = false; previa = null; $('nome').blur();
+  salvaPerfil(); $('perfil').style.display = 'none';
+};
+// reacoes: o botao de carinha esta sempre no topo; a barra mostra so o que o jogador tem e fecha ao tocar
+const barraRea = $('barraRea');
+function minhasReacoes() { return [...GRATIS, ...PACOTES.flatMap((p, i) => perfil.pacotes.includes(i) ? p[2] : [])]; }
+function fechaBarra() { barraRea.classList.remove('on'); $('reagir').setAttribute('aria-expanded', 'false'); }
+function reage(k) {
+  r = k; nr++; treme(20);
+  perfil.est.reacoes++; confereTrofeus(); guarda('perfil' + j, perfil);       // sem salvaPerfil: ele reenvia o perfil e a tela refaria o boneco
+  if (aberto) desenhaTrofeus();
+  fechaBarra(); envia();
+}
+$('reagir').onclick = () => {
+  if (barraRea.classList.contains('on')) return fechaBarra();
+  barraRea.textContent = '';
+  for (const k of minhasReacoes()) {
+    const bt = document.createElement('button');
+    bt.className = 'emoji'; bt.textContent = REACOES[k][0]; bt.setAttribute('aria-label', REACOES[k][1]);
+    bt.onclick = () => reage(k);
+    barraRea.append(bt);
+  }
+  barraRea.style.top = $('topo').getBoundingClientRect().bottom + 6 + 'px';
+  barraRea.classList.add('on'); $('reagir').setAttribute('aria-expanded', 'true');
+};
+document.addEventListener('pointerdown', e => { if (!e.target.closest('#barraRea, #reagir')) fechaBarra(); });
+// a tela do PC alterna a pausa: um toque pausa, outro continua
+// Na rodada, pausa e perfil pedem segurar 0,5 s (toque sem querer nao pega); fora da rodada, um toque basta.
+function seguraNaRodada(el, acao) {
+  let timer = 0, agiu = false;       // agiu: o timer ja fez a acao; o click de soltar logo depois nao age de novo
+  const para = () => { clearTimeout(timer); timer = 0; el.classList.remove('segura'); };
+  el.addEventListener('pointerdown', e => {
+    agiu = false;
+    if (!jogando) return;
+    e.preventDefault(); el.classList.add('segura');
+    timer = setTimeout(() => { para(); agiu = true; acao(); }, 500);
+  });
+  for (const tipo of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(tipo, para);
+  el.addEventListener('click', () => { if (agiu) { agiu = false; return; } if (!jogando) acao(); });
+}
+seguraNaRodada($('pausar'), () => { fetch('/pausa', { method: 'POST' }).catch(() => {}); });
+$('trocar').onclick = () => { try { localStorage.removeItem('slot'); } catch {} location.reload(); };
+
+function premia(premio) {       // cada premio tem um id; so conta uma vez
+  if (!premio?.id || perfil.premios.includes(premio.id)) return;
+  perfil.premios = [...perfil.premios, premio.id].slice(-40);
+  const valor = Math.max(0, Math.min(200, premio.valor | 0)), e = perfil.est;
+  perfil.moedas += valor; e.ganho += valor; e.rodadas++;
+  if (premio.venceu) {
+    e.vitorias++; e.seq++; e.maiorSeq = Math.max(e.maiorSeq, e.seq);
+    if (/^[a-z0-9-]{1,30}$/.test(premio.jogo))      // id vem da rede: so o formato dos arquivos de minijogo
+      e.porJogo[premio.jogo] = [String(premio.nomeJogo ?? premio.jogo).slice(0, 30), (e.porJogo[premio.jogo]?.[1] | 0) + 1];
+  } else if (premio.empate) e.empates++;
+  else e.seq = 0;                                   // empate nao quebra a sequencia, derrota sim
+  if (premio.partida) e.partidas++;
+  if (valor) flutua('+' + valor);         // a vibracao de vitoria ou derrota vem da tela (vib), nao daqui
+  salvaPerfil();
+}
+
+// ---------- o personagem como aparece no jogo (mesmas medidas do tela.html, visto de frente) ----------
+// Unidades do jogo: corpo de raio 0.8 no centro, y para cima. K achata os circulos vistos um pouco de cima.
+const K = 0.2, LUZ = 'rgba(255,255,255,.3)', SOMBRA = 'rgba(0,0,0,.3)';
+function pinta(c, cor, borda = LUZ) { c.fillStyle = cor; c.fill(); if (borda) { c.lineWidth = 0.025; c.strokeStyle = borda; c.stroke(); } }   // borda null: sem contorno
+function elipse(c, x, y, rx, ry, cor, borda) { c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, 7); pinta(c, cor, borda); }
+function poli(c, pts, cor, borda) { c.beginPath(); pts.forEach(([px, py], i) => i ? c.lineTo(px, py) : c.moveTo(px, py)); c.closePath(); pinta(c, cor, borda); }
+function tronco(c, y0, y1, r0, r1, cor, borda) {      // lateral de cilindro ou cone cortado, de y0 (raio r0) ate y1 (raio r1)
+  c.beginPath();
+  c.ellipse(0, y1, r1, r1 * K, 0, Math.PI, 2 * Math.PI);
+  c.ellipse(0, y0, r0, r0 * K, 0, 0, Math.PI, true);
+  c.closePath(); pinta(c, cor, borda);
+}
+function pontudo(c, bx, by, ang, r, h, cor, borda) {  // cone fino: base em (bx, by), inclinado ang para a direita
+  const ax = Math.sin(ang), ay = Math.cos(ang);
+  poli(c, [[bx - ay * r, by + ax * r], [bx + ay * r, by - ax * r], [bx + ax * h, by + ay * h]], cor, borda);
+}
+const ESPETADO = [3, 4, 5, 7];          // nascem de dentro da cabeca: desenhados antes do corpo
+function chapeu2d(c, tipo, t) {
+  if (tipo === 1) {                     // cartola
+    elipse(c, 0, 0.72, 0.62, 0.62 * K, '#16181d');
+    tronco(c, 0.72, 1.27, 0.4, 0.38, '#16181d');
+    elipse(c, 0, 1.27, 0.38, 0.38 * K, '#262a33');
+    tronco(c, 0.75, 0.85, 0.41, 0.41, '#d23b3b', SOMBRA);
+  } else if (tipo === 2) {              // coroa: aro aberto e seis pontas
+    const ponta = (px, py, cor) => poli(c, [[px - 0.1, py], [px + 0.1, py], [px, py + 0.25]], cor, SOMBRA);
+    elipse(c, 0, 0.93, 0.45, 0.45 * K, '#a87400', SOMBRA);
+    for (const s of [-1, 1]) ponta(s * 0.225, 1.0, '#d9a11a');
+    tronco(c, 0.71, 0.93, 0.45, 0.45, '#ffc531', SOMBRA);
+    for (const s of [-1, 1]) { ponta(s * 0.45, 0.92, '#ffc531'); ponta(s * 0.225, 0.85, '#ffd65a'); }
+  } else if (tipo === 3) {              // orelhas
+    for (const s of [-1, 1]) {
+      poli(c, [[s * 0.38 - 0.2, 0.61], [s * 0.38 + 0.2, 0.61], [s * 0.38, 1.03]], '#ffffff', SOMBRA);
+      poli(c, [[s * 0.38, 0.61], [s * 0.38 + 0.2, 0.61], [s * 0.38, 1.03]], '#d5d9e6', null);
+    }
+  } else if (tipo === 4) {              // chifres
+    for (const s of [-1, 1]) pontudo(c, s * 0.3, 0.63, s * 0.5, 0.11, 0.5, '#f2efe2', SOMBRA);
+  } else if (tipo === 5) {              // helice girando
+    poli(c, [[-0.04, 0.74], [0.04, 0.74], [0.04, 1.1], [-0.04, 1.1]], '#999999');
+    const a = t * 14, px = Math.cos(a) * 0.55, py = Math.sin(a) * 0.55 * K;
+    c.beginPath(); c.moveTo(-px, 1.1 - py); c.lineTo(px, 1.1 + py);
+    c.lineCap = 'round'; c.lineWidth = 0.1; c.strokeStyle = '#e5383b'; c.stroke();
+    elipse(c, 0, 1.1, 0.06, 0.05, '#cccccc', null);
+  } else if (tipo === 6) {              // cone de transito
+    c.beginPath(); c.moveTo(0, 1.48); c.lineTo(0.4, 0.68); c.ellipse(0, 0.68, 0.4, 0.4 * K, 0, 0, Math.PI, true); c.closePath();
+    pinta(c, '#ff7a2f', SOMBRA);
+    tronco(c, 0.93, 1.07, 0.33, 0.27, '#ffffff', SOMBRA);
+  } else if (tipo === 7) {              // antenas
+    for (const s of [-1, 1]) {
+      c.beginPath(); c.moveTo(s * 0.42, 0.68); c.lineTo(s * 0.547, 1.16); c.lineCap = 'round';
+      c.lineWidth = 0.11; c.strokeStyle = LUZ; c.stroke();
+      c.lineWidth = 0.06; c.strokeStyle = '#222222'; c.stroke();
+      elipse(c, s * 0.552, 1.18, 0.16, 0.16, 'rgba(255,197,49,.25)', null);
+      elipse(c, s * 0.552, 1.18, 0.1, 0.1, '#ffc531', SOMBRA);
+    }
+  } else if (tipo === 8) {              // pirata: tricornio com caveira
+    elipse(c, 0, 0.76, 0.68, 0.68 * K, '#16181d');
+    poli(c, [[-0.5, 0.78], [0.5, 0.78], [0.28, 1.22], [-0.28, 1.22]], '#22262e', SOMBRA);
+    elipse(c, 0, 0.97, 0.11, 0.11, '#ffffff', null);
+    for (const s of [-1, 1]) elipse(c, s * 0.04, 0.99, 0.025, 0.03, '#111111', null);
+  } else if (tipo === 9) {              // chef: gorro branco com bolas
+    for (const [px, py, r] of [[-0.28, 1.0, 0.26], [0.28, 1.0, 0.26], [0, 1.2, 0.34]]) elipse(c, px, py, r, r, '#ffffff', SOMBRA);
+    tronco(c, 0.68, 0.9, 0.4, 0.4, '#f4f4f4', SOMBRA);
+    elipse(c, 0, 0.9, 0.4, 0.4 * K, '#ffffff', SOMBRA);
+  } else if (tipo === 10) {             // aureola dourada flutuando
+    const y = 1.3 + Math.sin(t * 3) * 0.04;
+    c.beginPath(); c.ellipse(0, y, 0.44, 0.44 * K * 1.4, 0, 0, 7); c.lineWidth = 0.2; c.strokeStyle = 'rgba(255,184,31,.3)'; c.stroke();
+    c.beginPath(); c.ellipse(0, y, 0.44, 0.44 * K * 1.4, 0, 0, 7); c.lineWidth = 0.09; c.strokeStyle = '#ffd84d'; c.stroke();
+  } else if (tipo === 11) {             // viking: capacete de metal com dois chifres
+    for (const s of [-1, 1]) pontudo(c, s * 0.6, 0.5, s * 1.0, 0.12, 0.6, '#f2efe2', SOMBRA);
+    c.beginPath(); c.arc(0, 0.1, 0.84, Math.PI / 2 - 0.9, Math.PI / 2 + 0.9); c.closePath(); pinta(c, '#8c93a6', SOMBRA);
+  } else if (tipo === 12) {             // faixa ninja: fita escura, placa de metal e pontas
+    for (const s of [-1, 1]) poli(c, [[s * 0.5, 0.58], [s * 0.92, 0.5 - s * 0.05], [s * 0.96, 0.32], [s * 0.6, 0.5]], '#1d2a6b', SOMBRA);
+    poli(c, [[-0.64, 0.46], [0.64, 0.46], [0.5, 0.62], [-0.5, 0.62]], '#1d2a6b', SOMBRA);
+    poli(c, [[-0.14, 0.48], [0.14, 0.48], [0.14, 0.6], [-0.14, 0.6]], '#c8ccd8', SOMBRA);
+  }
+}
+function estiloCor(c, idx, t) {          // cor de preenchimento do corpo: lisa, ou gradiente nas cores especiais
+  if (idx === 10) { const g = c.createLinearGradient(-0.6, 0.7, 0.6, -0.7); [[0, '#fff3b0'], [0.35, '#e8b923'], [0.7, '#b8860b'], [1, '#ffe27a']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
+  if (idx === 11) return `hsl(${(t * 72) % 360},85%,56%)`;
+  if (idx === 12) { const g = c.createRadialGradient(-0.2, 0.3, 0, 0, 0, 0.95); g.addColorStop(0, '#8a55ee'); g.addColorStop(1, '#14104a'); return g; }
+  return CORES[idx][0];
+}
+const ESTRELAS = [[-0.5, 0.45, 0.035], [0.35, 0.6, 0.03], [0.1, 0.2, 0.025], [-0.2, -0.3, 0.04], [0.5, -0.1, 0.03], [-0.6, -0.1, 0.025], [0.2, -0.55, 0.03], [0.6, 0.3, 0.02], [-0.05, 0.7, 0.025], [-0.4, -0.6, 0.02]];
+function boneco(c, idx, tipo, t, pisca) {
+  if (ESPETADO.includes(tipo)) chapeu2d(c, tipo, t);
+  c.beginPath(); c.arc(0, 0, 0.8, 0, 7);
+  if (idx === 13) { c.shadowColor = '#39ff14'; c.shadowBlur = 14; }      // neon brilha
+  c.fillStyle = estiloCor(c, idx, t); c.fill(); c.shadowBlur = 0;
+  if (idx === 12) {                                                       // galaxia: nuvem rosa e estrelas
+    c.save(); c.clip();
+    const n = c.createRadialGradient(0.35, 0.1, 0, 0.35, 0.1, 0.5); n.addColorStop(0, 'rgba(255,90,200,.6)'); n.addColorStop(1, 'rgba(255,90,200,0)');
+    c.fillStyle = n; c.fillRect(-1, -1, 2, 2);
+    c.fillStyle = '#fff'; for (const [ex, ey, er] of ESTRELAS) { c.beginPath(); c.arc(ex, ey, er, 0, 7); c.fill(); }
+    c.restore();
+  }
+  let g = c.createRadialGradient(-0.28, 0.34, 0, -0.28, 0.34, 0.75);
+  g.addColorStop(0, 'rgba(255,255,255,.5)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fill();
+  g = c.createRadialGradient(0, 0, 0.5, 0, 0, 0.8);
+  g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.3)'); pinta(c, g, 'rgba(255,255,255,.22)');
+  for (const s of [-1, 1]) {
+    elipse(c, s * 0.3, 0.25, 0.22, pisca ? 0.03 : 0.22, '#ffffff', SOMBRA);
+    if (!pisca) { elipse(c, s * 0.3, 0.27, 0.1, 0.1, '#111111', null); elipse(c, s * 0.3 - 0.035, 0.31, 0.03, 0.03, '#ffffff', null); }
+    elipse(c, s * 0.36, -0.72, 0.24, 0.15, '#22252e');
+  }
+  c.beginPath(); c.arc(0, -0.05, 0.16, 0, Math.PI, true);
+  c.lineCap = 'round'; c.lineWidth = 0.07; c.strokeStyle = '#111111'; c.stroke();
+  if (!ESPETADO.includes(tipo)) chapeu2d(c, tipo, t);
+}
+function miniChapeu(i) {                // cabeca com o chapeu, para o cartao da loja
+  const cv = document.createElement('canvas'), q = Math.min(devicePixelRatio || 1, 3);
+  cv.width = 56 * q; cv.height = 40 * q; cv.className = 'mini';
+  const c = cv.getContext('2d');
+  c.setTransform(26 * q, 0, 0, -26 * q, 28 * q, 42 * q);
+  boneco(c, perfil.cor, i, 0.03, false);
+  return cv;
+}
+
+// palco do perfil: so anima com o perfil aberto, para nao gastar nada durante o jogo
+const palco = $('palco'), tela = $('previa'), ctx = tela.getContext('2d');
+let confete = [], pulo = 0, antes = 0;
+function festa() {                      // comprou ou pegou premio: pulo, confete e brilho
+  pulo = 1; treme([30, 40, 30, 40, 80]);
+  palco.classList.remove('festa'); void palco.offsetWidth; palco.classList.add('festa');
+  for (let k = 0; k < 46; k++) {
+    const a = Math.random() * 6.3, v = 0.5 + Math.random() * 1.3;
+    confete.push({ x: Math.cos(a) * 0.7, y: 0.2 + Math.sin(a) * 0.7, vx: Math.cos(a) * v, vy: Math.sin(a) * v + 1.2, g: Math.random() * 6.3, vida: 1 + Math.random() * 0.6, cor: CORES[(Math.random() * 8) | 0][0] });
+  }
+}
+function quadro(agora) {
+  if (!aberto) return;
+  requestAnimationFrame(quadro);
+  const q = Math.min(devicePixelRatio || 1, 3), w = Math.round(palco.clientWidth * q), h = Math.round(palco.clientHeight * q);
+  if (tela.width !== w || tela.height !== h) { tela.width = w; tela.height = h; }
+  const t = agora / 1000, dt = Math.min(0.05, t - antes); antes = t;
+  const u = Math.min(h / 2.95, w / 1.9);
+  const cor = previa?.campo === 'cor' ? previa.i : perfil.cor, tipo = previa?.campo === 'chapeu' ? previa.i : perfil.chapeu;
+  pulo = Math.max(0, pulo - dt * 1.4);
+  const alto = Math.abs(Math.sin(pulo * Math.PI * 2)) * 0.3 * pulo, s = 1 + 0.03 * Math.sin(t * 2.6);
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
+  ctx.setTransform(u, 0, 0, -u, w / 2, h / 2 + 0.3 * u);
+  elipse(ctx, 0, -0.88, 0.95, 0.17, 'rgba(255,255,255,.07)', 'rgba(255,255,255,.12)');   // chao do palco
+  elipse(ctx, 0, -0.88, 0.66 - alto * 0.5, 0.1, 'rgba(0,0,0,.4)', null);
+  ctx.save();
+  ctx.translate(0, -0.88 + alto); ctx.scale(2 - s, s); ctx.translate(0, 0.88);           // respira apoiado nos pes
+  boneco(ctx, cor, tipo, t, t % 3.4 < 0.13);
+  ctx.restore();
+  confete = confete.filter(p => (p.vida -= dt) > 0);
+  for (const p of confete) {
+    p.vy -= 3.2 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.g += dt * 9;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.g); ctx.globalAlpha = Math.min(1, p.vida * 2);
+    ctx.fillStyle = p.cor; ctx.fillRect(-0.05, -0.03, 0.1, 0.06); ctx.restore();
+  }
+}
+
+// ---------- o que a tela do PC manda: modo do controle, rotulos, texto secreto, opcoes, premio ----------
+let jogando = false, versao = null, vibra, vibN = null, vibBase = false;
+function aplica(s) {
+  if (s.versao) { if (versao && versao !== s.versao) location.reload(); versao = s.versao; return; }
+  const novo = j === 1 && s.sala ? 'menu' : s.modo || 'espera';       // o anfitriao (Jogador 1) tem o menu de modos na espera
+  if (novo !== modo) {
+    modo = novo; soltaTudo();
+    for (const id of ['padrao', 'botao', 'toque', 'opcoes', 'menu', 'espera']) $(id).style.display = id === modo ? 'flex' : 'none';
+  }
+  $('nomeJogo').textContent = s.jogo || '';
+  $('texto').textContent = s.texto || '';
+  jogando = !!s.jg; $('torcer').style.display = jogando ? 'none' : '';      // torcer so fora da rodada
+  if (s.sala) mostraMenu(s.sala);
+  $('btA').textContent = $('btG').textContent = s.a ?? 'EMPURRA';
+  $('btB').textContent = s.b ?? 'PULA';
+  $('btB').style.visibility = s.b === '' ? 'hidden' : 'visible';
+  $('btA').style.visibility = s.a === '' && modo === 'padrao' ? 'hidden' : 'visible';
+  $('padrao').classList.toggle('semjoy', s.joy === false);
+  $('padDica').textContent = s.a ?? 'arraste aqui';
+  const cartas = Array.isArray(s.cartas) ? s.cartas : null;      // opcoes que sao cartas de poder: nome, dica e cor
+  const ops = JSON.stringify([s.opcoes || [], cartas]);
+  if ($('opcoes').dataset.ops !== ops) {
+    $('opcoes').dataset.ops = ops; $('opcoes').textContent = '';
+    (s.opcoes || []).slice(0, 4).forEach((rotulo, i) => {
+      const bt = document.createElement('button'), k = cartas?.[i];
+      if (k && typeof k === 'object') {
+        bt.className = 'carta';
+        const nomeC = document.createElement('b'), dica = document.createElement('small');
+        nomeC.textContent = String(k.nome ?? rotulo).slice(0, 30); dica.textContent = String(k.dica ?? '').slice(0, 60);
+        bt.append(nomeC, dica);
+        if (COR_OK.test(k.cor)) bt.style.setProperty('--cc', k.cor);
+      } else bt.textContent = rotulo;
+      bt.addEventListener('touchstart', e => {
+        e.preventDefault();
+        op = i; nop++; treme(30); envia();
+        for (const o of $('opcoes').children) o.classList.toggle('sel', o === bt);
+      });
+      $('opcoes').append(bt);
+    });
+  }
+  // O primeiro estado depois de abrir a pagina (ou de reconectar) e so a linha de base: nada vibra do nada.
+  // Depois: vibra do minijogo (contador que zera a cada rodada) vibra a cada mudanca, menos a volta para zero;
+  // vib da tela (pancada, queda, vitoria, derrota) vibra quando o numero muda, com o desenho que a tela mandou.
+  if (vibBase) {
+    if (Number.isInteger(s.vibra) && s.vibra !== 0 && s.vibra !== (vibra ?? 0)) treme(200, true, true);
+    if (s.vib && Number.isInteger(s.vib.n) && s.vib.n !== vibN && Array.isArray(s.vib.p)) treme(s.vib.p, s.vib.forte, true);
+  }
+  if (s.vib && Number.isInteger(s.vib.n)) vibN = s.vib.n;
+  vibra = s.vibra;
+  if (s.vib) vibBase = true;          // base so com estado de verdade da tela ('{}' do servidor recem-ligado nao conta)
+  // carta de poder ativa nesta rodada: selo no topo
+  const chip = $('cartaChip'), carta = s.carta && typeof s.carta === 'object' ? s.carta : null;
+  chip.classList.toggle('on', !!carta);
+  chip.textContent = carta ? 'Carta: ' + String(carta.nome ?? '').slice(0, 30) : '';
+  chip.style.setProperty('--cc', COR_OK.test(carta?.cor) ? carta.cor : '#ffc531');
+  mostraProvoca(s.provoca === true);
+  premia(s.premio);
+}
+
+// ---------- quem venceu a rodada ganha 3 reacoes rapidas em destaque (as melhores que ele tem) ----------
+const COR_OK = /^#[0-9a-f]{6}$/i;
+const PROVOCA = [8, 7, 6, 1, 4, 0];      // palhaco, oculos, lingua, choro de rir, joinha, risada
+let provocaVis = false;
+function mostraProvoca(on) {
+  if (on === provocaVis) return;
+  provocaVis = on;
+  const caixa = $('provoca');
+  caixa.classList.toggle('on', on);
+  caixa.textContent = '';
+  if (!on) return;
+  const tem = minhasReacoes(), lista = PROVOCA.filter(k => tem.includes(k)).slice(0, 3);
+  const rot = document.createElement('span'); rot.textContent = 'Provoque:'; caixa.append(rot);
+  for (const k of lista) {
+    const bt = document.createElement('button');
+    bt.className = 'emoji'; bt.textContent = REACOES[k][0]; bt.setAttribute('aria-label', REACOES[k][1]);
+    bt.addEventListener('touchstart', e => { e.preventDefault(); reage(k); });
+    bt.addEventListener('click', () => reage(k));
+    caixa.append(bt);
+  }
+}
+
+// ---------- torcer: em espera, toque solta confete do seu lado na tela do PC (a tela limita a frequencia) ----------
+const RECARGA_TORCIDA = 450;
+let torceuEm = 0;
+function torce(e) {
+  e?.preventDefault();
+  const agora = Date.now(), bt = $('torcer');
+  if (jogando || agora - torceuEm < RECARGA_TORCIDA) return;
+  torceuEm = agora; nt++; treme(20); envia();
+  bt.classList.add('ap', 'recarga');
+  setTimeout(() => bt.classList.remove('ap'), 120);
+  setTimeout(() => bt.classList.remove('recarga'), RECARGA_TORCIDA);
+}
+$('torcer').addEventListener('touchstart', torce);
+$('torcer').addEventListener('click', torce);
+
+// ---------- menu de modos do anfitriao ----------
+let menuVis = '';
+function mandaModo(modo, comeca) {
+  fetch('/modo', { method: 'POST', body: JSON.stringify({ j, modo, comeca }), signal: AbortSignal.timeout(2000) }).catch(() => {});
+}
+// O modo marcado e o do proprio clique (escolhaLocal), nao o que a tela devolve 150 a 300 ms depois: o COMECAR manda so ele, numa requisicao.
+// Se a sala passa a trazer outro modo (outro aparelho do J1, a tela), a escolha local acompanha.
+let escolhaLocal = 'classico', modoDaSala = null, salaAtual = {};
+function pintaMenu() {
+  const faltas = salaAtual.faltas && typeof salaAtual.faltas === 'object' ? salaAtual.faltas : {};       // o que impede cada modo agora (a tela decide)
+  for (const bt of $('menuLista').children) {
+    const motivo = typeof faltas[bt.dataset.m] === 'string' ? faltas[bt.dataset.m].slice(0, 80) : '';
+    bt.classList.toggle('sel', bt.dataset.m === escolhaLocal);
+    bt.disabled = !!faltas[bt.dataset.m];
+    let sm = bt.querySelector('small');
+    if (!sm && motivo) { sm = document.createElement('small'); sm.dataset.fixo = ''; bt.append(sm); }
+    if (sm) { sm.dataset.fixo ??= sm.textContent; sm.textContent = motivo || sm.dataset.fixo; sm.hidden = !sm.textContent; }
+  }
+  const falta = typeof faltas[escolhaLocal] === 'string' ? faltas[escolhaLocal].slice(0, 80) : '';
+  $('menuGo').disabled = !!faltas[escolhaLocal];
+  const auto = Number.isInteger(salaAtual.auto) ? salaAtual.auto : null;
+  $('menuDica').textContent = falta || (auto !== null ? 'O Clássico começa sozinho em ' + auto + ' s' : '');
+}
+function mostraMenu(sa) {
+  const chave = JSON.stringify(sa);
+  if (chave === menuVis) return;
+  menuVis = chave;
+  const on = Array.isArray(sa.on) ? sa.on : [], modoSala = typeof sa.modo === 'string' ? sa.modo : 'classico';
+  if (modoSala !== modoDaSala) { modoDaSala = modoSala; escolhaLocal = modoSala; }       // so muda o que o clique local ja marcou quando a sala muda de verdade
+  salaAtual = sa;
+  $('menuConectados').textContent = '';
+  for (let n = 0; n < 4; n++) { const i = document.createElement('i'); i.textContent = n + 1; i.className = on[n] ? 'on' : ''; $('menuConectados').append(i); }
+  pintaMenu();
+}
+for (const bt of $('menuLista').children) bt.addEventListener('click', () => { if (!bt.disabled) { treme(20); escolhaLocal = bt.dataset.m; pintaMenu(); mandaModo(escolhaLocal, false); } });
+$('menuGo').addEventListener('click', () => { if (!$('menuGo').disabled) { treme(40); mandaModo(escolhaLocal, true); } });
+
+function comecar(num) {
+  j = num; guarda('slot', j);
+  // perfil salvo antigo ou estragado: o que faltar ou vier torto volta para o padrao
+  const salvo = le('perfil' + j), lista = v => Array.isArray(v) ? v.filter(Number.isInteger) : null;
+  perfil = { nome: '', cor: j - 1, chapeu: 0, moedas: 0, cores: [0, 1], chapeus: [0], pacotes: [], premios: [], ...salvo };
+  perfil.nome = String(perfil.nome ?? '').slice(0, 10);
+  perfil.moedas = Math.max(0, perfil.moedas | 0);
+  perfil.cores = lista(perfil.cores) ?? [0, 1];
+  if (!perfil.cores.includes(j - 1)) perfil.cores.push(j - 1);       // a cor padrao do lugar (verde no 3, amarelo no 4) ja e do jogador
+  perfil.chapeus = lista(perfil.chapeus) ?? [0];
+  perfil.pacotes = (lista(perfil.pacotes) ?? []).filter(i => PACOTES[i]);
+  if (!Array.isArray(perfil.premios)) perfil.premios = [];
+  if (!Number.isInteger(perfil.cor) || !CORES[perfil.cor]) perfil.cor = j - 1;       // so indice: "length" e cia nao passam
+  if (!Number.isInteger(perfil.chapeu) || !CHAPEUS[perfil.chapeu]) perfil.chapeu = 0;
+  perfil.est = { ...EST0, ganho: perfil.moedas, ...(salvo?.est && typeof salvo.est === 'object' ? salvo.est : null) };
+  for (const k in EST0) if (k !== 'porJogo') perfil.est[k] = Math.max(0, perfil.est[k] | 0);
+  if (!perfil.est.porJogo || typeof perfil.est.porJogo !== 'object') perfil.est.porJogo = {};
+  if (!perfil.trofeus || typeof perfil.trofeus !== 'object') perfil.trofeus = {};
+  $('escolha').style.display = 'none';
+  $('jogo').style.display = 'flex';
+  salvaPerfil(); aplica({});
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  const es = new EventSource('/eventos-c?j=' + j);
+  es.onmessage = e => { try { aplica(JSON.parse(e.data)); } catch {} };
+  es.onopen = () => { vibBase = false; salvaPerfil(); };     // (re)conectou: o estado que chega e base, e o servidor recebe o perfil de novo
+  envia();
+}
+
+// ---------- joystick ----------
+// Joystick flutuante: nasce onde o dedo encosta (em qualquer lugar da area, fora dos botoes), entao nao precisa
+// olhar para o celular para achar o centro. Se o dedo passa da borda, o centro vai junto.
+const base = $('base'), seta = $('seta'), bola = $('bola'), areaPadrao = $('padrao');
+// @puras (funcoes sem DOM: o teste le este trecho do html)
+const ZONA_MORTA = 0.1;
+// len: distancia do dedo ao centro, 0 a 1. Depois da zona morta, mistura de linear e quadratica: movimento pequeno
+// fica preciso, e empurrar ate o fim (len 1) continua dando 1. A diagonal usa o mesmo modulo, entao tambem chega a 1.
+function forcaJoystick(len) {
+  if (len < ZONA_MORTA) return 0;
+  const f = Math.min(1, (len - ZONA_MORTA) / (1 - ZONA_MORTA));
+  return 0.4 * f + 0.6 * f * f;
+}
+// Qual botao fica mais perto do toque (px, py)? ca e cb sao os centros de A e B. Sem B (ou sem A), a area toda vale o que existe;
+// sem nenhum dos dois, null (nada conta). Com `atual` (o botao em que o dedo ja esta) ha histerese: so troca quando o dedo passa
+// 18% da distancia entre os centros alem da divisa (a diferenca das distancias e o dobro disso), entao dedo parado ou esfregando na divisa nao alterna.
+function botaoNaPos(px, py, ca, cb, temA = true, temB = true, atual = null) {
+  if (!temA && !temB) return null;
+  if (!temB) return 'A';
+  if (!temA) return 'B';
+  const dA = Math.hypot(px - ca.x, py - ca.y), dB = Math.hypot(px - cb.x, py - cb.y);
+  if (atual === 'A' || atual === 'B') {
+    const dAtual = atual === 'A' ? dA : dB, dOutro = atual === 'A' ? dB : dA;
+    return dAtual - dOutro > 0.36 * Math.hypot(ca.x - cb.x, ca.y - cb.y) ? (atual === 'A' ? 'B' : 'A') : atual;
+  }
+  return dA <= dB ? 'A' : 'B';
+}
+// @fim-puras
+const bordaJoy = { x: false };       // dedo na borda: vibra uma vez por chegada
+let dedo = null, origem = null, casa = null;      // origem: centro atual; casa: centro de repouso do desenho
+function mover(t) {
+  const raio = base.offsetWidth / 2;
+  let dx = t.clientX - origem.x, dy = t.clientY - origem.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist > raio) {                       // arrasta o centro atras do dedo
+    origem.x += dx / dist * (dist - raio); origem.y += dy / dist * (dist - raio);
+    dx = dx / dist * raio; dy = dy / dist * raio;
+  }
+  const len = Math.min(1, dist / raio);
+  const forca = forcaJoystick(len);       // tremor do dedo parado nao anda
+  if (len >= 0.98 && !bordaJoy.x) { bordaJoy.x = true; treme(10); } else if (len < 0.8) bordaJoy.x = false;
+  const k = len ? forca / len : 0;
+  x = Math.round(dx / raio * k * 1000) / 1000; y = Math.round(dy / raio * k * 1000) / 1000;
+  base.style.transform = `translate(${origem.x - casa.x}px, ${origem.y - casa.y}px)`;
+  bola.style.transform = `translate(${dx / raio * 75}%, ${dy / raio * 75}%)`;
+  base.classList.toggle('mexe', forca > 0);
+  if (forca > 0) seta.style.transform = `rotate(${Math.atan2(dy, dx) + Math.PI / 2}rad)`;
+  envia();
+}
+function soltaJoystick() {
+  dedo = null; x = y = 0;
+  bola.style.transform = ''; base.style.transform = ''; base.classList.remove('ativo', 'mexe'); bordaJoy.x = false;
+  envia();
+}
+areaPadrao.addEventListener('touchstart', e => {
+  if (e.target.closest('#botoes')) return;   // botoes A e B cuidam de si
+  e.preventDefault();
+  if (dedo !== null || !base.offsetWidth) return;   // sem joystick na tela, ou segundo dedo (ou a palma) nao rouba o joystick
+  const t = e.changedTouches[0], r = base.getBoundingClientRect();
+  if (!base.style.transform) casa = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  casa ??= { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  dedo = t.identifier; origem = { x: t.clientX, y: t.clientY };
+  base.classList.add('ativo'); mover(t);
+});
+areaPadrao.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (t.identifier === dedo) { mover(t); e.preventDefault(); } });
+for (const tipo of ['touchend', 'touchcancel'])
+  areaPadrao.addEventListener(tipo, e => { for (const t of e.changedTouches) if (t.identifier === dedo) soltaJoystick(); });
+
+// ---------- botoes A (normal e gigante) e B ----------
+function botao(el, aperta, solta) {
+  el.addEventListener('touchstart', e => { aperta(); el.classList.add('ap'); treme(30); envia(); e.preventDefault(); });
+  for (const tipo of ['touchend', 'touchcancel'])
+    el.addEventListener(tipo, e => { if (!e.targetTouches.length) { solta(); el.classList.remove('ap'); } envia(); e.preventDefault(); });
+}
+botao($('btG'), () => { d = true; n++; }, () => { d = false; });
+// A e B no modo padrao: a metade direita inteira (#botoes) e area de toque, dividida pela posicao. Cada dedo guarda o botao em que esta;
+// deslizar de um para o outro (com histerese) solta um e aperta o outro. Sem joystick (semjoy: corrida-dedos, pula-corda, domino) os botoes
+// se alternam e deslizar NAO troca de botao: cada aperto exige tirar o dedo e tocar de novo.
+const zonaBotoes = $('botoes'), dedosBotao = new Map();       // identifier do toque -> 'A' | 'B'
+const centro = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
+function botaoDoToque(t, atual = null) {
+  const vivo = el => getComputedStyle(el).visibility !== 'hidden';
+  return botaoNaPos(t.clientX, t.clientY, centro($('btA')), centro($('btB')), vivo($('btA')), vivo($('btB')), atual);
+}
+function pintaBotoes() {
+  const vals = [...dedosBotao.values()];
+  d = vals.includes('A'); b = vals.includes('B');
+  $('btA').classList.toggle('ap', d); $('btB').classList.toggle('ap', b);
+}
+function apertou(qual) { if (qual === 'A') n++; else nb++; treme(30); }
+zonaBotoes.addEventListener('touchstart', e => {
+  e.preventDefault();
+  for (const t of e.changedTouches) { const q = botaoDoToque(t); if (!q) continue; dedosBotao.set(t.identifier, q); apertou(q); }
+  pintaBotoes(); envia();
+});
+zonaBotoes.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if ($('padrao').classList.contains('semjoy')) return;      // botoes que se alternam: deslizar nao troca, tira o dedo e toca de novo
+  let mudou = false;
+  for (const t of e.changedTouches) {
+    if (!dedosBotao.has(t.identifier)) continue;
+    const q = botaoDoToque(t, dedosBotao.get(t.identifier));
+    if (!q) { dedosBotao.delete(t.identifier); mudou = true; }      // os botoes sumiram com o dedo na area: solta, sem contar aperto
+    else if (q !== dedosBotao.get(t.identifier)) { dedosBotao.set(t.identifier, q); apertou(q); mudou = true; }
+  }
+  if (mudou) { pintaBotoes(); envia(); }
+});
+for (const tipo of ['touchend', 'touchcancel'])
+  zonaBotoes.addEventListener(tipo, e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) dedosBotao.delete(t.identifier);
+    pintaBotoes(); envia();
+  });
+
+// ---------- area de toque: x/y e a posicao do dedo (-1 a 1), d diz se esta tocando ----------
+const pad = $('pad'), ponto = $('ponto');
+let dedoPad = null;
+function tocaPad(t) {
+  const r = pad.getBoundingClientRect(), meio = Math.min(r.width, r.height) / 2;
+  let dx = (t.clientX - (r.left + r.width / 2)) / meio, dy = (t.clientY - (r.top + r.height / 2)) / meio;
+  const len = Math.hypot(dx, dy);
+  if (len > 1) { dx /= len; dy /= len; }
+  x = dx; y = dy;
+  ponto.style.display = 'block';
+  ponto.style.left = (r.width / 2 + dx * meio) + 'px'; ponto.style.top = (r.height / 2 + dy * meio) + 'px';
+  envia();
+}
+pad.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (dedoPad !== null) return;
+  const t = e.changedTouches[0]; dedoPad = t.identifier; d = true; n++; tocaPad(t);
+});
+pad.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (t.identifier === dedoPad) tocaPad(t); e.preventDefault(); });
+for (const tipo of ['touchend', 'touchcancel'])
+  pad.addEventListener(tipo, e => {
+    for (const t of e.changedTouches) if (t.identifier === dedoPad) { dedoPad = null; d = false; ponto.style.display = 'none'; envia(); }
+  });
+
+function soltaTudo() {
+  dedoPad = null; d = b = false; ponto.style.display = 'none';
+  dedosBotao.clear();
+  for (const id of ['btA', 'btB', 'btG']) $(id).classList.remove('ap');
+  soltaJoystick();
+}
+// saiu da pagina (notificacao, ligacao, outra aba): solta tudo
+document.addEventListener('visibilitychange', () => { if (document.hidden) soltaTudo(); });
+
+// tela cheia e deitado: o navegador so deixa depois de um toque, entao tenta a cada toque enquanto nao estiver
+document.addEventListener('touchend', () => {
+  if (!j || document.fullscreenElement || aberto) return;
+  document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
+    .then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+});
+
+const salvo = le('slot');
+if (Number.isInteger(salvo) && salvo >= 1 && salvo <= 4) comecar(salvo);
+</script>
+</body>
+</html>

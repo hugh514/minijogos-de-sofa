@@ -1,0 +1,21 @@
+{
+  "name": "minijogos-de-sofa",
+  "version": "1.0.0",
+  "description": "Party game 3D para jogar no PC usando o celular como controle. Rede local, sem app, sem internet.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test *.test.mjs jogos/*.test.mjs",
+    "e2e": "node e2e/teste-boost.js && node e2e/teste-festa.js && node e2e/teste-controles.js && node e2e/teste-kart.js"
+  },
+  "keywords": ["party-game", "threejs", "local-multiplayer", "phone-as-controller", "minigames"],
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  }
+}
