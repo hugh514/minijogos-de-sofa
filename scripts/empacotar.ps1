@@ -25,8 +25,8 @@ try {
   # 1. Fonte: so o que esta no commit atual (nada de rascunho da pasta de trabalho)
   $fonte = Join-Path $tmp 'fonte'
   New-Item -ItemType Directory -Force $fonte | Out-Null
-  git archive --format=tar -o (Join-Path $tmp 'fonte.tar') HEAD
-  tar -xf (Join-Path $tmp 'fonte.tar') -C $fonte
+  git archive --format=zip -o (Join-Path $tmp 'fonte.zip') HEAD
+  Expand-Archive (Join-Path $tmp 'fonte.zip') -DestinationPath $fonte
 
   foreach ($a in 'server.js', 'tela.html', 'controle.html', 'logica.mjs', 'JOGAR.bat', 'LICENSE', 'package.json') {
     Copy-Item (Join-Path $fonte $a) $pacote
