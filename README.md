@@ -21,7 +21,9 @@ Nasceu para jogar em casa, no sofá, com a família. A TV (ou o monitor) mostra 
 **Jeito fácil (Windows):**
 
 1. Baixe o `minijogos-de-sofa-windows.zip` na página de [Releases](https://github.com/hugh514/minijogos-de-sofa/releases). Ele já traz o Node junto.
-2. Extraia e dê dois cliques em `JOGAR.bat`. Se o Windows perguntar sobre o firewall, permita em **rede privada**, para os celulares conseguirem conectar.
+2. Extraia o zip **inteiro** numa pasta e dê dois cliques em `JOGAR.bat`.
+   - Se o Windows avisar que o arquivo veio da internet, clique em "Mais informações" e depois em "Executar assim mesmo".
+   - Se o firewall perguntar, permita em **rede privada**, para os celulares conseguirem conectar.
 3. A tela do jogo abre no navegador. Nos celulares, conectados no mesmo Wi-Fi, leia o QR code da tela ou digite o endereço que aparece.
 
 **Pelo código (qualquer sistema):**
@@ -118,7 +120,8 @@ Ponha o arquivo em `jogos/` com o servidor ligado, e ele aparece na próxima rod
 
 ```bash
 npm test          # cerca de 600 testes de lógica, sem navegador
-npm run e2e       # partidas completas no Chromium (precisa de npm install com dev)
+npx playwright install chromium   # uma vez, para os testes de navegador
+npm run e2e       # sobe o servidor numa porta de teste e joga partidas completas no Chromium
 ```
 
 Os testes de navegador simulam os celulares com toques de verdade, jogam rodadas inteiras e tiram prints. Cada minijogo também é testado com "dedos aleatórios" em dezenas de sementes, para garantir que nenhuma rodada acaba em menos de 5 segundos por um toque sem querer.
