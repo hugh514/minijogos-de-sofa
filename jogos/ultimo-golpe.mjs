@@ -6,7 +6,7 @@ const JANELA = 0.7, RECUO = 8;                    // tempo em que o empurrao val
 const T_CARGA = 0.9, ALCANCE = 5.2, T_TONTO = 1, FORCA_ONDA = 12, T_ONDA = 0.4, ALTURA_DESVIO = 0.7;
 
 export default {
-  id: 'ultimo-golpe', nome: 'Último golpe', dica: 'Bata no chefão com A. Só o GOLPE FINAL vale o ponto. Fuja quando ele girar!',
+  id: 'ultimo-golpe', genero: 'reflexo', nome: 'Último golpe', dica: 'Corra até o chefão e aperte Golpe. Quem der o último golpe vence. Fuja quando ele girar!',
   controle: { modo: 'padrao', a: 'GOLPE', b: 'PULA' }, rotulo: 'golpes', duracao: LIMITE,
 
   inicia(p) {
@@ -27,7 +27,7 @@ export default {
     if (d.carga > 0) {
       d.carga -= dt;
       if (d.carga <= 0) {
-        d.carga = 0; d.onda = T_ONDA; d.ondas++; d.prox = 3.5 + p.rng() * 3;
+        d.carga = 0; d.onda = T_ONDA; d.ondas++; d.prox = (d.vida <= 6 ? 2 : 3.5) + p.rng() * 3;
         p.eventos.push('explosao');
         p.jogadores.forEach((j, i) => {
           const dist = Math.hypot(j.x, j.z);
@@ -70,8 +70,8 @@ export default {
       if (d.vida <= 0) { d.aviso = ''; p.eventos.push('explosao'); return i; }
     }
 
-    if (d.vida === 1 && d.tAviso > 0) { d.tAviso -= dt; d.aviso = d.tAviso > 0 ? 'FALTA 1 GOLPE!' : ''; }
-    if (p.t > LIMITE) return -1;
+    if (d.vida === 1 && d.tAviso > 0) { d.tAviso -= dt; d.aviso = d.tAviso > 0 ? 'Falta 1 golpe!' : ''; }
+    if (p.t > LIMITE) return d.golpe.n > 0 ? d.golpe.quem : -1;      // fim do tempo: leva quem deu o ultimo golpe (ninguem bateu, empate)
   },
 
   monta(c) {

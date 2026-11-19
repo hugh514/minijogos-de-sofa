@@ -2,11 +2,11 @@
 // Repetir o mesmo botao e pisar duas vezes com o mesmo pe: tropeca.
 
 export const LARGADA = -9.3, CHEGADA = 9, RAIA = 1.7, LIMITE = 30;
-const IMPULSO = 0.5, ATRITO = 0.35, TROPECO = 0.35, V_MAX = 9;
+const IMPULSO = 0.2, ATRITO = 0.35, TROPECO = 0.35, V_MAX = 9;
 
 export default {
-  id: 'corrida-dedos', nome: 'Cem metros', dica: 'Aperte ESQ e DIR alternando, bem rápido. Repetir o mesmo botão faz tropeçar!',
-  rotulo: 'metros', semMovimento: true, semDash: true, semPulo: true,
+  id: 'corrida-dedos', genero: 'ritmo', nome: 'Cem metros', dica: 'Aperte ESQ e DIR alternando, bem rápido. Repetir o mesmo botão faz tropeçar!',
+  rotulo: 'metros', duracao: LIMITE, semMovimento: true, semDash: true, semPulo: true,
   controle: { modo: 'padrao', a: 'DIR', b: 'ESQ', joystick: false },
 
   inicia(p) {

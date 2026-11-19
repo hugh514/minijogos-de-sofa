@@ -1,10 +1,11 @@
-// Rebate: cada um defende o seu gol com uma raquete que anda só de lado. Entra uma bola nova a cada 6 s (até 4).
+// Rebate: cada um defende o seu gol com uma raquete que corre no sentido do joystick vertical. Entra uma bola nova a cada 6 s (até 4).
+// A quadra fica deitada (camera de lado): o Jogador 1 defende o gol da esquerda e o 2 o da direita, como no hoquei.
 // A dá um golpe forte por um instante (com recarga). Cada gol sofrido tira 1 de 5 vidas.
 import { posiciona, maiorPlacar, colide } from '../logica.mjs';
 
-const LX = 9, LZ = 6.5, ZR = 5.6, MEIA = 1.5, ESPESSURA = 0.3, ALCANCE_FORTE = 0.55, R = 0.45;
-const V_PAD = 13, ACEL_PAD = 90, V0 = 7.5, V_MIN = 6, V_MAX = 17, V_FORTE = 20, MAX_ANGULO = 0.95;
-const VIDAS = 5, T_BOLA = 6, MAX_BOLAS = 4, LIMITE = 45, PAUSA = 0.8;
+const LX = 6.5, LZ = 9, ZR = 8.1, MEIA = 1.5, ESPESSURA = 0.3, ALCANCE_FORTE = 0.55, R = 0.55;      // LX: meia largura da raquete; LZ: do centro ate o gol
+const V_PAD = 13, ACEL_PAD = 90, V0 = 9.5, V_MIN = 7.5, V_MAX = 21, V_FORTE = 25, MAX_ANGULO = 0.95;
+const VIDAS = 5, T_BOLA = 6, MAX_BOLAS = 4, LIMITE = 45, SUBITA = 10, PAUSA = 0.8;
 const T_GOLPE = 0.28, RECARGA = 1.3, BUFFER = 0.2;
 const AMARELO = 0xffd23f;
 
@@ -63,16 +64,20 @@ function passoBola(p, d, b, h) {
 }
 
 export default {
-  id: 'rebate', nome: 'Rebate', dica: 'Deslize a raquete e não deixe as bolas passarem. A dá uma rebatida forte. 5 vidas!',
+  id: 'rebate', genero: 'gol', nome: 'Rebate', dica: 'Defenda o seu gol: o joystick sobe e desce a raquete e A rebate forte. Cada gol sofrido tira 1 de 5 vidas.',
   controle: { modo: 'padrao', a: 'FORTE', b: '' }, semMovimento: true, semDash: true, semPulo: true, rotulo: 'vidas', duracao: LIMITE,
+
+  // De lado, com os gols nas laterais da tela (Jogador 1 a esquerda): a quadra inteira cabe e nenhum gol fica embaixo do cartao.
+  camera() { return { x: -14.5, y: 13.5, z: 0, ox: 0, oy: 0, oz: 0 }; },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: LX, lz: LZ, parede: true };
     posiciona(p, 0, ZR);
     p.dados = {
       placar: [VIDAS, VIDAS], bolas: [novaBola(p, p.rng() < 0.5 ? -1 : 1)], proxBola: T_BOLA,
-      vraq: [0, 0], golpe: [0, 0], cd: [0, 0], quer: [0, 0], fx: [], aviso: '', avisoT: 0,
+      vraq: [0, 0], golpe: [0, 0], cd: [0, 0], quer: [0, 0], fx: [], aviso: 'Defenda o seu gol!', avisoCor: '#ffffff', avisoT: 2.2,
     };
+    for (const i of [0, 1]) p.celular[i] = { texto: 'Joystick sobe e desce a raquete. Não deixe a bola entrar no seu gol' };
   },
 
   atualiza(p, dt) {
@@ -81,7 +86,7 @@ export default {
 
     p.jogadores.forEach((j, i) => {              // a raquete só anda de lado, com um pouco de inércia
       j.vx = 0; j.vz = 0;
-      const alvo = limita(j.ent.x, 1) * V_PAD;
+      const alvo = -limita(j.ent.y, 1) * V_PAD;        // joystick para cima = raquete sobe na tela (x cresce, camera em -x)
       d.vraq[i] += limita(alvo - d.vraq[i], ACEL_PAD * dt);
       j.x = limita(j.x + d.vraq[i] * dt, LX - MEIA);
       if (Math.abs(j.x) >= LX - MEIA) d.vraq[i] = 0;
@@ -112,7 +117,8 @@ export default {
 
     const [a, b] = d.placar;
     if (a <= 0 || b <= 0) return a <= 0 && b <= 0 ? -1 : a <= 0 ? 1 : 0;
-    if (p.t > LIMITE) return maiorPlacar(p);
+    if (p.t > LIMITE && a === b && !d.subita) { d.subita = true; d.aviso = 'Morte súbita: o próximo gol decide!'; d.avisoCor = '#ffffff'; d.avisoT = 3; }
+    if (p.t > LIMITE && (a !== b || p.t > LIMITE + SUBITA)) return maiorPlacar(p);
   },
 
   monta(c) {

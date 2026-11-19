@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrada, passo } from '../logica.mjs';
 import { partidaCom, roda, fumaca, DT } from '../jogos/_teste.mjs';
-import jogo, { intervalo } from './detector.mjs';
+import jogo, { intervalo, calor, achou } from './detector.mjs';
 
 // poe o jogador i em (x, z) e o tesouro em (tx, tz); o outro fica longe, no canto
 function cena(i, x, z, tx, tz) {
@@ -72,19 +72,56 @@ test('detector: o terceiro tesouro vence na hora', () => {
   assert.equal(p.vencedor, 1);
 });
 
-test('detector: aos 50 s vence o maior placar, e igual e empate', () => {
+test('detector: aos 50 s vence o maior placar', () => {
   let p = partidaCom(jogo);
   roda(p, 49);
   assert.equal(p.fase, 'jogando');
-  roda(p, 1.2);
-  assert.equal(p.vencedor, -1);
   p = partidaCom(jogo);
   p.dados.placar = [1, 2];
   roda(p, 50.2);
   assert.equal(p.vencedor, 1);
 });
 
+test('detector: empatado aos 50 s vale o proximo tesouro; sem achar ate 60 s, empate', () => {
+  const p = cena(0, 3, 3, 3, 3);
+  roda(p, 51);
+  assert.equal(p.fase, 'jogando');
+  assert.equal(p.dados.aviso, 'Morte súbita!');
+  cava(p, 0); roda(p, 1);
+  assert.deepEqual(p.dados.placar, [1, 0]);
+  assert.equal(p.vencedor, 0);
+  const q = partidaCom(jogo);
+  roda(q, 59);
+  assert.equal(q.fase, 'jogando');
+  roda(q, 2);
+  assert.equal(q.vencedor, -1);
+});
+
+test('detector: sem ninguem achar, o buraco que acha o tesouro fica maior ate 3 m', () => {
+  assert.equal(achou({ sem: 5 }), 1.3);
+  assert.ok(achou({ sem: 20 }) > 1.9 && achou({ sem: 20 }) < 2.2);
+  assert.ok(Math.abs(achou({ sem: 100 }) - 3) < 1e-9);
+  const p = cena(0, 0, 0, 2.4, 0);
+  p.dados.sem = 26;
+  cava(p, 0); roda(p, 1);
+  assert.deepEqual(p.dados.placar, [1, 0], 'a 2,4 m ja acha depois de 20 s sem tesouro');
+  assert.equal(p.dados.sem < 1.5, true, 'o raio volta ao normal depois de achar');
+});
+
 test('detector: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   const vencedores = fumaca(jogo);
   assert.equal(vencedores.length, 15);
+});
+
+test('detector: sem vibracao tambem da para saber (o celular escreve QUENTE, MORNO ou FRIO e calor() cresce ao chegar perto)', () => {
+  assert.ok(calor(0) === 1 && calor(2) > calor(5) && calor(5) > calor(9) && calor(30) === 0);
+  const p = cena(0, 3, 3, 3, 3);
+  Object.assign(p.jogadores[1], { x: -6, z: -5 });
+  roda(p, 0.2);
+  assert.match(p.celular[0].texto, /Quente/);
+  assert.match(p.celular[1].texto, /Frio/);
+  assert.match(p.celular[0].texto, /CAVAR/);
+  p.jogadores[0].x = -3; p.jogadores[0].z = -3;
+  roda(p, 0.2);
+  assert.match(p.celular[0].texto, /Morno|Frio/, 'longe do tesouro o texto esfria');
 });

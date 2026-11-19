@@ -5,7 +5,8 @@ import { posiciona, maiorPlacar } from '../logica.mjs';
 const FORMAS = [['Quantas', 'esferas', 0], ['Quantas', 'caixas', 0], ['Quantos', 'cones', 1]];   // [pergunta, nome, masculino]
 const NOME_COR = [['vermelhas', 'vermelhos'], ['azuis', 'azuis'], ['amarelas', 'amarelos']];
 const HEX = [0xe5383b, 0x2f7df6, 0xffd23f];
-const RODADAS = 3, T_MOSTRA = 5, T_PERGUNTA = 7, T_REVELA = 1.5;
+const RODADAS = 3, T_MOSTRA = 5, T_PERGUNTA = 6, T_REVELA = 1.5;
+const valorDe = d => (d.rodada === RODADAS - 1 ? 2 : 1);     // a ultima rodada vale em dobro: da para virar
 const XS = [-6, -3, 0, 3, 6], ZS = [-2.6, 1.4];
 const DUR = { mostra: T_MOSTRA, pergunta: T_PERGUNTA, revela: T_REVELA };
 
@@ -35,14 +36,16 @@ function novaRodada(p) {
   });
   d.resp = [null, null];
   d.fase = 'mostra'; d.tempo = T_MOSTRA; d.aviso = '';
+  if (d.rodada === RODADAS - 1) { d.aviso = 'Última rodada: vale em dobro!'; d.avisoCor = '#ffd84d'; }
+  else if (d.rodada >= RODADAS) { d.aviso = 'Desempate! Quem acertar vence'; d.avisoCor = '#ffd84d'; }
   for (const i of [0, 1]) p.celular[i] = { modo: 'espera', texto: 'Olhe a tela e decore as formas e as cores!', vibra: d.vibra[i] };
 }
 
 function espera(p, i, texto) { p.celular[i] = { modo: 'espera', texto, vibra: p.dados.vibra[i] }; }
 
 export default {
-  id: 'sumiu', nome: 'Sumiu!',
-  dica: 'Decore as formas e as cores. Quando sumirem, responda a pergunta no seu celular!',
+  id: 'sumiu', genero: 'memoria', nome: 'Sumiu!',
+  dica: 'Decore as formas e as cores. Quando sumirem, responda no celular. A última rodada vale em dobro!',
   semMovimento: true, controle: { modo: 'espera' }, rotulo: 'pontos',
 
   inicia(p) {
@@ -68,7 +71,7 @@ export default {
         const certa = q.opcoes[e] === String(q.resp);
         d.resp[i] = { certa, t: p.t };
         d.fx.push({ tipo: certa ? 'ok' : 'erro', quem: i });
-        if (certa) { d.placar[i]++; p.eventos.push('moeda'); espera(p, i, `Certo! A resposta era ${q.resp}`); }
+        if (certa) { d.placar[i] += valorDe(d); p.eventos.push('moeda'); espera(p, i, `Certo! A resposta era ${q.resp}`); }
         else {
           if (j.y === 0) j.vy = 7;                       // susto
           d.vibra[i]++; p.eventos.push('batida'); espera(p, i, `Errou! A resposta era ${q.resp}`);
@@ -78,13 +81,14 @@ export default {
       if (d.tempo > 0 && !(a && b)) return;
       if (a?.certa && b?.certa && a.t !== b.t) {         // os dois acertaram: bonus para o mais rapido
         const i = a.t < b.t ? 0 : 1;
-        d.placar[i]++; d.fx.push({ tipo: 'bonus', quem: i }); p.eventos.push('gol');
-        espera(p, i, `Certo e mais rápido: bônus de +1! A resposta era ${d.perg[i].resp}`);
+        d.placar[i] += valorDe(d); d.fx.push({ tipo: 'bonus', quem: i }); p.eventos.push('gol');
+        espera(p, i, `Certo e mais rápido: bônus de +${valorDe(d)}! A resposta era ${d.perg[i].resp}`);
       }
       for (const i of [0, 1]) if (!d.resp[i]) espera(p, i, `Tempo esgotado! A resposta era ${d.perg[i].resp}`);
       d.fase = 'revela'; d.tempo = T_REVELA; d.aviso = '';
     } else if (d.tempo <= 0) {
-      if (++d.rodada >= RODADAS) return maiorPlacar(p);
+      d.rodada++;
+      if (d.rodada > RODADAS || (d.rodada === RODADAS && d.placar[0] !== d.placar[1])) return maiorPlacar(p);   // empate: uma rodada de desempate
       novaRodada(p);
     }
   },

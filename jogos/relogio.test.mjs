@@ -27,7 +27,7 @@ test('relogio: vence quem para mais perto de 10 s, e os tempos sao revelados com
   const p = partida();
   para(p, 1, 540);                                   // 9,00
   assert.ok(p.jogadores[1].vy > 0 || p.jogadores[1].y > 0, 'o boneco pula quando para');
-  assert.equal(p.dados.aviso, '?,?', 'so um parou: nada revelado');
+  assert.match(p.dados.aviso, /parou! Falta [0-9] s/, 'so um parou: nada revelado, a contagem corre');
   para(p, 0, 618);                                   // 10,30
   assert.equal(p.dados.aviso, '10,30 s  x  9,00 s');
   assert.match(p.celular[0].texto, /10,30 s \(erro de 0,30 s\)/);
@@ -37,11 +37,33 @@ test('relogio: vence quem para mais perto de 10 s, e os tempos sao revelados com
   assert.equal(p.vencedor, 0);
 });
 
+test('relogio: aperto enquanto o relogio ainda aparece (antes de 3 s) nao conta', () => {
+  const p = partida();
+  para(p, 0, 60);
+  assert.equal(p.dados.parou[0], null);
+  assert.equal(p.fase, 'jogando');
+  para(p, 0, 600);
+  assert.ok(Math.abs(p.dados.parou[0] - 10) < 1e-6);
+});
+
 test('relogio: so o primeiro aperto vale', () => {
   const p = partida();
   para(p, 0, 300);
   para(p, 0, 600);
   assert.ok(Math.abs(p.dados.parou[0] - 5) < 1e-6);
+});
+
+test('relogio: quando um para, o outro tem 4 s; passou, o relogio para por ele', () => {
+  const p = partida();
+  para(p, 0, 400);                                   // 6,67
+  assert.match(p.celular[1].texto, /você tem 4 s/);
+  ate(p, 400 + 230);
+  assert.equal(p.dados.parou[1], null, 'ainda dentro do prazo');
+  ate(p, 400 + 245);
+  assert.ok(Math.abs(p.dados.parou[1] - (400 + 240) / 60) < 0.05, 'parou no fim do prazo');
+  assert.ok(p.dados.revela >= 0);
+  ate(p, 400 + 245 + 220);
+  assert.equal(p.vencedor, 1, 'o que parou perto de 6,67 perde para 10,67');
 });
 
 test('relogio: erros iguais (um antes, outro depois) da empate', () => {

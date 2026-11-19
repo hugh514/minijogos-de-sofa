@@ -39,7 +39,7 @@ function efeito(d, x, z, quem, forca) {
 function paraBase(d, i) { Object.assign(d.band[i], baseDe(i), { estado: 'base', t: 0 }); }
 
 export default {
-  id: 'bandeira', nome: 'Pega-bandeira', dica: 'Pegue a bandeira do outro e leve até a sua base. Encoste no ladrão para derrubar!',
+  id: 'bandeira', genero: 'corrida', nome: 'Pega-bandeira', dica: 'Pegue a bandeira do outro e leve até a sua base. Encoste no ladrão para derrubar!',
   controle: { modo: 'padrao', a: 'EMPURRA', b: 'PULA' }, rotulo: 'bandeiras', duracao: LIMITE,
 
   inicia(p) {
@@ -101,7 +101,7 @@ export default {
       for (const i of marcou) { d.placar[i]++; efeito(d, js[i].x, js[i].z, i, 12); }
       paraBase(d, 0); paraBase(d, 1);
       js[0].turbo = js[1].turbo = 1;
-      d.aviso = 'BANDEIRA CAPTURADA!'; d.avisoCor = '#ffd23f'; d.avisoT = 1.2;
+      d.aviso = 'Bandeira capturada!'; d.avisoCor = '#ffd23f'; d.avisoT = 1.2;
       p.eventos.push('gol');
       const [a, b] = d.placar;
       if (a >= META || b >= META) return a === b ? -1 : a > b ? 0 : 1;

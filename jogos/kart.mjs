@@ -262,9 +262,10 @@ export function persegue(j, ang) {
 }
 
 export default {
-  id: 'kart', nome: 'Kart Maluco',
-  dica: 'Joystick vira e acelera, puxar para baixo freia. Segure B na curva e solte para o turbo. A usa o item. 3 voltas!',
+  id: 'kart', genero: 'corrida', nome: 'Kart Maluco',
+  dica: 'Corrida de 3 voltas. Segure B na curva e solte para o turbo; A usa o item',
   controle: { modo: 'padrao', a: 'ITEM', b: 'DERRAPA' }, semMovimento: true, semDash: true, semPulo: true, rotulo: 'voltas', duracao: LIMITE,
+  semNome: true,       // o nome flutuante do rival atras da camera cobria a pista; o kart ja tem a cor do jogador
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: LX, lz: LZ, parede: true };
@@ -337,7 +338,7 @@ export default {
         if (d.prox[i] === 0) {
           d.voltas[i]++; d.placar[i] = d.voltas[i]; d.tempos[i].push(p.t); p.eventos.push('moeda'); fx(d, j.x, j.z, i, 'volta');
           if (d.voltas[i] >= VOLTAS) venceu = venceu === undefined ? i : -1;
-          else if (d.voltas[i] === VOLTAS - 1 && d.voltas[1 - i] < VOLTAS - 1) { d.aviso = 'ÚLTIMA VOLTA!'; d.avisoCor = '#ffd84d'; d.avisoT = 1.5; }
+          else if (d.voltas[i] === VOLTAS - 1 && d.voltas[1 - i] < VOLTAS - 1) { d.aviso = 'Última volta!'; d.avisoCor = '#ffd84d'; d.avisoT = 1.5; }
         }
         d.prox[i] = (d.prox[i] + 1) % PORTOES;
       }

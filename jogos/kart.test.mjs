@@ -123,6 +123,15 @@ test('kart: fora da pista a grama deixa o kart lento', () => {
   assert.equal(p.dados.naPista[0], false);
 });
 
+test('kart: dica curta e aviso de ultima volta sem caixa alta', () => {
+  assert.ok(jogo.dica.length <= 80, 'dica com ' + jogo.dica.length + ' letras');
+  assert.match(jogo.dica, /3 voltas/);
+  const p = partidaCom(jogo); semCaixas(p);
+  let aviso = '';
+  corre(p, 40, p => { pilota(p, 0); if (p.dados.aviso) aviso = p.dados.aviso; });
+  assert.equal(aviso, 'Última volta!');
+});
+
 test('kart: 3 voltas vencem, para cada lado, e o placar conta as voltas', () => {
   for (const quem of [0, 1]) {
     const p = partidaCom(jogo); semCaixas(p);
@@ -498,4 +507,8 @@ test('kart: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   const vencedores = fumaca(jogo);
   assert.equal(vencedores.length, 15);
   assert.ok(vencedores.every(v => [-1, 0, 1].includes(v)));
+});
+
+test('kart: esconde o nome flutuante dos jogadores (semNome)', () => {
+  assert.equal(jogo.semNome, true);
 });

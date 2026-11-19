@@ -1,19 +1,25 @@
 // Regras e fisica dos minijogos, sem nada de tela. Roda no navegador e no node (testes).
 export const RAIO = 0.8;
-export const NOITES_COOP = 5;             // o cooperativo so tem um minijogo: a partida dura 5 rodadas
+export const NOITES_COOP = 5;             // a partida cooperativa dura 5 rodadas (noites), sorteadas entre os minijogos coop
 export const PONTOS_VITORIA = 10;         // partida mais longa: mais minijogos por partida
 // Aceleracao alta com atrito alto: o boneco responde rapido ao dedo e para logo, com a mesma velocidade maxima (~13).
 const ACEL = 30, ATRITO = 0.1, DASH = 16, RECARGA = 1.0, GRAVIDADE = 30, PULO = 9;
-const ESPERA_BOTAO = 0.15, LIMITE_RODADA = 60, LIMITE_MOTOR = 75;
+const ESPERA_BOTAO = 0.15, LIMITE_MOTOR = 75;
 const BATIDA_MIN = 3;     // velocidade de aproximacao (m/s) a partir da qual o choque vira 'batida'
 const T_PRONTO = 60;      // espera maxima pelo "pronto" dos dois antes de comecar sozinho
 const T_INTRO = 3.5, T_RESULTADO = 2.5, T_FIM = 7;
+const HISTORICO_MAX = 30;         // ids dos ultimos minijogos, que a tela guarda no localStorage para a rotacao lembrar entre noites
+const JANELA = 6;                 // a fila procura nos 6 primeiros um minijogo que respeite o genero
+const POUCOS_ELEGIVEIS = 8;       // menos que isso: minijogo repetido volta com modificador diferente
+const ELEGIVEIS_ALVO_CURTO = 6, PONTOS_CURTO = 6;     // com menos de 6 elegiveis a partida vai a 6 pontos em vez de 10
 
 // ---------- modos: 'classico' (exatamente 2 jogadores, minijogos sem "festa") e a Festa (2 a 4 jogadores) ----------
 // Festa: 'vs' (todos contra todos), 'times' (A = J1+J3, B = J2+J4) e 'coop' (todos juntos). Cada minijogo de festa declara
 // festa: { min, max, modos } e devolve de atualiza: vs = indice do vencedor, times = 0 ou 1 (o time), coop = 2 (todos vencem); -1 = empate ou fracasso.
 export const MODOS = ['classico', 'vs', 'times', 'coop'];
 export const timeDe = (p, i) => i % 2;
+// Nome de quem joga, para texto de minijogo: o do perfil (a tela poe em p.nomes) ou "Jogador N".
+export const quem = (p, i) => (typeof p.nomes?.[i] === 'string' && p.nomes[i]) || 'Jogador ' + (i + 1);
 export function ehCoop(p) { return p.modo === 'coop' || (p.modo === 'classico' && !!p.jogo?.coop); }
 // O jogador i ganhou a rodada que acabou de terminar?
 export function venceu(p, i) {
@@ -23,9 +29,11 @@ export function venceu(p, i) {
   return p.modo === 'times' ? v === timeDe(p, i) : v === i;
 }
 // Minijogos que podem sair na rotacao deste modo com n jogadores.
+// "Todos contra todos" com 2 pessoas usa tambem os do Classico (sem os cooperativos): os minijogos de festa sao poucos.
 export function elegiveis(modo, n) {
   if (modo === 'classico') return JOGOS.filter(j => !j.festa);
-  return JOGOS.filter(j => j.festa && n >= j.festa.min && n <= j.festa.max && j.festa.modos.includes(modo));
+  const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && n <= j.festa.max && j.festa.modos.includes(modo));
+  return modo === 'vs' && n === 2 ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
 }
 // Minijogo que quebrou sozinho no modo (nao havia outro para cobrir): fica na lista, mas o modo nao pode comecar.
 const QUEBRADOS = new Set();
@@ -39,23 +47,32 @@ const novoJogador = () => ({ pontos: 0, direito: false, ent: { x: 0, y: 0, d: fa
 // ---------- modificadores: de vez em quando uma rodada vem "temperada", para a mesma brincadeira nao enjoar ----------
 // So valem com p.modificadores ligado (a tela liga). "anda" = so serve para minijogo em que o motor move o boneco.
 export const MODIFICADORES = [
-  { id: 'ouro', nome: 'Rodada de ouro', dica: 'Esta rodada vale 2 pontos!', pontos: 2 },
-  { id: 'gelo', nome: 'Chão de gelo', dica: 'Tudo escorrega: freie antes!', anda: true, atrito: 0.55 },
-  { id: 'foguete', nome: 'Modo foguete', dica: 'Todo mundo muito mais rápido', anda: true, acel: 1.7 },
-  { id: 'espelho', nome: 'Controles invertidos', dica: 'Esquerda é direita, cima é baixo', anda: true, inverte: true },
-  { id: 'lua', nome: 'Gravidade da lua', dica: 'Pulos altos e demorados', anda: true, pulo: true, gravidade: 9 },
+  { id: 'ouro', nome: 'Rodada de ouro', dica: 'Vale 2 pontos', pontos: 2 },
+  { id: 'gelo', nome: 'No gelo!', dica: 'Freie antes da curva', anda: true, atrito: 0.55 },
+  { id: 'foguete', nome: 'Foguete', dica: 'Todo mundo voando', anda: true, acel: 1.7 },
+  { id: 'espelho', nome: 'De ponta-cabeça', dica: 'Esquerda virou direita', anda: true, inverte: true },
+  { id: 'lua', nome: 'Na lua', dica: 'Pulo alto e lento', anda: true, pulo: true, gravidade: 9 },
 ];
 const CHANCE_MOD = 0.3;
 
 function deJoystick(j) { return !j.semMovimento && (j.controle?.modo ?? 'padrao') === 'padrao' && j.controle?.joystick !== false; }
 
+// Minijogo que volta na mesma partida (so quando ha poucos elegiveis) sempre volta com um modificador diferente do da ultima vez.
 function sorteiaModificador(p) {
-  if (!p.modificadores || p.modo !== 'classico' || p.rodada < 3 || p.rng() > CHANCE_MOD) return null;       // rodada especial so no Classico
-  const j = p.jogo;
-  const servem = MODIFICADORES.filter(m => (!m.anda || deJoystick(j)) && (!m.pulo || !j.semPulo) && m.id !== p.modAnterior
-    && (!m.pontos || !j.coop || coopCabe(p, m.pontos)));      // ouro em coop nao pode dar a partida para um so
-  const mod = servem[Math.floor(p.rng() * servem.length)] ?? null;
-  if (mod) p.modAnterior = mod.id;
+  const j = p.jogo, ultimo = p.modsVistos[j.id];
+  const repete = !!p.modificadores && Object.hasOwn(p.modsVistos, j.id) && elegiveis(p.modo, p.n).length < POUCOS_ELEGIVEIS;
+  let mod = null;
+  if (p.modificadores && (repete || (p.rodada >= 3 && p.rng() <= CHANCE_MOD))) {
+    const serve = m => (!m.anda || deJoystick(j)) && (!m.pulo || !j.semPulo) && !j.semMod?.includes(m.id)
+      && (!m.pontos || (p.modo !== 'coop' && (!j.coop || coopCabe(p, m.pontos))));      // ouro nao cabe nas 5 noites do coop, nem em coop que daria a partida para um so
+    const sem = (lista, ids) => lista.filter(m => !ids.includes(m.id));
+    const todas = MODIFICADORES.filter(serve), nao = repete ? [ultimo, p.modAnterior] : [p.modAnterior];
+    const servem = sem(todas, nao).length ? sem(todas, nao) : sem(todas, [ultimo]);
+    mod = servem[Math.floor(p.rng() * servem.length)] ?? null;
+    if (mod) p.modAnterior = mod.id;
+  }
+  p.repete = repete && !!mod;
+  p.modsVistos[j.id] = mod?.id ?? null;
   return mod;
 }
 
@@ -63,12 +80,12 @@ function sorteiaModificador(p) {
 // O modificador (p.mod) e da rodada inteira; a carta (j.carta) e de um jogador so. Os dois se somam.
 // anda: so em minijogo de joystick. atras: so para quem esta atras no placar. Sem dash/pulo: precisa do botao.
 export const CARTAS = [
-  { id: 'dobro', nome: 'Vale dobro', dica: 'Se vencer, ganha 1 ponto a mais' },
-  { id: 'moedas', nome: 'Moedas em dobro', dica: 'Ganha o dobro de moedas nesta rodada' },
-  { id: 'escudo', nome: 'Escudo de ponto', dica: 'Se perder, o outro não ganha ponto', atras: true },
-  { id: 'turbo', nome: 'Turbo', dica: 'Anda bem mais rápido', anda: true, acel: 1.35 },
-  { id: 'dash', nome: 'Dash rápido', dica: 'O empurrão recarrega na metade do tempo', anda: true, recarga: 0.5, precisaDash: true },
-  { id: 'pulo', nome: 'Pulo alto', dica: 'Pula bem mais alto', anda: true, pulo: 1.45, precisaPulo: true },
+  { id: 'dobro', nome: 'Vale dobro', dica: 'Venceu, leva 2' },
+  { id: 'moedas', nome: 'Cofre em dobro', dica: 'Moedas em dobro nesta' },
+  { id: 'escudo', nome: 'Escudo', dica: 'Se perder, ninguém pontua', atras: true },
+  { id: 'turbo', nome: 'Turbo', dica: 'Pernas ligeiras', anda: true, acel: 1.35 },
+  { id: 'dash', nome: 'Empurrão ligeiro', dica: 'Recarrega na metade', anda: true, recarga: 0.5, precisaDash: true },
+  { id: 'pulo', nome: 'Mola', dica: 'Pula bem mais alto', anda: true, pulo: 1.45, precisaPulo: true },
 ];
 const CARTA = Object.fromEntries(CARTAS.map(c => [c.id, c]));
 const N_OFERTA = 3, ESPERA_CARTA = 0.35;     // segundos em que o toque na carta, se chegar atrasado, nao vale como escolha do minijogo
@@ -93,7 +110,7 @@ export function moedasDaRodada(p, i) {
 // Cada um: inicia(p) monta a arena; atualiza(p, dt) devolve o indice do vencedor, -1 (empate) ou undefined.
 // Quando existe p.dados.placar, a tela mostra o placar da rodada com o texto de "rotulo".
 
-// Melhor de 3 quedas (sumo, lava, helice, meteoros): cada queda vale 1 para o outro, 2 vencem, aos 50 s vence quem derrubou mais.
+// Melhor de 3 quedas (sumo, lava, helice, meteoros e, com explosao no lugar da queda, o labirinto): cada queda vale 1 para o outro, 2 vencem, aos 50 s vence quem derrubou mais.
 // Quem caiu some caindo e volta ao centro com 1,5 s de protecao (nesse tempo nao cai). volta(j, i, nova) poe o jogador de pe.
 const QUEDAS = 2, T_PROTECAO = 1.5, T_QUEDAS = 50, T_MIN_QUEDAS = 5;     // a queda que decide so encerra depois de 5 s de jogo (antes, so conta no placar)
 const novoPlacarQuedas = () => ({ placar: [0, 0], protecao: [0, 0], caiu: [false, false], decidiu: -1 });
@@ -117,7 +134,7 @@ function contaQuedas(p, dt, volta) {
 const noCentro = (j, i) => { j.x = i ? 1.5 : -1.5; j.z = 0; };
 
 const sumo = {
-  id: 'sumo', nome: 'Sumô', dica: 'Melhor de 3 quedas: derrube o outro 2 vezes. Quem cai volta ao centro', rotulo: 'quedas', duracao: T_QUEDAS,
+  id: 'sumo', genero: 'empurra', nome: 'Sumô', dica: 'Melhor de 3 quedas: derrube o outro 2 vezes. Quem cai volta ao centro', rotulo: 'quedas', duracao: T_QUEDAS,
   inicia(p) { p.arena = { tipo: 'circulo', raio: 8, parede: false }; posiciona(p, 4); p.dados = { ...novoPlacarQuedas(), t0: 0 }; },
   atualiza(p, dt) {
     const d = p.dados;
@@ -126,12 +143,14 @@ const sumo = {
   },
 };
 
+// Uma moeda por vez: os dois correm para a mesma e disputam no empurrao (com 3 moedas e 5 para vencer a rodada durava 4 s).
+const MOEDAS_VENCE = 10, T_MOEDAS = 45;
 const moedas = {
-  id: 'moedas', nome: 'Caça-moedas', dica: 'Pegue 5 moedas antes do outro', rotulo: 'moedas',
+  id: 'moedas', genero: 'corrida', nome: 'Caça-moedas', dica: 'Corra até a moeda antes do outro. Quem pegar 10 vence', rotulo: 'moedas', duracao: T_MOEDAS,
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 9, parede: true };
     posiciona(p, 5);
-    p.dados = { moedas: [0, 1, 2].map(() => pontoNoCirculo(p, p.arena.raio - 1.5)), placar: [0, 0] };
+    p.dados = { moedas: [pontoNoCirculo(p, p.arena.raio - 1.5)], placar: [0, 0] };
   },
   atualiza(p) {
     const d = p.dados;
@@ -139,18 +158,18 @@ const moedas = {
       for (const [k, m] of d.moedas.entries())
         if (Math.hypot(j.x - m.x, j.z - m.z) < RAIO + 0.6) {
           d.placar[i]++; d.moedas[k] = pontoNoCirculo(p, p.arena.raio - 1.5); p.eventos.push('moeda');
-          if (d.placar[i] >= 5) return i;
+          if (d.placar[i] >= MOEDAS_VENCE) return i;
         }
-    if (p.t > LIMITE_RODADA) return maiorPlacar(p);
+    if (p.t > T_MOEDAS) return maiorPlacar(p);
   },
 };
 
 const bomba = {
-  id: 'bomba', nome: 'Batata quente', empurrao: 2.3, dica: 'Encoste no outro para passar a bomba antes de explodir',
+  id: 'bomba', genero: 'reflexo', nome: 'Batata quente', empurrao: 2.3, dica: 'Encoste no outro para passar a bomba antes de explodir',
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 7, parede: true };
     posiciona(p, 4);
-    p.dados = { dono: p.rng() < 0.5 ? 0 : 1, pavio: 12 + p.rng() * 8, troca: 1 };
+    p.dados = { dono: p.rng() < 0.5 ? 0 : 1, pavio: 15 + p.rng() * 8, troca: 1 };
   },
   atualiza(p, dt) {
     const d = p.dados;
@@ -165,9 +184,14 @@ const bomba = {
   },
 };
 
-const N_PISOS = 7, LADO_PISO = 2.4, T_PISO = 0.9;
+// Chao de lava: o piso pisado racha (fica laranja) e cai 2 s depois. Nos primeiros 2,5 s nada racha, a borda de fora segura
+// o boneco (so cai quem pisa num buraco) e todo mundo anda mais devagar: com piso de 0,9 s e velocidade cheia a rodada fechava em 5 s.
+const N_PISOS = 7, LADO_PISO = 2.4, T_PISO = 2, T_PISO_INICIO = 2.5, TURBO_LAVA = 0.6;
+const BORDA_PISOS = N_PISOS / 2 * LADO_PISO - 0.01, FOLGA_BORDA = 0.5;     // o boneco para meio corpo antes da beirada
+const naBorda = v => Math.max(-BORDA_PISOS, Math.min(BORDA_PISOS, v));
+const COR_PISO = [0x444f74, 0x566288];      // as mesmas da tela (montaBase), para o piso que volta
 const lava = {
-  id: 'lava', nome: 'Chão de lava', dica: 'O piso cai depois que você pisa. Melhor de 3 quedas: derrube o outro 2 vezes', rotulo: 'quedas', duracao: T_QUEDAS,
+  id: 'lava', genero: 'equilibrio', nome: 'Chão de lava', dica: 'Melhor de 3: quem cair 2 vezes perde. O piso pisado racha e cai, não volte por ele', rotulo: 'quedas', duracao: T_QUEDAS,
   inicia(p) {
     p.arena = { tipo: 'pisos', parede: false, n: N_PISOS, lado: LADO_PISO };
     posiciona(p, 4.8, 4.8);
@@ -176,10 +200,12 @@ const lava = {
       for (let k = 0; k < N_PISOS; k++)
         pisos.push({ x: (i - 3) * LADO_PISO, z: (k - 3) * LADO_PISO, t: -1, caiu: false });
     p.dados = { pisos, ...novoPlacarQuedas() };
+    for (const j of p.jogadores) j.turbo = TURBO_LAVA;
   },
   atualiza(p, dt) {
     for (const j of p.jogadores) {
-      const piso = j.vivo && j.y <= 0 && pisoEm(p, j.x, j.z);
+      if (j.vivo) for (const e of ['x', 'z']) if (Math.abs(j[e]) > BORDA_PISOS - FOLGA_BORDA) { j[e] = Math.sign(j[e]) * (BORDA_PISOS - FOLGA_BORDA); j['v' + e] = 0; }
+      const piso = j.vivo && j.y <= 0 && p.t >= T_PISO_INICIO && pisoEm(p, j.x, j.z);
       if (piso && piso.t < 0) piso.t = 0;
     }
     for (const piso of p.dados.pisos)
@@ -194,11 +220,19 @@ const lava = {
       }
     });
   },
+  // A tela so desenha o piso rachando e caindo; o que volta inteiro depois de uma queda e reposto aqui (senao fica sumido ou laranja).
+  desenha(c) {
+    c.base.pisos?.forEach((m, i) => {
+      const piso = c.p.dados.pisos[i];
+      if (!piso || piso.caiu || piso.t >= 0) return;
+      m.visible = true; m.position.y = -0.25; m.material.color.set(COR_PISO[i % 2]); m.material.emissiveIntensity = 0;
+    });
+  },
 };
 
 const RAIO_BOLA = 0.6, GOL = 2.5, GOLS = 3, T_FUTEBOL = 55;
 const futebol = {
-  id: 'futebol', nome: 'Futebol', dica: 'Chute a bola no gol da cor do outro. 3 gols vencem; no fim do tempo, quem fez mais', rotulo: 'gols', duracao: T_FUTEBOL,
+  id: 'futebol', genero: 'gol', nome: 'Futebol', dica: 'Chute a bola no gol da cor do outro. 3 gols vencem; no fim do tempo, quem fez mais', rotulo: 'gols', duracao: T_FUTEBOL,
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 11, lz: 6.5, parede: true, gol: GOL };
     posiciona(p, 6);
@@ -229,8 +263,11 @@ const futebol = {
 // Labirinto de bombas: grade com pilares fixos (1) e caixas que quebram (2). O botao A solta bomba.
 const COLS = 11, LINS = 9, T_BOMBA = 2, ALCANCE = 2, T_FOGO = 0.5, MAX_BOMBAS = 2;
 const labirinto = {
-  id: 'labirinto', nome: 'Labirinto de bombas', dica: 'Solte bombas, quebre as caixas e pegue o outro na explosão!',
+  id: 'labirinto', genero: 'mira', nome: 'Labirinto de bombas', dica: 'Solte bombas e pegue o outro na explosão. Quem for pego 2 vezes perde',
+  rotulo: 'pontos', duracao: T_QUEDAS,
   semDash: true, semPulo: true, controle: { a: 'BOMBA', b: '' },
+  // Camera propria: bem mais alta e quase a pino, para o boneco nao sumir atras das caixas e ficar grande o bastante na TV.
+  camera() { return { x: 0, y: 29, z: 8.5, ox: 0, oy: 0, oz: -0.3 }; },
   inicia(p) {
     p.arena = { tipo: 'ret', lx: COLS, lz: LINS, parede: true, grade: true };
     posiciona(p, COLS - 1, LINS - 1);
@@ -243,7 +280,7 @@ const labirinto = {
       }
     }
     // poder de cada um (cresce com os itens). coletas e queimados so crescem: a tela anima o que for novo.
-    p.dados = { grade, bombas: [], fogo: [], itens: [], coletas: [], queimados: [],
+    p.dados = { grade, bombas: [], fogo: [], itens: [], coletas: [], queimados: [], ...novoPlacarQuedas(),
       poder: [0, 1].map(() => ({ bombas: MAX_BOMBAS, fogo: ALCANCE, patins: 0, passa: false })) };
     for (const j of p.jogadores) j.turbo = TURBO_LAB;
   },
@@ -265,13 +302,14 @@ const labirinto = {
     for (const f of d.fogo) f.t -= dt;
     d.fogo = d.fogo.filter(f => f.t > 0);
     pegaItens(p, dt);
-    for (const j of p.jogadores) {
-      if (!j.vivo) continue;
+    for (const [i, j] of p.jogadores.entries()) {
+      if (!j.vivo || d.protecao[i] > 0) continue;
       const c = celula(p, j.x, j.z);
       if (d.fogo.some(f => f.i === c.i && f.k === c.k)) { elimina(p, j, 10); p.eventos.push('queda'); }
     }
     d.inventario = d.poder.map(o => [`Bombas ${o.bombas}`, `Fogo ${o.fogo}`, ...(o.patins ? [`Patins ${o.patins}`] : []), ...(o.passa ? ['Atravessa'] : [])]);
-    return quemSobrou(p) ?? (p.t > LIMITE_RODADA ? -1 : undefined);
+    // melhor de 3 (como as quedas): quem e pego da 1 ponto ao outro e volta ao seu canto com protecao
+    return contaQuedas(p, dt, (j, i) => { j.x = (i ? 1 : -1) * (COLS - 1); j.z = (i ? 1 : -1) * (LINS - 1); });
   },
 };
 
@@ -319,35 +357,44 @@ function explode(p, b) {
   p.eventos.push('explosao');
 }
 
-// Helice: uma barra gira rente ao chao. Pule (B) ou seja arremessado.
+// Helice: uma barra gira rente ao chao. Pule (B) ou seja arremessado: quem leva a barra fica tonto (sem controle) por um instante,
+// senao o joystick anulava o golpe e ninguem caia.
+const GOLPE_BARRA = 15, T_TONTO = 0.7, T_PULOU = 0.8, MEIA_BARRA = 0.5;     // barra fina: um pulo no lugar passa por cima mesmo com ela devagar
 const helice = {
-  id: 'helice', nome: 'Hélice', dica: 'B pula a barra. Melhor de 3 quedas: jogue o outro para fora 2 vezes', rotulo: 'quedas', duracao: T_QUEDAS,
+  // sem empurrao: com ele quase toda queda era o proprio empurrao errado (rodada de 6 a 10 s); agora quem derruba e a barra
+  id: 'helice', genero: 'equilibrio', nome: 'Hélice', dica: 'Pule a barra com B. Melhor de 3: quem cair 2 vezes perde', rotulo: 'quedas', duracao: T_QUEDAS,
+  semDash: true, controle: { a: '', b: 'PULA' },
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 7, parede: false };
-    posiciona(p, 3.5, 3.5);
-    p.dados = { ang: -Math.PI / 4, vel: 0.6, ...novoPlacarQuedas() };      // jogadores nascem na diagonal oposta a da barra
+    posiciona(p, 2.5, 2.5);       // perto do eixo: o primeiro golpe arremessa, mas ainda nao derruba
+    p.dados = { ang: -Math.PI / 4, vel: 0.6, tonto: [0, 0], ...novoPlacarQuedas() };      // jogadores nascem na diagonal oposta a da barra
   },
   atualiza(p, dt) {
     const d = p.dados;
-    d.vel = Math.min(4, 0.6 + p.t * 0.09);
+    d.vel = Math.min(4, 0.8 + p.t * 0.08);
     d.ang += d.vel * dt;
     const cos = Math.cos(d.ang), sin = Math.sin(d.ang);
-    for (const j of p.jogadores) {
+    for (const [i, j] of p.jogadores.entries()) {
       j.imune -= dt;
+      d.tonto[i] = Math.max(0, d.tonto[i] - dt);
+      j.turbo = d.tonto[i] > 0 ? 0 : 1;
       const lado = j.x * cos + j.z * sin, dist = -j.x * sin + j.z * cos;   // ao longo e atraves da barra
-      if (!j.vivo || j.y > 0.6 || j.imune > 0 || Math.abs(dist) > RAIO + 0.2) continue;
+      if (!j.vivo || j.imune > 0 || Math.abs(dist) > MEIA_BARRA) continue;
+      if (j.y > 0.6) { j.imune = T_PULOU; continue; }      // pulou por cima: esta passada da barra nao pega mais (perto do eixo ela demora a passar)
       const s = Math.sign(lado) || 1;             // a barra anda em sentidos opostos de cada lado do centro
-      j.vx += -sin * s * 14; j.vz += cos * s * 14; j.imune = 0.5;
+      const golpe = GOLPE_BARRA * Math.min(1, Math.max(0.4, Math.abs(lado) / 4));      // perto do eixo a barra passa devagar e bate mais fraco
+      j.vx += -sin * s * golpe; j.vz += cos * s * golpe; j.imune = 0.5; d.tonto[i] = T_TONTO;
       p.eventos.push('batida');
     }
-    return contaQuedas(p, dt, (j, i, nova) => { noCentro(j, i); j.imune = T_PROTECAO; });
+    // volta perto do centro, em angulos diferentes: lado a lado a barra pegava os dois no mesmo quadro (queda dupla nao pontua) para sempre
+    return contaQuedas(p, dt, (j, i, nova) => { j.x = i ? 0.8 : -1.5; j.z = i ? 2.2 : 0; j.imune = T_PROTECAO; d.tonto[i] = 0; });
   },
 };
 
 // Rei da colina: fique sozinho na zona amarela para somar tempo.
-const T_COLINA = 8;
+const T_COLINA = 8, T_LIMITE_COLINA = 45;
 const colina = {
-  id: 'colina', nome: 'Rei da colina', dica: 'Fique sozinho na zona amarela. Empurre o outro para fora!', rotulo: 'segundos na zona',
+  id: 'colina', genero: 'empurra', nome: 'Rei da colina', dica: 'Fique sozinho na zona amarela. Empurre o outro para fora!', rotulo: 'segundos na zona', duracao: T_LIMITE_COLINA,
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 9, parede: true };
     posiciona(p, 6);
@@ -362,14 +409,14 @@ const colina = {
     const dentro = p.jogadores.map(j => Math.hypot(j.x - z.x, j.z - z.z) < z.r);
     for (const i of [0, 1])
       if (dentro[i] && !dentro[1 - i]) { d.placar[i] += dt; if (d.placar[i] >= T_COLINA) return i; }
-    if (p.t > LIMITE_RODADA) return maiorPlacar(p);
+    if (p.t > T_LIMITE_COLINA) return maiorPlacar(p);
   },
 };
 
 // Chuva de meteoros: a sombra avisa onde vai cair.
 const T_METEORO = 1.3, RAIO_METEORO = 1.8;
 const meteoros = {
-  id: 'meteoros', nome: 'Chuva de meteoros', dica: 'Fuja das sombras vermelhas. Melhor de 3 quedas: leve o outro para baixo de uma 2 vezes', rotulo: 'quedas', duracao: T_QUEDAS,
+  id: 'meteoros', genero: 'reflexo', nome: 'Chuva de meteoros', dica: 'Fuja das sombras vermelhas. Melhor de 3 quedas: leve o outro para baixo de uma 2 vezes', rotulo: 'quedas', duracao: T_QUEDAS,
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 8, parede: true };
     posiciona(p, 4);
@@ -401,7 +448,7 @@ const meteoros = {
 // Pintura: o piso fica da cor de quem pisou por ultimo.
 const P_COLS = 9, P_LINS = 7, T_PINTURA = 25;
 const pintura = {
-  id: 'pintura', nome: 'Guerra de tinta', dica: 'Pinte o chão passando por cima. Quem tiver mais pisos no fim vence!',
+  id: 'pintura', genero: 'mira', nome: 'Guerra de tinta', dica: 'Pinte o chão passando por cima. Quem tiver mais pisos no fim vence!',
   rotulo: 'pisos', duracao: T_PINTURA,
   inicia(p) {
     p.arena = { tipo: 'ret', lx: P_COLS, lz: P_LINS, parede: true, pintura: true };
@@ -461,7 +508,7 @@ function pisoEm(p, x, z) {
 
 function temChao(p, x, z) {
   if (p.arena.tipo === 'circulo') return Math.hypot(x, z) <= p.arena.raio;
-  if (p.arena.tipo === 'pisos') return !!pisoEm(p, x, z);
+  if (p.arena.tipo === 'pisos') return !!pisoEm(p, naBorda(x), naBorda(z));
   return true;
 }
 
@@ -601,21 +648,139 @@ export function descarta(p, jogo, erro) {
   p.erros.push(`${jogo.id}: ${erro?.message ?? erro}`);
 }
 
+// ---------- rotacao: baralho sem repeticao, distancia minima, genero e memoria entre partidas ----------
+// Genero: campo opcional do minijogo (lista fechada GENEROS); sem ele vale o controle.modo. Nunca o mesmo genero 2 vezes seguidas
+// nem 3 seguidas com o mesmo controle.modo, sempre que a fila permite.
+export const GENEROS = ['empurra', 'corrida', 'mira', 'reflexo', 'ritmo', 'memoria', 'blefe', 'gol', 'equilibrio'];
+export const generoDe = j => j.genero ?? j.controle?.modo ?? 'padrao';
+const modoDe = j => j.controle?.modo ?? 'padrao';
+const ultimosJogos = (p, k) => p.historico.slice(-k).map(id => JOGOS.find(j => j.id === id)).filter(Boolean);
+
+// Poe a lista em ordem que respeita o genero (no maximo 1 seguido) e o modo de controle (no maximo 2 seguidos), a partir dos ultimos
+// jogados, e mantem a ordem recebida quando nada impede. Antes de cada escolha confere (com contagens, sem refazer o resto) que o que
+// sobra ainda tem como ser separado.
+const LIMITES = [[generoDe, 1], [modoDe, 2]];
+function ordena(lista, anteriores) {
+  const saida = [], resto = [...lista], hist = [...anteriores];
+  const cont = LIMITES.map(([chave]) => { const m = new Map(); for (const x of resto) m.set(chave(x), (m.get(chave(x)) ?? 0) + 1); return m; });
+  const seguidos = (chave, c) => { let n = 1; for (let i = hist.length - 1; i >= 0 && n <= 3 && chave(hist[i]) === chave(c); i--) n++; return n; };
+  const cabe = (c, l) => {
+    const [chave, max] = LIMITES[l], vc = chave(c), n = seguidos(chave, c), total = resto.length - 1;
+    if (n > max) return false;
+    for (const [v, q0] of cont[l]) { const q = v === vc ? q0 - 1 : q0; if (q > (v === vc ? max - n : max) + max * (total - q)) return false; }
+    return true;
+  };
+  const cabeTudo = c => cabe(c, 0) && cabe(c, 1);
+  const permite = c => seguidos(generoDe, c) <= 1 && seguidos(modoDe, c) <= 2;
+  while (resto.length) {
+    const b = hist.at(-2), longe = c => !b || generoDe(c) !== generoDe(b);
+    const testes = [c => cabeTudo(c) && longe(c), cabeTudo, permite, c => seguidos(generoDe, c) <= 1];
+    let k = -1;
+    for (const t of testes) if ((k = resto.findIndex(t)) >= 0) break;
+    const [c] = resto.splice(Math.max(k, 0), 1);
+    LIMITES.forEach(([chave], l) => cont[l].set(chave(c), cont[l].get(chave(c)) - 1));
+    saida.push(c); hist.push(c);
+  }
+  return saida;
+}
+
+function geradorDe(texto) {
+  let a = 0;
+  for (const c of texto) a = (Math.imul(a, 31) + c.charCodeAt(0)) | 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+function defeitosDe(ordem, antes) {
+  const h = [...antes, ...ordem];
+  let n = 0;
+  for (let i = antes.length; i < h.length; i++) {
+    if (i > 0 && generoDe(h[i]) === generoDe(h[i - 1])) n++;
+    if (i > 1 && modoDe(h[i]) === modoDe(h[i - 1]) && modoDe(h[i]) === modoDe(h[i - 2])) n++;
+  }
+  return n;
+}
+
+// Embaralha e poe no fim os que sairam nas ultimas k rodadas, do mais antigo para o mais novo (assim a distancia nao depende do genero).
+// No baralho novo k = max(min(4, n-1) - 1, n/2): o mesmo id so volta depois de min(4, n-1) rodadas, e depois de metade do total quando n e grande.
+// So o resto (quem nao saiu ha pouco) e ordenado por genero e modo; se travar, sorteia de novo, mas para no primeiro sem defeito.
+function baralho(p, lista, k = Math.min(lista.length - 1, Math.max(Math.min(4, lista.length - 1) - 1, lista.length >> 1))) {
+  const fim = [];
+  for (const id of k > 0 ? p.historico.slice(-k) : []) {
+    const x = lista.find(y => y.id === id);
+    if (x) { const antigo = fim.indexOf(x); if (antigo >= 0) fim.splice(antigo, 1); fim.push(x); }
+  }
+  const antes = ultimosJogos(p, 2), tentativas = Math.max(2, Math.min(30, Math.floor(240 / lista.length)));
+  let melhor = null, menos = Infinity, rng = p.rng;
+  for (let tentativa = 0; tentativa < tentativas && menos > 0; tentativa++) {       // a ordem de genero e modo e gulosa: se travar, sorteia de novo
+    const sorteada = embaralha(lista, rng);
+    if (!tentativa) rng = geradorDe(sorteada.map(x => x.id).join());       // as outras tentativas nao gastam o p.rng: o resto da rodada sorteia igual a antes
+    const ordem = ordena(sorteada.filter(x => !fim.includes(x)), antes);
+    const defeitos = defeitosDe([...ordem, ...fim], antes);
+    if (defeitos < menos) { melhor = [...ordem, ...fim]; menos = defeitos; }
+  }
+  return melhor;
+}
+
+// Reiniciar a partida nao zera a fila: so poe no fim o que saiu nas ultimas floor(n/2) rodadas, para a noite nova nao repetir o fim da anterior.
+function recicla(p) {
+  if (!p.fila.length) return;
+  const todos = elegiveis(p.modo, p.n), k = todos.length >> 1, recentes = new Set(k > 0 ? p.historico.slice(-k) : []);
+  const lista = [...p.fila];
+  const faltam = k - lista.filter(x => !recentes.has(x.id)).length;
+  if (faltam > 0) lista.push(...embaralha(todos.filter(x => !recentes.has(x.id) && !lista.includes(x)), p.rng).slice(0, faltam));
+  p.fila = baralho(p, lista, k);
+}
+
+// Uma rodada sorteada que nunca comecou (a tela voltou ao menu ou o anfitriao trocou de modo) nao conta como jogada.
+function esquece(p) {
+  if (p.fase === 'intro' && p.jogo && p.historico.at(-1) === p.jogo.id) {
+    p.historico.pop(); p.noitesVistas.pop();
+    if (!p.prioridade.includes(p.jogo)) p.prioridade.unshift(p.jogo);       // nao jogado: volta ao comeco, nao some
+  }
+}
+
+// O proximo minijogo. Primeiro p.prioridade (minijogo que chegou com a tela aberta; a tela poe la), depois a fila. Da fila sai o primeiro que
+// passa nos filtros, nesta ordem de forca: coop que cabe e distancia minima (fixos, o genero nunca vence a distancia), depois genero e modo
+// (procura primeiro nos 6 primeiros). O que for escolhido sai da fila.
+function sorteiaProximo(p) {
+  const todos = elegiveis(p.modo, p.n);
+  const livre = c => !c.coop || coopCabe(p);        // ponto decisivo de um so nao sai de rodada cooperativa
+  const esperam = [];
+  while (p.prioridade.length) {
+    const novo = p.prioridade.shift(), k = p.fila.indexOf(novo);
+    if (!todos.includes(novo)) continue;
+    if (!livre(novo)) { esperam.push(novo); continue; }       // coop bloqueado: espera a vez em vez de sumir
+    if (k >= 0) p.fila.splice(k, 1);
+    p.prioridade.unshift(...esperam);
+    return novo;
+  }
+  p.prioridade.push(...esperam);
+  if (!p.fila.length) {
+    p.fila = baralho(p, todos);
+    if (!p.fila.length) throw new Error(`nenhum minijogo para o modo ${p.modo} com ${p.n} jogadores`);
+  }
+  const [a, b] = ultimosJogos(p, 2).reverse();
+  const recentes = new Set(p.historico.slice(-Math.max(1, Math.min(4, todos.length - 1) - 1)));
+  const longe = c => !recentes.has(c.id);
+  const vistos = new Set(p.noitesVistas);       // no coop, as noites da partida cobrem todos os coop antes de repetir um
+  const nova = p.modo === 'coop' && todos.some(c => livre(c) && !vistos.has(c.id)) ? c => !vistos.has(c.id) : () => true;
+  const genero = c => !a || generoDe(c) !== generoDe(a);
+  const modo = c => !(a && b && modoDe(a) === modoDe(b) && modoDe(c) === modoDe(a));
+  const camadas = [[p.fila.slice(0, JANELA), [livre, nova, longe, genero, modo]], [p.fila, [livre, nova, longe, genero, modo]], [p.fila, [livre, nova, longe, genero]], [p.fila, [livre, nova, longe]], [p.fila, [livre, nova]]];
+  let jogo;
+  for (const [lista, regras] of camadas) if ((jogo = lista.find(c => regras.every(r => r(c))))) break;
+  jogo ??= embaralha(todos.filter(c => livre(c) && nova(c) && longe(c) && !p.fila.includes(c)), p.rng)[0] ?? p.fila.find(c => livre(c) && nova(c)) ?? todos.find(c => livre(c) && nova(c) && longe(c)) ?? p.fila.find(livre) ?? embaralha(todos.filter(livre), p.rng)[0] ?? p.fila[0];
+  const k = p.fila.indexOf(jogo);
+  if (k >= 0) p.fila.splice(k, 1);
+  return jogo;
+}
+
 function proximaRodada(p, forcado) {
   // carta usada na ultima rodada competitiva (coop no meio nao conta); calculada uma vez, antes de qualquer nova tentativa
   const anterior = p.jogadores.map(j => (p.jogo?.coop ? j.cartaAnterior : j.carta) ?? null);
+  if (p.jogadores.every(j => j.pontos === 0)) p.alvo = alvoDe(p);       // a pasta de minijogos ainda pode estar carregando: o alvo acompanha a lista ate o placar andar
   for (let tentativa = 0; tentativa < 100; tentativa++) {
-    if (!p.fila.length) {
-      p.fila = embaralha(elegiveis(p.modo, p.n), p.rng);
-      if (!p.fila.length) throw new Error(`nenhum minijogo para o modo ${p.modo} com ${p.n} jogadores`);
-      if (p.fila[0] === p.jogo && p.fila.length > 1) p.fila.push(p.fila.shift());   // nao repete o mesmo em seguida
-    }
-    p.jogo = forcado ?? p.fila.shift();
-    if (!forcado && p.jogo.coop && !coopCabe(p)) {        // ponto decisivo de um so nao sai de rodada cooperativa
-      let k = p.fila.findIndex(x => !x.coop);
-      if (k < 0) { p.fila.push(...embaralha(elegiveis(p.modo, p.n).filter(x => !x.coop), p.rng)); k = p.fila.findIndex(x => !x.coop); }
-      if (k >= 0) { const outro = p.fila.splice(k, 1)[0]; p.fila.push(p.jogo); p.jogo = outro; }
-    }
+    p.jogo = forcado ?? sorteiaProximo(p);
     forcado = undefined;
     for (const [i, j] of p.jogadores.entries())
       Object.assign(j, {
@@ -629,6 +794,7 @@ function proximaRodada(p, forcado) {
     p.mod = null;
     try {
       p.jogo.inicia(p); p.mod = sorteiaModificador(p);
+      p.historico.push(p.jogo.id); p.historico.splice(0, p.historico.length - HISTORICO_MAX); p.noitesVistas.push(p.jogo.id);
       if (!p.jogo.coop)             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima
         for (const [i, j] of p.jogadores.entries()) if (j.direito) { j.oferta = sorteiaCartas(p, i); j.direito = false; }
       return;
@@ -638,7 +804,7 @@ function proximaRodada(p, forcado) {
 
 // Rodada cooperativa so entra quando nao decide a partida para um so: ninguem a "vale" pontos do fim, ou os dois.
 function coopCabe(p, vale = 1) {
-  const quase = p.jogadores.filter(j => j.pontos >= PONTOS_VITORIA - vale).length;
+  const quase = p.jogadores.filter(j => j.pontos >= p.alvo - vale).length;
   return quase === 0 || quase === p.jogadores.length;
 }
 
@@ -649,13 +815,13 @@ function termina(p, vencedor) {
   const js = p.jogadores, antes = js.map(j => j.pontos), vale = p.mod?.pontos ?? 1;
   const anuncios = p.anuncios = [];
   if (vencedor === 2) {
-    for (const j of js) j.pontos = Math.min(PONTOS_VITORIA, j.pontos + vale);
+    for (const j of js) j.pontos = Math.min(p.alvo, j.pontos + vale);
     anuncios.push({ tipo: 'equipe' });
   } else if (vencedor >= 0) {
     const j = js[vencedor], o = 1 - vencedor;
     const escudo = js[o].carta === 'escudo';
     if (escudo) anuncios.push({ tipo: 'escudo', quem: o });
-    else j.pontos = Math.min(PONTOS_VITORIA, j.pontos + vale + (j.carta === 'dobro' ? 1 : 0));
+    else j.pontos = Math.min(p.alvo, j.pontos + vale + (j.carta === 'dobro' ? 1 : 0));
     js[o].direito = true;
     if (!escudo) p.seq[vencedor]++;     // ponto segurado nao soma na sequencia
     p.seq[o] = 0;
@@ -666,14 +832,14 @@ function termina(p, vencedor) {
     }
   }
   for (const i of [0, 1]) p.deficit[i] = Math.max(p.deficit[i], js[1 - i].pontos - js[i].pontos);
-  const campeoes = js.map(j => j.pontos >= PONTOS_VITORIA);
+  const campeoes = js.map(j => j.pontos >= p.alvo);
   if (campeoes[0] || campeoes[1]) {
     p.fase = 'fim'; p.campeao = campeoes[0] && campeoes[1] ? 2 : campeoes[0] ? 0 : 1;
     p.campeoes = campeoes[0] && campeoes[1] ? [0, 1] : [p.campeao];
     for (const j of js) j.direito = false;
   } else {
     p.campeoes = [];
-    const quase = js.map(j => j.pontos === PONTOS_VITORIA - 1);
+    const quase = js.map(j => j.pontos === p.alvo - 1);
     if (quase[0] || quase[1]) anuncios.push({ tipo: 'match', quem: quase[0] && quase[1] ? 2 : quase[0] ? 0 : 1 });
   }
   p.eventos.push('ponto');
@@ -683,10 +849,10 @@ function termina(p, vencedor) {
 function terminaFesta(p) {
   const vale = p.mod?.pontos ?? 1;
   p.anuncios = [];
-  p.jogadores.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(PONTOS_VITORIA, j.pontos + vale); });
-  p.campeoes = p.jogadores.flatMap((j, i) => j.pontos >= PONTOS_VITORIA ? [i] : []);
+  p.jogadores.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale); });
+  p.campeoes = p.jogadores.flatMap((j, i) => j.pontos >= p.alvo ? [i] : []);
   if (p.campeoes.length) p.fase = 'fim';
-  if (p.modo === 'coop' && p.fase !== 'fim') {       // cooperativo: so ha um minijogo, entao a partida dura NOITES_COOP rodadas
+  if (p.modo === 'coop' && p.fase !== 'fim') {       // cooperativo: a partida dura NOITES_COOP rodadas
     p.noites.jogadas++;
     if (p.vencedor === 2) p.noites.vencidas++;
     if (p.noites.jogadas >= NOITES_COOP) {
@@ -708,13 +874,20 @@ function tocouBotao(j, m, estado, contador) {
 }
 
 // ---------- API ----------
-export function criaPartida(rng = Math.random, { n = 2, modo = 'classico' } = {}) {
+// historico: ids dos ultimos minijogos (a tela guarda no localStorage); so valem textos curtos de id.
+const limpaHistorico = h => (Array.isArray(h) ? h.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id)) : []).slice(-HISTORICO_MAX);
+
+// Alvo de pontos da partida: 10, ou 6 quando ha menos de 6 minijogos elegiveis no modo (a tela mostra p.alvo).
+const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : PONTOS_VITORIA);
+
+export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', historico = [] } = {}) {
   confereModo(n, modo);
   const p = {
-    rng, fila: [], jogo: null, rodada: 0, eventos: [], erros: [], anuncios: [], n, modo,
+    rng, fila: [], prioridade: [], noitesVistas: [], jogo: null, historico: limpaHistorico(historico), modsVistos: {}, rodada: 0, eventos: [], erros: [], anuncios: [], n, modo,
     noites: { jogadas: 0, vencidas: 0 }, seq: Array(n).fill(0), deficit: Array(n).fill(0), campeao: undefined,       // vitorias seguidas e maior desvantagem (para "virada")
     jogadores: Array.from({ length: n }, novoJogador),
   };
+  p.alvo = alvoDe(p);
   proximaRodada(p);
   return p;
 }
@@ -722,7 +895,9 @@ export function criaPartida(rng = Math.random, { n = 2, modo = 'classico' } = {}
 export function reinicia(p) {
   for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; }
   p.seq = p.jogadores.map(() => 0); p.deficit = p.jogadores.map(() => 0); p.campeao = undefined; p.campeoes = undefined;
-  p.fila = []; p.noites = { jogadas: 0, vencidas: 0 };
+  esquece(p); p.noitesVistas = [];
+  p.noites = { jogadas: 0, vencidas: 0 }; p.modsVistos = {}; p.alvo = alvoDe(p);
+  recicla(p);
   proximaRodada(p);
 }
 
@@ -732,6 +907,7 @@ export function configura(p, { n = p.n, modo = p.modo } = {}) {
   p.n = n; p.modo = modo;
   while (p.jogadores.length < n) p.jogadores.push(novoJogador());
   p.jogadores.length = n;
+  p.fila = [];       // outro modo ou outro numero de jogadores: o baralho de antes nao serve (o esquece fica no reinicia)
   reinicia(p);
 }
 
@@ -743,6 +919,7 @@ export function registra(jogo) {
     if (!f || !ok(f.min) || !ok(f.max) || f.min > f.max || !Array.isArray(f.modos) || !f.modos.length || !f.modos.every(m => m === 'vs' || m === 'times' || m === 'coop'))
       throw new Error('festa torto em ' + jogo.id);
   }
+  if (jogo.genero !== undefined && !GENEROS.includes(jogo.genero)) throw new Error('genero torto em ' + jogo.id);
   const n = JOGOS.findIndex(x => x.id === jogo.id);
   if (n >= 0) JOGOS[n] = jogo; else JOGOS.push(jogo);
 }
@@ -808,7 +985,7 @@ export function passo(p, dt) {
     if (p.t >= T_INTRO) { p.fase = 'jogando'; p.t = 0; for (const j of p.jogadores) { j.escolhaDesde = j.oferta || j.carta ? ESPERA_CARTA : 0; j.oferta = null; } }    // quem nao escolheu fica sem carta
     return;
   }
-  if (p.fase === 'fim') { fisicaSegura(p, dt); if (p.t >= T_FIM) reinicia(p); return; }
+  if (p.fase === 'fim') { fisicaSegura(p, dt); if (p.t >= T_FIM && !p.esperaRevanche) reinicia(p); return; }     // esperaRevanche (a tela liga): o podio espera a escolha de revanche
   if (p.fase === 'resultado') { fisicaSegura(p, dt); if (p.t >= T_RESULTADO) proximaRodada(p); return; }
   let vencedor;
   try {
@@ -819,4 +996,26 @@ export function passo(p, dt) {
   if (vencedor === undefined && p.t > LIMITE_MOTOR) vencedor = -1;       // nenhuma rodada passa disso
   for (const j of p.jogadores) { j.apertouA = 0; j.apertouB = 0; j.escolha = -1; }   // valem so por um passo
   if (vencedor !== undefined) termina(p, vencedor);
+}
+
+// Regra do ESTILO.md: nenhuma rodada fecha antes de T_MIN_RODADA, nem por toque sem querer nem por jogada perfeita.
+// A tela aplica comMinimo em todo minijogo (embutido ou da pasta). Se o minijogo decide antes do tempo, o resultado fica
+// guardado em p.dados.fimCedo, o atualiza deixa de ser chamado (placar e celular ficam como estavam, a fisica segue) e a
+// rodada fecha aos 5 s com o mesmo resultado. Retorno invalido para o modo segue na hora e vira erro no motor.
+// Os testes de unidade de cada minijogo rodam sem a trava, para conferir a regra pura do jogo.
+export const T_MIN_RODADA = 5;
+const COM_MINIMO = Symbol('comMinimo');
+export function comMinimo(jogo) {
+  if (typeof jogo?.atualiza !== 'function' || jogo.atualiza[COM_MINIMO]) return jogo;      // invalido: registra recusa com a mensagem certa
+  const original = jogo.atualiza;
+  const atualiza = function (p, dt) {
+    const d = p.dados;
+    if (d.fimCedo !== undefined) return p.t >= T_MIN_RODADA ? d.fimCedo : undefined;
+    const r = original.call(this, p, dt);
+    if (r !== undefined && p.t < T_MIN_RODADA && resultadosValidos(p).includes(r)) { d.fimCedo = r; return undefined; }
+    return r;
+  };
+  atualiza[COM_MINIMO] = true;
+  jogo.atualiza = atualiza;
+  return jogo;
 }

@@ -1,18 +1,12 @@
 // Leilao cego: 10 fichas, 3 premios. Lances secretos e simultaneos: o maior leva e paga; no empate ninguem leva e os dois pagam metade.
+// No celular: A soma 1 ficha, B tira 1, e segurar A e B juntos por 1 s fecha o lance (apostar nao e um toque sem querer).
 import { elimina } from '../logica.mjs';
 
-const FICHAS = 10, T_LANCE = 7, T_SUSPENSE = 0.8, T_VOA = 0.9, T_VOLTA = 1.5, T_REVELA = 3, T_FIM = 2.4;
-const PREMIOS = ['a taça', 'a joia', 'a coroa'];
+const FICHAS = 10, T_LANCE = 9, T_FECHA = 1, T_JUNTA = 0.12, T_SUSPENSE = 0.8, T_VOA = 0.9, T_VOLTA = 1.5, T_REVELA = 3, T_FIM = 2.4;
+const PREMIOS = ['a taça', 'a joia', 'a coroa'], VALOR = [1, 1, 2];     // o ultimo premio vale 2: sempre da para virar
 const X = 5.3, Z = 1.8, PILHA_X = 3.4, PILHA_Z = 2.5, MONTE_X = 1.5, MONTE_Z = 1.7, ALT = 0.14;
 
 const fichas = n => (n === 1 ? '1 ficha' : `${n} fichas`);
-
-// Ate 4 lances possiveis com o que o jogador tem: 0, 1, metade e tudo (completa com vizinhos se repetir).
-export function lances(tem) {
-  const v = new Set([0, 1, Math.floor(tem / 2), tem].filter(n => n <= tem));
-  for (let n = 2; v.size < 4 && n < tem; n++) v.add(n);
-  return [...v].sort((a, b) => a - b);
-}
 
 // Quem leva (0, 1 ou -1) e quanto cada um paga.
 export function resolve(a, b) {
@@ -29,24 +23,51 @@ function novoLeilao(p) {
   const d = p.dados;
   d.round++;
   d.fase = 'lance'; d.t = T_LANCE; d.k = 0; d.mostrou = false;
-  d.lance = [-1, -1]; d.ops = d.fichas.map(lances); d.antes = [...d.fichas]; d.pago = [0, 0]; d.dono = -1;
+  d.lance = [-1, -1]; d.alvo = [0, 0]; d.pend = [[], []]; d.segura = [0, 0]; d.antes = [...d.fichas]; d.pago = [0, 0]; d.dono = -1;
   d.novo = true;                                  // os celulares so mudam com a rodada valendo (toque na intro se perderia)
 }
 
 function celulares(p) {
+  p.dados.novo = false;
+  for (const i of [0, 1]) p.celular[i] = visor(p, i);
+}
+
+// Celular de quem ainda nao fechou: A soma, B tira, segurar os dois fecha. O texto mostra o lance atual.
+function visor(p, i) {
   const d = p.dados;
-  d.novo = false;
-  for (const i of [0, 1])
-    p.celular[i] = {
-      modo: 'opcoes', vibra: d.round,
-      opcoes: d.ops[i].map(n => fichas(n) + (n === d.fichas[i] && n > 0 ? ' (tudo)' : '')),
-      texto: `Você tem ${fichas(d.fichas[i])}. Lance secreto por ${PREMIOS[d.round]} (prêmio ${d.round + 1} de 3):`,
-    };
+  return {
+    modo: 'padrao', joy: false, a: '+', b: '-', vibra: d.round,
+    texto: d.segura[i] > 0 ? `Segure... fechando o lance de ${d.alvo[i]}` : `Lance ${d.alvo[i]} de ${d.fichas[i]}. Segure + e - juntos para fechar`,
+  };
+}
+
+// Um quadro de quem esta dando o lance. O toque entra depois de T_JUNTA: se o outro botao chegar junto, e o gesto de fechar e nao soma.
+function dial(p, i, dt) {
+  const d = p.dados, j = p.jogadores[i], fila = d.pend[i], dois = j.ent.d && j.ent.b;
+  if (j.apertouA) fila.push({ v: j.apertouA, t: 0 });
+  if (j.apertouB) fila.push({ v: -j.apertouB, t: 0 });
+  for (const x of fila) x.t += dt;
+  if (dois) {
+    fila.length = 0; d.segura[i] += dt;
+    if (d.segura[i] >= T_FECHA) return true;
+  } else {
+    d.segura[i] = 0;
+    while (fila.length && fila[0].t >= T_JUNTA) d.alvo[i] = Math.max(0, Math.min(d.fichas[i], d.alvo[i] + fila.shift().v));
+  }
+  const v = visor(p, i);
+  if (p.celular[i].texto !== v.texto) p.celular[i] = v;
+  return false;
+}
+
+function fechaLance(p, i) {
+  const d = p.dados;
+  d.lance[i] = d.alvo[i]; p.eventos.push('troca');
+  p.celular[i] = { modo: 'espera', texto: `Lance de ${fichas(d.lance[i])} feito. Disfarce! Você tem ${fichas(d.fichas[i])}.` };
 }
 
 export default {
-  id: 'leilao', nome: 'Leilão cego', dica: 'Lance secreto com suas 10 fichas: o maior leva o prêmio e paga. Empatou, ninguém leva!',
-  semMovimento: true, semDash: true, semPulo: true, rotulo: 'prêmios', controle: { modo: 'espera' },
+  id: 'leilao', genero: 'blefe', nome: 'Leilão cego', dica: 'Dê lances secretos com + e -: quem der mais leva o prêmio e paga. Empate, ninguém leva. O último vale 2!',
+  semMovimento: true, semDash: true, semPulo: true, rotulo: 'pontos', controle: { modo: 'padrao', a: '+', b: '-', joystick: false },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 9, lz: 5, parede: true };
@@ -63,14 +84,10 @@ export default {
 
     if (d.fase === 'lance') {
       for (const i of [0, 1]) {
-        const op = p.jogadores[i].escolha;
-        if (d.lance[i] < 0 && op >= 0 && op < d.ops[i].length) {
-          d.lance[i] = d.ops[i][op]; p.eventos.push('troca');
-          p.celular[i] = { modo: 'espera', texto: `Lance de ${fichas(d.lance[i])} feito. Disfarce! Você tem ${fichas(d.fichas[i])}.` };
-        }
-        if (d.lance[i] < 0 && d.t <= 0) d.lance[i] = 0;         // nao escolheu: lance zero
+        if (d.lance[i] >= 0) continue;
+        if (dial(p, i, dt) || d.t <= 0) fechaLance(p, i);        // acabou o tempo: vale o que estava no visor (zero, se ninguem mexeu)
       }
-      d.aviso = `Leilão ${d.round + 1} de 3: ${PREMIOS[d.round]}! Façam seus lances... ${Math.max(0, Math.ceil(d.t))}`;
+      d.aviso = `${d.round === 2 ? 'Último, vale 2' : `Leilão ${d.round + 1}/3`}: lance em ${Math.max(0, Math.ceil(d.t))} s`;
       d.avisoCor = '#ffffff';
       if (d.lance[0] < 0 || d.lance[1] < 0) return;
       Object.assign(d, resolve(d.lance[0], d.lance[1]));
@@ -90,21 +107,21 @@ export default {
         for (const i of [0, 1]) d.fichas[i] -= d.pago[i];
         d.premios[d.round] = d.dono;
         if (d.dono >= 0) {
-          d.placar[d.dono]++; p.jogadores[d.dono].vy = 8; p.eventos.push('gol');
-          d.aviso = `${d.lance[0]} x ${d.lance[1]}: Jogador ${d.dono + 1} leva ${PREMIOS[d.round]}!`; d.avisoCor = '#ffd84d';
+          d.placar[d.dono] += VALOR[d.round]; p.jogadores[d.dono].vy = 8; p.eventos.push('gol');
+          d.aviso = `${d.lance[0]} x ${d.lance[1]}: Jogador ${d.dono + 1} leva!`; d.avisoCor = '#ffd84d';
         } else {
           p.eventos.push('explosao');
-          d.aviso = `EMPATE em ${d.lance[0]}! Ninguém leva` + (d.pago[0] ? ` e cada um paga ${d.pago[0]}` : ''); d.avisoCor = '#ff4a4a';
+          d.aviso = `Empate em ${d.lance[0]}! Ninguém leva`; d.avisoCor = '#ff4a4a';
         }
         for (const i of [0, 1])
-          p.celular[i] = { modo: 'espera', texto: `Você tem ${fichas(d.fichas[i])} e ${d.placar[i]} ${d.placar[i] === 1 ? 'prêmio' : 'prêmios'}.` };
+          p.celular[i] = { modo: 'espera', texto: `Você tem ${fichas(d.fichas[i])} e ${d.placar[i]} ${d.placar[i] === 1 ? 'ponto' : 'pontos'}.` };
       }
       if (d.k < T_REVELA) return;
-      const faltam = PREMIOS.length - 1 - d.round;
+      const faltam = VALOR.slice(d.round + 1).reduce((s, v) => s + v, 0);
       if (faltam > 0 && Math.abs(d.placar[0] - d.placar[1]) <= faltam) return void novoLeilao(p);
       d.fase = 'fim'; d.k = 0; d.vencedor = decide(d);
       const v = d.vencedor, porFichas = v >= 0 && d.placar[0] === d.placar[1];
-      d.aviso = v < 0 ? 'EMPATE TOTAL!' : porFichas ? `Empate em prêmios: Jogador ${v + 1} vence com mais fichas!` : `Jogador ${v + 1} arrematou mais prêmios!`;
+      d.aviso = v < 0 ? 'Empate geral!' : porFichas ? `Jogador ${v + 1} vence nas fichas!` : `Jogador ${v + 1} venceu o leilão!`;
       d.avisoCor = '#ffd84d';
       if (v >= 0) {                                 // quem perdeu o leilao sai voando
         const j = p.jogadores[1 - v];

@@ -41,14 +41,25 @@ test('sequencia: toque de quem nao esta na vez e ignorado', () => {
   assert.deepEqual(p.dados.seq, []); assert.equal(p.dados.vez, a); assert.equal(p.fase, 'jogando');
 });
 
-test('sequencia: demorar mais de 4 s num toque perde', () => {
-  const p = nova(), a = p.dados.vez;
-  roda(p, 3.5);
+test('sequencia: a primeira cor tem 7 s; demorar mais de 4 s gasta a vida extra e a segunda demora perde', () => {
+  const p = nova(), a = p.dados.vez, b = 1 - a;
+  roda(p, 6.5);
   assert.equal(p.fase, 'jogando');
+  assert.deepEqual(p.dados.vida, [1, 1], 'o comeco tem prazo maior');
   toca(p, a, 0);                       // o toque renova o prazo, agora para o outro
-  roda(p, 3.5);
-  assert.equal(p.fase, 'jogando');
-  roda(p, 1);
+  roda(p, 4.2);
+  assert.equal(p.fase, 'jogando', 'a primeira demora so avisa');
+  assert.equal(p.dados.vida[b], 0);
+  assert.equal(p.dados.vez, b, 'continua a vez de quem demorou');
+  roda(p, 4.2);
+  assert.equal(p.vencedor, a);
+});
+
+test('sequencia: errar a cor e depois demorar tambem perde (a vida extra e uma so)', () => {
+  const p = nova(), a = p.dados.vez, b = 1 - a;
+  toca(p, a, 1);
+  toca(p, b, 3);                       // erro perdoado
+  roda(p, 4.2);
   assert.equal(p.vencedor, a);
 });
 

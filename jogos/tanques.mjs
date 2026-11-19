@@ -4,8 +4,8 @@ import { posiciona, maiorPlacar, elimina, RAIO } from '../logica.mjs';
 
 const LX = 11, LZ = 6.5, R_TIRO = 0.3, V_TIRO = 13, V_TANQUE = 7, GIRO = 14, ZONA_MORTA = 0.15;
 const VIDAS = 3, RECARGA = 0.8, BUFFER = 0.25, T_IMUNE = 1.2, EMPURRAO = 9, T_TIRO = 6, LIMITE = 45;
-const R_ACERTO = RAIO * 0.9 + R_TIRO;
-const AMARELO = 0xffd23f;
+const R_ACERTO = RAIO * 1.1 + R_TIRO;                 // acompanha o tanque 1,5x maior
+const AMARELO = 0xffd23f, ESCALA = 1.5;
 
 // Blocos de cobertura (meia largura hx e meia profundidade hz). Simétricos, longe dos cantos de saída.
 export const BLOCOS = [
@@ -64,14 +64,14 @@ function passoTiro(p, d, t, h) {
     d.kb[i] = { x: t.vx / len * EMPURRAO, z: t.vz / len * EMPURRAO };
     d.fx.push({ x: j.x, z: j.z, cor: i, tipo: 'acerto' });
     p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 };
-    if (d.placar[i] <= 0) { elimina(p, j, 8); p.eventos.push('explosao'); d.aviso = 'DESTRUÍDO!'; d.avisoCor = '#ff4a4a'; d.avisoT = 1.5; }
+    if (d.placar[i] <= 0) { elimina(p, j, 8); p.eventos.push('explosao'); d.aviso = 'Destruído!'; d.avisoCor = '#ff4a4a'; d.avisoT = 1.5; }
     else p.eventos.push('batida');
     return;
   }
 }
 
 export default {
-  id: 'tanques', nome: 'Tanques', dica: 'Ande com o tanque e atire com A. O tiro quica uma vez na parede. 3 vidas cada!',
+  id: 'tanques', genero: 'mira', nome: 'Tanques', dica: 'Ande com o tanque e aperte Atirar. O tiro quica uma vez na parede. 3 vidas cada!',
   controle: { modo: 'padrao', a: 'ATIRAR', b: '' }, semMovimento: true, semDash: true, semPulo: true, rotulo: 'vidas', duracao: LIMITE,
 
   inicia(p) {
@@ -108,7 +108,7 @@ export default {
       if (d.quer[i] > 0 && d.cd[i] <= 0) {
         d.quer[i] = 0; d.cd[i] = RECARGA; d.disparos[i]++;
         const dx = Math.cos(d.ang[i]), dz = Math.sin(d.ang[i]);
-        const t = { x: j.x + dx * 1.1, z: j.z + dz * 1.1, vx: dx * V_TIRO, vz: dz * V_TIRO, dono: i, quica: 1, idade: 0, vivo: true };
+        const t = { x: j.x + dx * 1.1 * ESCALA, z: j.z + dz * 1.1 * ESCALA, vx: dx * V_TIRO, vz: dz * V_TIRO, dono: i, quica: 1, idade: 0, vivo: true };
         t.x = limita(t.x, LX - R_TIRO); t.z = limita(t.z, LZ - R_TIRO);
         d.tiros.push(t);
         d.fx.push({ x: t.x, z: t.z, cor: i, tipo: 'tiro' });
@@ -140,10 +140,10 @@ export default {
 
     // blocos de cobertura
     for (const b of BLOCOS) {
-      const corpo = malha(new THREE.BoxGeometry(b.hx * 2, 1.1, b.hz * 2), 0x56607f, { roughness: 0.6 });
-      corpo.position.set(b.x, 0.55, b.z); grupo.add(corpo);
+      const corpo = malha(new THREE.BoxGeometry(b.hx * 2, 0.6, b.hz * 2), 0x56607f, { roughness: 0.6 });       // baixos: nao escondem os tanques
+      corpo.position.set(b.x, 0.3, b.z); grupo.add(corpo);
       const topo = malha(new THREE.BoxGeometry(b.hx * 2 + 0.1, 0.12, b.hz * 2 + 0.1), 0xffd23f, { emissive: 0xffd23f, emissiveIntensity: 0.5 });
-      topo.position.set(b.x, 1.14, b.z); topo.castShadow = false; grupo.add(topo);
+      topo.position.set(b.x, 0.62, b.z); topo.castShadow = false; grupo.add(topo);
     }
 
     // tanques low-poly
@@ -158,6 +158,7 @@ export default {
       const cano = malha(new THREE.BoxGeometry(1.0, 0.17, 0.17), 0xe9edf7, { emissive: cor, emissiveIntensity: 0.2 });
       cano.position.x = 0.6; canoGrupo.add(cano);
       g.add(casco, frente, esteiraA, esteiraB, torre, canoGrupo);
+      g.scale.setScalar(ESCALA);                       // tanque 1,5x maior na TV (a fisica segue igual)
       grupo.add(g); pecas.tanques.push({ g, cano });
     }
   },
@@ -171,7 +172,7 @@ export default {
       g.position.set(j.x, j.y, j.z);
       g.rotation.y = -d.ang[i];
       if (!j.vivo) { g.rotation.x += dt * 6; g.rotation.z += dt * 4; }
-      g.visible = !j.vivo || !(d.imune[i] > 0 && Math.floor(t * 14) % 2 === 0);    // pisca depois de levar tiro
+      g.visible = !j.vivo || p.fase !== 'jogando' || !(d.imune[i] > 0 && Math.floor(t * 14) % 2 === 0);    // pisca depois de levar tiro (no resultado fica aceso)
       const pronto = d.cd[i] <= 0;
       cano.material.emissiveIntensity = pronto ? 0.35 : 0;
     });
@@ -189,12 +190,12 @@ export default {
     });
     ts.forEach((s, k) => {
       const cor = c.cores[s.dono];
-      ms[k].position.set(s.x, 0.8, s.z);
+      ms[k].position.set(s.x, 1.1, s.z);
       ms[k].material.color.set(0xffffff); ms[k].material.emissive.set(cor);
       const len = Math.hypot(s.vx, s.vz) || 1;
       for (let r = 0; r < NR; r++) {
         const m = rs[k * NR + r], f = 1 - (r + 1) / (NR + 1);
-        m.position.set(s.x - s.vx / len * (r + 1) * 0.4, 0.8, s.z - s.vz / len * (r + 1) * 0.4);
+        m.position.set(s.x - s.vx / len * (r + 1) * 0.4, 1.1, s.z - s.vz / len * (r + 1) * 0.4);
         m.scale.setScalar(f); m.material.color.set(cor); m.material.emissive.set(cor); m.material.opacity = 0.55 * f;
       }
     });

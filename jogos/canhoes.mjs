@@ -42,7 +42,7 @@ function acertou(b, c) {
 }
 
 export default {
-  id: 'canhoes', nome: 'Guerra de canhões', dica: 'Arraste para trás e solte para atirar. Derrube todas as caixas do outro!',
+  id: 'canhoes', genero: 'mira', nome: 'Guerra de canhões', dica: 'Arraste para trás e solte para atirar. Derrube todas as caixas do outro!',
   semMovimento: true, semDash: true, semPulo: true, rotulo: 'caixas', duracao: DURACAO,
   controle: { modo: 'toque' },
 

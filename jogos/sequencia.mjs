@@ -8,7 +8,7 @@ const CORES = ['Vermelho', 'Azul', 'Verde', 'Amarelo'];
 const HEX = [0xe5383b, 0x2f7df6, 0x35c26b, 0xffd23f];
 const NOTAS = [262, 330, 392, 523];
 const POS = [[-1.7, -1.7], [1.7, -1.7], [-1.7, 1.7], [1.7, 1.7]];   // grade 2x2 igual ao celular (1 2 / 3 4)
-const PRAZO = 4, LIMITE = 55, LADO = 6.5, MAX_PINOS = 22;
+const PRAZO = 4, PRAZO_INICIO = 7, LIMITE = 55, LADO = 6.5, MAX_PINOS = 22;
 
 function telas(p) {
   const d = p.dados, n = d.seq.length;
@@ -30,16 +30,25 @@ function perde(p, cor, aviso) {
   return 1 - d.vez;
 }
 
+// Erro de cor ou demora: o primeiro so avisa (vida extra), o segundo perde.
+function perdoa(p, cor, final, aviso) {
+  const d = p.dados;
+  if (!d.vida[d.vez]) return perde(p, cor, final);
+  d.vida[d.vez] = 0;
+  d.fx.push({ cor: -1, ok: false, quem: d.vez }); d.prazo = PRAZO; d.aviso = aviso; d.avisoCor = '#ffd84d'; d.tAviso = 1.5;
+  p.eventos.push('queda'); telas(p);
+}
+
 export default {
-  id: 'sequencia', nome: 'Sequência venenosa',
-  dica: 'Na sua vez, repita todas as cores e acrescente uma. Segundo erro, ou 4 s sem tocar, perde!',
+  id: 'sequencia', genero: 'memoria', nome: 'Sequência venenosa',
+  dica: 'Na sua vez, repita todas as cores e acrescente uma. Segundo erro (ou demora) perde!',
   semMovimento: true, controle: { modo: 'espera' }, duracao: LIMITE,
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 9, lz: 6, parede: true };
     posiciona(p, LADO);
     // fx: toques para a tela piscar e tocar som (a tela guarda ate onde ja viu)
-    p.dados = { seq: [], vez: p.rng() < 0.5 ? 0 : 1, pos: 0, prazo: PRAZO, fx: [], vibra: [0, 0], aviso: '', vida: [1, 1], tAviso: 0 };
+    p.dados = { seq: [], vez: p.rng() < 0.5 ? 0 : 1, pos: 0, prazo: PRAZO_INICIO, fx: [], vibra: [0, 0], aviso: '', vida: [1, 1], tAviso: 0 };
     telas(p);
   },
 
@@ -49,19 +58,13 @@ export default {
     if (d.tAviso <= 0 && d.aviso && d.avisoCor === '#ffd84d') d.aviso = '';
     if (e >= 0 && e < 4) {
       const nova = d.pos >= d.seq.length;
-      if (!nova && e !== d.seq[d.pos]) {
-        if (!d.vida[d.vez]) return perde(p, e, 'ERROU A COR!');
-        d.vida[d.vez] = 0;                          // cada um tem uma vida extra: o primeiro erro só avisa
-        d.fx.push({ cor: -1, ok: false, quem: d.vez }); d.prazo = PRAZO; d.aviso = 'ERROU! Última chance'; d.avisoCor = '#ffd84d'; d.tAviso = 1.5;
-        p.eventos.push('queda'); telas(p);
-        return;
-      }
+      if (!nova && e !== d.seq[d.pos]) return perdoa(p, e, 'Errou a cor!', 'Errou! Última chance');
       d.fx.push({ cor: e, ok: true });
       d.prazo = PRAZO;
       if (nova) { d.seq.push(e); d.vez = 1 - d.vez; d.pos = 0; d.vibra[d.vez]++; p.eventos.push('troca'); }
       else d.pos++;
       telas(p);
-    } else if (d.prazo <= 0) return perde(p, -1, 'DEMOROU!');
+    } else if (d.prazo <= 0) return perdoa(p, -1, 'Demorou!', 'Demorou! Última chance');
     if (p.t > LIMITE) return -1;
   },
 

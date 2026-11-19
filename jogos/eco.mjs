@@ -1,8 +1,10 @@
 // Eco: um cria um ritmo de 4 batidas, a tela toca de volta uma vez e o outro repete de ouvido. Depois trocam.
+// Na segunda vez a TV e o celular mostram a nota que o segundo precisa passar, e nota igual desempata pelo erro em milissegundos.
 import { RAIO } from '../logica.mjs';
 
 const N = 4, JANELA = 4, T_ESPERA = 3, T_PREP = 1.5, T_PAUSA = 0.9, T_DEPOIS = 0.5, T_FOLGA = 1, T_SOBRA = 0.5;
 const T_NOTA = 2.2, T_FIM = 2.5, REBOTE = 0.1, PENA = 0.5, ERRO_ZERO = 0.4;
+const T_PREP_1 = 3.2;                                   // o primeiro aviso (ligar o som) fica mais tempo
 const X = 5.5, Z = 1.6, PISTA_X0 = -4.2, PISTA_ESC = 1.5, PISTA_MAX = 4.4;
 
 // Erro medio (em segundos) entre os intervalos do ritmo e os da imitacao. Batida faltando ou sobrando custa PENA.
@@ -12,6 +14,12 @@ export function erroMedio(ritmo, bat) {
     soma += i < bat.length ? Math.min(PENA, Math.abs((ritmo[i] - ritmo[i - 1]) - (bat[i] - bat[i - 1]))) : PENA;
   soma += PENA * Math.max(0, bat.length - ritmo.length);
   return soma / (ritmo.length - 1);
+}
+// Quem venceu pelas notas; nota igual desempata pelo erro (menor ganha, se a diferenca passar de 5 ms). -1 e empate.
+export function quemVenceu(notas, erros) {
+  if (notas[0] !== notas[1]) return notas[0] > notas[1] ? 0 : 1;
+  if (Math.abs(erros[0] - erros[1]) <= 0.005) return -1;
+  return erros[0] < erros[1] ? 0 : 1;
 }
 export const nota = erro => Math.round(100 * Math.max(0, 1 - erro / ERRO_ZERO));
 
@@ -27,18 +35,22 @@ function pulso(p, quem) { const d = p.dados; d.pulso = { n: d.pulso.n + 1, quem 
 
 function fase(p, nome) { const d = p.dados; d.fase = nome; d.k = 0; d.ini = null; d.bat = []; d.tocadas = 0; }
 
+// Na segunda vez, quem imita precisa passar a nota que o outro tirou na primeira.
+const aBater = p => (p.dados.turno === 1 ? p.dados.notas[p.dados.criador] : null);
+
 function celulares(p) {
   const d = p.dados, cr = d.criador, im = 1 - cr, v = d.vibra = (d.vibra ?? 0) + 1;
   const espera = texto => ({ modo: 'espera', texto });
+  const som = d.turno === 0 && d.fase === 'prepara' ? 'Ligue o som da TV. ' : '';      // jogo de ouvido
   if (d.fase === 'prepara' || d.fase === 'cria') {
-    p.celular[cr] = { modo: 'botao', a: 'BATE', texto: 'Você cria o ritmo: bata 4 vezes!', vibra: v };
-    p.celular[im] = espera('O outro está criando o ritmo. Escute bem: depois é você quem repete!');
+    p.celular[cr] = { modo: 'botao', a: 'BATE', texto: som + 'Você cria o ritmo: bata 4 vezes!', vibra: v };
+    p.celular[im] = espera(som + 'O outro está criando o ritmo. Escute bem: depois é você quem repete!');
   } else if (d.fase === 'toca') {
     p.celular[cr] = espera('Seu ritmo está tocando. Agora o outro tem que repetir.');
     p.celular[im] = espera('Escute o eco na tela. Já já você repete!');
   } else if (d.fase === 'imita') {
     p.celular[cr] = espera('O outro está tentando repetir o seu ritmo.');
-    p.celular[im] = { modo: 'botao', a: 'BATE', texto: 'Repita o ritmo: 4 batidas no mesmo compasso!', vibra: v };
+    p.celular[im] = { modo: 'botao', a: 'BATE', texto: aBater(p) === null ? 'Repita o ritmo: 4 batidas no mesmo compasso!' : `Repita o ritmo. Passe de ${aBater(p)} para vencer!`, vibra: v };
   } else {
     for (const i of [0, 1]) p.celular[i] = espera(d.notas[i] === null ? 'Olhe para a tela!' : `Sua precisão: ${d.notas[i]}`);
   }
@@ -56,69 +68,79 @@ function bate(p, i) {
   return true;
 }
 
+// Um quadro do jogo (o atualiza abaixo so acrescenta as luzes da TV depois).
+function passoEco(p, dt) {
+  const d = p.dados, cr = d.criador, im = 1 - cr;
+  p.jogadores.forEach((j, i) => { j.x = i ? X : -X; j.z = Z; j.vx = j.vz = 0; });
+  d.k += dt;
+
+  if (d.fase === 'prepara') {
+    const primeira = d.turno === 0;
+    d.aviso = primeira ? 'Ligue o som da TV!' : `Jogador ${cr + 1} cria o ritmo! O outro precisa passar de ${aBater(p)}`; d.avisoCor = primeira ? '#ffd84d' : '#ffffff';
+    if (d.k >= (primeira ? T_PREP_1 : T_PREP)) { d.ritmo = []; d.eco = []; fase(p, 'cria'); }
+  } else if (d.fase === 'cria') {
+    bate(p, cr);
+    d.aviso = `Jogador ${cr + 1}: bata ${N} vezes! (${d.bat.length}/${N})`; d.avisoCor = '#ffd84d';
+    const acabou = d.bat.length >= N || (d.ini === null ? d.k >= T_ESPERA : d.k - d.ini >= JANELA);
+    if (acabou) {
+      d.ritmo = completa(d.bat.slice(0, N));
+      fase(p, 'toca'); celulares(p); p.eventos.push('troca');
+    }
+  } else if (d.fase === 'toca') {
+    d.aviso = `Escute o eco... ${d.tocadas}/${N}`; d.avisoCor = '#7ad7ff';
+    while (d.tocadas < N && d.k >= T_PAUSA + d.ritmo[d.tocadas]) { d.tocadas++; pulso(p, -1); }
+    if (d.k >= T_PAUSA + d.ritmo[N - 1] + T_DEPOIS) { fase(p, 'imita'); celulares(p); }
+  } else if (d.fase === 'imita') {
+    bate(p, im);
+    d.eco = d.bat;
+    d.aviso = `Jogador ${im + 1}: repita! (${Math.min(N, d.bat.length)}/${N})`; d.avisoCor = '#ffd84d';
+    const t = d.ini === null ? 0 : d.k - d.ini;
+    const acabou = d.ini === null ? d.k >= T_ESPERA
+      : t >= d.ritmo[N - 1] + T_FOLGA || (d.bat.length >= N && t - d.bat[N - 1] >= T_SOBRA);
+    if (acabou) {
+      d.erros[im] = erroMedio(d.ritmo, d.bat);
+      d.notas[im] = d.placar[im] = nota(d.erros[im]);
+      fase(p, 'nota'); d.eco = d.eco.length ? d.eco : []; celulares(p);
+      p.eventos.push(d.notas[im] >= 70 ? 'gol' : d.notas[im] >= 35 ? 'moeda' : 'queda');
+      if (d.notas[im] >= 70) p.jogadores[im].vy = 8;
+    }
+  } else if (d.fase === 'nota') {
+    d.aviso = `Precisão do Jogador ${im + 1}: ${d.notas[im]}`; d.avisoCor = '#ffd84d';
+    if (d.k >= T_NOTA) {
+      if (++d.turno < 2) { d.criador = im; fase(p, 'prepara'); celulares(p); }
+      else {
+        
+        d.vencedor = quemVenceu(d.notas, d.erros);
+        fase(p, 'fim');
+        if (d.vencedor >= 0) { p.jogadores[d.vencedor].vy = 9; p.eventos.push('gol'); }
+      }
+    }
+  } else {
+    d.aviso = d.vencedor < 0 ? `Empate no ritmo: ${d.notas[0]} a ${d.notas[1]}` : `Jogador ${d.vencedor + 1} tem o melhor ouvido! ${d.notas[0]} a ${d.notas[1]}`; d.avisoCor = '#ffd84d';
+    if (d.k >= T_FIM) return d.vencedor;
+  }
+
+}
+
 export default {
-  id: 'eco', nome: 'Eco', dica: 'Um bate um ritmo de 4 toques, o outro escuta e repete igualzinho. Depois troca!',
+  id: 'eco', genero: 'memoria', nome: 'Eco', dica: 'Jogo de ouvido: ligue o som da TV. Um bate 4 toques, o outro escuta e repete. Depois troca!',
   semMovimento: true, semDash: true, semPulo: true, rotulo: 'precisão', controle: { modo: 'botao', a: 'BATE' },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 9, lz: 5, parede: true };
     p.dados = {
       placar: [0, 0], notas: [null, null], erros: [null, null], turno: 0, criador: p.rng() < 0.5 ? 0 : 1,
-      ritmo: [], eco: [], pulso: { n: 0, quem: -1 }, aviso: '', avisoCor: '#ffffff',
+      ritmo: [], eco: [], pulso: { n: 0, quem: -1 }, luzes: 0, aviso: '', avisoCor: '#ffffff',
     };
     fase(p, 'prepara');
     celulares(p);
   },
 
   atualiza(p, dt) {
-    const d = p.dados, cr = d.criador, im = 1 - cr;
-    p.jogadores.forEach((j, i) => { j.x = i ? X : -X; j.z = Z; j.vx = j.vz = 0; });
-    d.k += dt;
-
-    if (d.fase === 'prepara') {
-      d.aviso = `Jogador ${cr + 1} cria o ritmo!`; d.avisoCor = '#ffffff';
-      if (d.k >= T_PREP) { d.ritmo = []; d.eco = []; fase(p, 'cria'); }
-    } else if (d.fase === 'cria') {
-      bate(p, cr);
-      d.aviso = `Jogador ${cr + 1}: bata ${N} vezes! (${d.bat.length}/${N})`; d.avisoCor = '#ffd84d';
-      const acabou = d.bat.length >= N || (d.ini === null ? d.k >= T_ESPERA : d.k - d.ini >= JANELA);
-      if (acabou) {
-        d.ritmo = completa(d.bat.slice(0, N));
-        fase(p, 'toca'); celulares(p); p.eventos.push('troca');
-      }
-    } else if (d.fase === 'toca') {
-      d.aviso = 'Escute o eco...'; d.avisoCor = '#7ad7ff';
-      while (d.tocadas < N && d.k >= T_PAUSA + d.ritmo[d.tocadas]) { d.tocadas++; pulso(p, -1); }
-      if (d.k >= T_PAUSA + d.ritmo[N - 1] + T_DEPOIS) { fase(p, 'imita'); celulares(p); }
-    } else if (d.fase === 'imita') {
-      bate(p, im);
-      d.eco = d.bat;
-      d.aviso = `Jogador ${im + 1}: repita! (${Math.min(N, d.bat.length)}/${N})`; d.avisoCor = '#ffd84d';
-      const t = d.ini === null ? 0 : d.k - d.ini;
-      const acabou = d.ini === null ? d.k >= T_ESPERA
-        : t >= d.ritmo[N - 1] + T_FOLGA || (d.bat.length >= N && t - d.bat[N - 1] >= T_SOBRA);
-      if (acabou) {
-        d.erros[im] = erroMedio(d.ritmo, d.bat);
-        d.notas[im] = d.placar[im] = nota(d.erros[im]);
-        fase(p, 'nota'); d.eco = d.eco.length ? d.eco : []; celulares(p);
-        p.eventos.push(d.notas[im] >= 70 ? 'gol' : d.notas[im] >= 35 ? 'moeda' : 'queda');
-        if (d.notas[im] >= 70) p.jogadores[im].vy = 8;
-      }
-    } else if (d.fase === 'nota') {
-      d.aviso = `Precisão do Jogador ${im + 1}: ${d.notas[im]}`; d.avisoCor = '#ffd84d';
-      if (d.k >= T_NOTA) {
-        if (++d.turno < 2) { d.criador = im; fase(p, 'prepara'); celulares(p); }
-        else {
-          const [a, b] = d.notas;
-          d.vencedor = a === b ? -1 : a > b ? 0 : 1;
-          fase(p, 'fim');
-          if (d.vencedor >= 0) { p.jogadores[d.vencedor].vy = 9; p.eventos.push('gol'); }
-        }
-      }
-    } else {
-      d.aviso = d.vencedor < 0 ? 'EMPATE NO RITMO!' : `Jogador ${d.vencedor + 1} tem o melhor ouvido!`; d.avisoCor = '#ffd84d';
-      if (d.k >= T_FIM) return d.vencedor;
-    }
+    const r = passoEco(p, dt);
+    const d = p.dados;
+    d.luzes = d.fase === 'toca' ? d.tocadas : d.fase === 'cria' || d.fase === 'imita' ? d.bat.length : 0;     // notas ja soadas nesta fase: acendem as luzes da TV
+    return r;
   },
 
   monta(c) {
@@ -165,6 +187,12 @@ export default {
     pecas.marcasEco = marca(0xffffff, 1.9, -3.0);
     pecas.cursor = malha(new THREE.BoxGeometry(0.12, 2.1, 0.12), 0xffffff, brilho(0xffffff, 1));
     pecas.cursor.visible = false; grupo.add(pecas.cursor);
+
+    // 4 luzes grandes na frente do tambor: cada nota (de quem cria, do eco e de quem imita) acende a proxima. Sinal visual para quem esta sem som.
+    pecas.pips = [0, 1, 2, 3].map(k => {
+      const m = malha(new THREE.CylinderGeometry(0.62, 0.62, 0.16, 24), 0x39405e, { emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.4 });
+      m.position.set((k - 1.5) * 1.7, 0.08, 3.5); grupo.add(m); return m;
+    });
 
     // caixas de som nos cantos (o cone pulsa) e cordao de luzes
     pecas.cones = [];
@@ -217,6 +245,14 @@ export default {
       if (o.userData.k >= 1) o.visible = false;
     }
     for (let i = 0; i < 3; i++) q.bate[i] = Math.max(0, q.bate[i] - dt * 5);
+
+    const corLuz = d.fase === 'toca' ? 0xffd84d : cores[d.fase === 'imita' ? im : cr];
+    q.pips.forEach((m, k) => {
+      const acesa = k < d.luzes, nova = acesa && k === d.luzes - 1 ? q.bate[2] + q.bate[0] + q.bate[1] : 0;
+      m.material.color.set(acesa ? corLuz : 0x39405e); m.material.emissive.set(corLuz);
+      m.material.emissiveIntensity = acesa ? 0.9 + Math.min(1, nova) * 1.6 : 0;
+      m.scale.set(1 + Math.min(1, nova) * 0.35, 1 + Math.min(1, nova) * 1.2, 1 + Math.min(1, nova) * 0.35);
+    });
 
     q.pele.material.emissiveIntensity = q.bate[2] * 1.2;
     q.pele.position.y = 1.14 - q.bate[2] * 0.1;

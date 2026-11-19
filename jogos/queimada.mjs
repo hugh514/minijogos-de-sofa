@@ -21,7 +21,7 @@ function quica(b, fundo) {          // bola arremessada: parede do fundo (ou a s
 }
 
 export default {
-  id: 'queimada', nome: 'Queimada', dica: 'Pegue a bola, A arremessa no outro. B pula a bola. Cada um tem 3 vidas!',
+  id: 'queimada', genero: 'mira', nome: 'Queimada', dica: 'Passe por cima de uma bola para pegar e aperte Joga para acertar o outro. Pula desvia. 3 vidas cada!',
   controle: { modo: 'padrao', a: 'JOGA', b: 'PULA' }, semDash: true, rotulo: 'vidas', duracao: LIMITE,
 
   inicia(p) {
@@ -123,7 +123,7 @@ export default {
         const tem = k < d.placar[i];
         m.material.color.set(tem ? c.cores[i] : 0x30343f); m.material.emissiveIntensity = tem ? 0.6 : 0;
       });
-      if (j.vivo) c.bonecos[i].visible = d.imune[i] <= 0 || Math.floor(t * 14) % 2 === 0;     // pisca enquanto imune
+      if (j.vivo) c.bonecos[i].visible = p.fase !== 'jogando' || d.imune[i] <= 0 || Math.floor(t * 14) % 2 === 0;     // pisca enquanto imune (no resultado fica aceso)
       const seta = pecas.setas[i], naMao = j.vivo && p.fase === 'jogando' && d.bolas.some(b => b.estado === 'mao' && b.dono === i);
       seta.visible = naMao;
       if (naMao) {

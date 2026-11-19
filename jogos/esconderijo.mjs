@@ -7,7 +7,7 @@ const NOMES = ['Vermelha', 'Amarela', 'Verde', 'Roxa'], CORES = [0xff3b30, 0xffd
 const CAIXA_X = [-6, -2, 2, 6], Z_ESCONDE = -3.6, Z_PROCURA = 3.4;
 
 const rapido = d => d.round > 2;
-const prefixo = d => (rapido(d) ? 'DESEMPATE! ' : '');
+const prefixo = d => (rapido(d) ? 'Desempate! ' : '');
 
 function novoRound(p) {
   const d = p.dados;
@@ -38,11 +38,12 @@ function celularProcura(p, texto) {
 
 function termina(p, achou) {
   const d = p.dados, ganhou = achou ? 1 - d.esconde : d.esconde;
-  d.achou = achou; d.ganhou = ganhou;
-  d.placar[ganhou]++;
+  const pontos = achou && d.palpites === PALPITES - 1 ? 2 : 1;     // achar de primeira vale 2
+  d.achou = achou; d.ganhou = ganhou; d.pontos = pontos;
+  d.placar[ganhou] += pontos;
   d.final = d.round >= 2 && d.placar[0] !== d.placar[1];
   d.fase = 'revela'; d.k = 0; d.t = d.final ? T_FINAL : T_REVELA;
-  d.aviso = (achou ? 'ACHOU!' : 'NÃO ACHOU!') + ` Ponto do Jogador ${ganhou + 1}`;
+  d.aviso = (achou ? 'Achou!' : 'Não achou!') + (pontos > 1 ? ` De primeira: 2 pontos do Jogador ${ganhou + 1}` : ` Ponto do Jogador ${ganhou + 1}`);
   d.avisoCor = achou ? '#ffd84d' : '#ff4a4a';
   p.eventos.push(achou ? 'gol' : 'explosao');
   p.jogadores[ganhou].vy = 8;
@@ -51,11 +52,11 @@ function termina(p, achou) {
     j.vz = Math.sign(j.z || 1) * 4; elimina(p, j, 14);
   }
   for (const i of [0, 1])
-    p.celular[i] = { modo: 'espera', texto: `O tesouro estava na caixa ${NOMES[d.tesouro]}.` + (i === ganhou ? ' Ponto seu!' : ' Ponto do outro.') };
+    p.celular[i] = { modo: 'espera', texto: `O tesouro estava na caixa ${NOMES[d.tesouro]}.` + (i === ganhou ? (pontos > 1 ? ' 2 pontos seus!' : ' Ponto seu!') : (pontos > 1 ? ' 2 pontos do outro.' : ' Ponto do outro.')) };
 }
 
 export default {
-  id: 'esconderijo', nome: 'Quatro esconderijos', dica: 'Um esconde o tesouro e dá uma dica, verdadeira ou falsa. O outro tem 2 palpites!',
+  id: 'esconderijo', genero: 'blefe', nome: 'Quatro esconderijos', dica: 'Um esconde o tesouro e dá uma dica, verdadeira ou falsa. O outro tem 2 palpites, e achar de primeira vale 2 pontos!',
   semMovimento: true, semDash: true, semPulo: true, rotulo: 'rounds', controle: { modo: 'espera' },
 
   inicia(p) {

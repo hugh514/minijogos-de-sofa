@@ -47,7 +47,7 @@ test('ultimo-golpe: avisa quando falta 1 golpe', () => {
   p.dados.vida = 2;
   golpeia(p, 0);
   assert.equal(p.dados.vida, 1);
-  assert.equal(p.dados.aviso, 'FALTA 1 GOLPE!');
+  assert.equal(p.dados.aviso, 'Falta 1 golpe!');
   roda(p, 3);
   assert.equal(p.dados.aviso, '', 'o aviso some para nao tapar a tela');
 });
@@ -83,13 +83,24 @@ test('ultimo-golpe: atordoado nao consegue golpear', () => {
   assert.equal(p.dados.vida, 16);
 });
 
-test('ultimo-golpe: tempo acaba com o chefao vivo, empate', () => {
+test('ultimo-golpe: tempo acaba com o chefao vivo: leva quem deu o ultimo golpe; ninguem bateu, empate', () => {
   const p = semOnda();
-  p.dados.placar = [7, 2]; p.dados.vida = 7;
+  p.dados.vida = 7; p.dados.golpe = { n: 9, x: 1, z: 0, quem: 1 };
   roda(p, 39);
   assert.equal(p.fase, 'jogando');
   roda(p, 2);
-  assert.equal(p.vencedor, -1);
+  assert.equal(p.vencedor, 1);
+  const q = semOnda();
+  roda(q, 41);
+  assert.equal(q.vencedor, -1);
+});
+
+test('ultimo-golpe: com pouca vida a varrida vem mais depressa', () => {
+  const cheio = partidaCom(jogo), fraco = partidaCom(jogo);
+  fraco.dados.vida = 3;
+  for (const p of [cheio, fraco]) { p.dados.prox = 0.01; roda(p, 1.2); }
+  assert.ok(fraco.dados.prox <= 5 && cheio.dados.prox >= 3.5, 'prox ' + fraco.dados.prox + ' x ' + cheio.dados.prox);
+  assert.ok(fraco.dados.prox < 5.01);
 });
 
 test('ultimo-golpe: roda inteiro, parado e com dedos aleatorios, sem erro', () => {

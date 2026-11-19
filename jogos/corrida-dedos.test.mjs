@@ -24,6 +24,15 @@ test('cem metros: alternar A e B faz correr ate a chegada e vencer', () => {
   assert.ok(k * 0.1 > 4 && k * 0.1 < 20, 'duracao razoavel a 10 toques por segundo: ' + k * 0.1);
 });
 
+test('cem metros: humano mediano (7 toques por segundo) leva uns 15 s, nao acaba antes de entender', () => {
+  const p = partidaCom(jogo); prepara(p);
+  let k = 0;
+  while (p.fase === 'jogando' && k < 600) { const j = p.jogadores[0]; entrada(p, 0, k++ % 2 ? { n: j.n + 1, nb: j.nb } : { n: j.n, nb: j.nb + 1 }); roda(p, 1 / 7); }
+  const seg = k * 9 * DT;                           // roda(p, 1/7) anda 9 quadros
+  assert.equal(p.vencedor, 0);
+  assert.ok(seg > 13 && seg < LIMITE, 'duracao a 7 toques por segundo: ' + seg.toFixed(1));
+});
+
 test('cem metros: repetir o mesmo botao nao da impulso e tropeca', () => {
   const p = partidaCom(jogo); prepara(p);
   for (let k = 0; k < 10; k++) toca(p, 0, k % 2 ? 'a' : 'b');

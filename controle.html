@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Controle</title>
+<title>Almofadada</title>
 <style>
+  @font-face{font-family:'Baloo 2';src:url(/fontes/baloo2.woff2) format('woff2');font-weight:400 800;font-display:swap}
   :root{--cor:#2f7df6;--tinta:#fff;--ouro:#ffc531}
-  html,body{margin:0;height:100%;background:#0f1220;color:#fff;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#0f1220;color:#fff;font-family:'Baloo 2',system-ui,sans-serif;line-height:1.15;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent}
   button{font-family:inherit;color:#fff;border:0;padding:0;background:none}
   .ic{width:1.2em;height:1.2em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
   .moeda{display:inline-block;width:1em;height:1em;border-radius:50%;flex:none;vertical-align:-.14em;background:radial-gradient(circle at 35% 30%,#fff6c2 0 16%,#ffc531 42%,#e09200 100%);box-shadow:inset 0 0 0 .08em #a86400,inset 0 0 0 .2em #ffd968}
@@ -15,7 +16,14 @@
 
   /* ---------- escolha do jogador ---------- */
   #escolha{display:flex;flex-direction:column;gap:18px;justify-content:center;align-items:center;height:100%;background:radial-gradient(120% 100% at 50% 0,#27305c,#0f1220 70%)}
-  #escolha h1{margin:0;font-size:26px;letter-spacing:.5px}
+  #escolha h1{margin:0;font-size:26px;font-weight:800}
+  #escolha .logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;opacity:.85}
+  #escolha .logo i{width:34px;height:24px;border-radius:12px 12px 10px 10px;background:linear-gradient(#ff8fb8,#e0457f);box-shadow:inset 0 -4px 0 #0003;position:relative}
+  #escolha .logo i::after{content:'';position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:#fff8}
+  #escolha .tx{display:flex;flex-direction:column;align-items:flex-start;line-height:1.05;min-width:0}
+  #escolha .tx b{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #escolha .tx small{font-size:15px;font-weight:700;opacity:.8}
+  #escolha button.ocupado{filter:saturate(.25) brightness(.6)}
   #escolha .dupla{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;width:88%}
   #escolha button{flex:1 1 220px;max-width:320px;font-size:26px;font-weight:800;padding:22px 20px;border-radius:20px;display:flex;align-items:center;justify-content:center;gap:14px;background:linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,0) 50%),var(--c);box-shadow:inset 0 -6px 0 rgba(0,0,0,.25),0 6px 0 rgba(0,0,0,.5)}
   .carinha{width:1.3em;height:1.3em;border-radius:50%;flex:none;position:relative;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--cor);box-shadow:0 0 0 2px rgba(255,255,255,.25)}
@@ -76,31 +84,83 @@
   #ponto{position:absolute;width:44px;height:44px;border-radius:50%;margin:-22px 0 0 -22px;display:none;pointer-events:none;background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.5),rgba(255,255,255,0) 55%),var(--cor);box-shadow:0 0 0 6px rgba(255,255,255,.15),0 4px 10px rgba(0,0,0,.6)}
   #opcoes{flex-wrap:wrap;gap:10px;padding:10px;box-sizing:border-box;align-content:center}
   #opcoes button{flex:1 1 40%;min-height:34%;border-radius:18px;font-size:24px;font-weight:700;background:linear-gradient(#3d4780,#2b3360);box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),0 4px 0 rgba(0,0,0,.5)}
+  /* opcoes coloridas em linha (cor-mentirosa): s.coresOp (uma cor por botao) e s.linha */
+  #opcoes.linha{flex-wrap:nowrap}
+  #opcoes.linha button{flex:1 1 0;min-height:78%;font-size:20px}
+  #opcoes button.colorido{background:linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,0) 50%),var(--bc);color:#10131f;font-weight:900}
   #opcoes button.sel{outline:5px solid #fff;background:linear-gradient(rgba(255,255,255,.25),rgba(255,255,255,0) 50%),var(--cor);color:var(--tinta)}
   /* menu de modos: so o Jogador 1 (anfitriao) ve, na espera */
   #menu{flex-direction:row;gap:10px;padding:6px 10px 10px;box-sizing:border-box;align-items:stretch;justify-content:stretch}
-  #menuLista{flex:1;min-width:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  #menuLista button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 8px;border-radius:16px;font-size:19px;font-weight:800;line-height:1.1;text-align:center;
-    background:linear-gradient(#3d4780,#2b3360);box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),0 4px 0 rgba(0,0,0,.5);border:3px solid transparent}
-  #menuLista button small{font-size:13px;font-weight:600;opacity:.8}
-  #menuLista button.sel{border-color:#fff;background:linear-gradient(rgba(255,255,255,.22),rgba(255,255,255,0) 55%),var(--cor);color:var(--tinta)}
-  #menuLista button:disabled{opacity:.35;box-shadow:none}
+  /* deitado: 4 colunas; em pe: lista. Cada cartao tem desenho, nome, linha (ou o motivo da trava) e, no escolhido, quantos minijogos tem */
+  #menuLista{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  #menuLista button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 6px;border-radius:16px;font-size:20px;font-weight:800;line-height:1.05;text-align:center;
+    background:linear-gradient(#3d4780,#2b3360);box-shadow:inset 0 -5px 0 rgba(0,0,0,.25),0 4px 0 rgba(0,0,0,.5);border:3px solid transparent;transition:transform .15s}
+  #menuLista svg.des{width:58px;height:34px;fill:currentColor;opacity:.9}
+  #menuLista button small{font-size:14px;font-weight:700;opacity:.8}
+  #menuLista button .qtd{font-size:13px;opacity:.95}
+  #menuLista button .qtd:empty{display:none}
+  #menuLista button.sel{border-color:#fff;transform:scale(1.06);background:linear-gradient(rgba(255,255,255,.22),rgba(255,255,255,0) 55%),var(--cor);color:var(--tinta)}
+  #menuLista button.trava{filter:grayscale(1);opacity:.5;box-shadow:none}
+  #menuLista button.treme{animation:balanca .2s 2}
+  @keyframes balanca{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
   #menuLado{width:30%;min-width:150px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
-  #menuConectados{display:flex;gap:6px;justify-content:center;align-items:center;font-size:13px;font-weight:700}
-  #menuConectados i{font-style:normal;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.12);color:rgba(255,255,255,.45);font-weight:900}
-  #menuConectados i.on{background:#35c26b;color:#06210f}
-  #menuGo{flex:1;border-radius:18px;font-size:26px;font-weight:900;letter-spacing:1px;color:#06210f;background:linear-gradient(#7af0a2,#2fbf68);box-shadow:inset 0 -6px 0 rgba(0,0,0,.2),0 5px 0 #0f6b39}
+  #menuConectados{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center}
+  #menuConectados i{font-style:normal;padding:1px 10px 2px;border-radius:99px;font-size:14px;font-weight:800;background:var(--pc);color:var(--pt,#fff);max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #menuConectados i.pula{animation:pulinho .45s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes pulinho{40%{transform:translateY(-8px) scale(1.1)}}
+  #menuNome{font-size:14px;font-weight:700;color:#ffe08a;text-decoration:underline;padding:2px}
+  #menuGo{position:relative;flex:1;border-radius:18px;font-size:28px;font-weight:800;color:#06210f;background:linear-gradient(#7af0a2,#2fbf68);box-shadow:inset 0 -6px 0 rgba(0,0,0,.2),0 5px 0 #0f6b39;overflow:hidden}
+  /* anel da contagem automatica: a borda clara vai esvaziando */
+  #menuGo::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:5px;background:conic-gradient(#fff calc(var(--f,0) * 360deg),#0000 0);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
   #menuGo:active{transform:translateY(4px);box-shadow:none}
   #menuGo:disabled{filter:saturate(.2) brightness(.6)}
-  #menuDica{font-size:13px;font-weight:700;text-align:center;min-height:2.4em;opacity:.85}
-  @media (orientation:portrait){ #menu{flex-direction:column} #menuLado{width:auto} #menuGo{min-height:70px} }
-  #espera{font-size:22px;text-align:center;padding:0 20px;flex-direction:column;justify-content:center;gap:12px}
-  #esperaTx{display:flex;align-items:center;gap:12px;opacity:.75}
-  #espera .ic{width:44px;height:44px;stroke-width:1.5;animation:respira 2s ease-in-out infinite}
-  @keyframes respira{50%{transform:translateY(-5px);opacity:.6}}
+  #menuDica{font-size:14px;font-weight:700;text-align:center;min-height:2.4em;opacity:.9}
+  @media (orientation:portrait){ #menu{flex-direction:column} #menuLista{grid-template-columns:1fr} #menuLista button{flex-direction:row;flex-wrap:wrap;gap:2px 10px;justify-content:flex-start;text-align:left} #menuLado{width:auto} #menuGo{min-height:70px} }
+  #espera{font-size:22px;text-align:center;padding:0 20px;flex-direction:column;justify-content:center;gap:10px}
+  #esperaTx{display:flex;align-items:center;gap:12px;opacity:.85;font-weight:700}
+  #esperaTx .carinha{font-size:44px;animation:respira 2s ease-in-out infinite}
+  #esperaTx .visto{display:none;width:44px;height:44px;border-radius:50%;background:#35c26b;color:#06210f;place-items:center;animation:mola .5s cubic-bezier(.2,1.8,.4,1)}
+  #espera.pronto #esperaTx .visto{display:grid} #espera.pronto #esperaTx .carinha{display:none}
+  #esperaTx .visto .ic{width:28px;height:28px;stroke-width:3}
+  @keyframes mola{0%{transform:scale(.2)}}
+  @keyframes respira{50%{transform:translateY(-5px)}}
+  #espera .fila{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  #nomeIni{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;font-size:18px;font-weight:800}
+  #nomeIni[hidden]{display:none}
+  #nomeIni input{width:9em;height:44px;border-radius:12px;border:2px solid #3a4478;background:#12162a;color:#fff;font:800 18px 'Baloo 2',system-ui,sans-serif;text-align:center;user-select:text;-webkit-user-select:text}
+  #nomeIni button{height:44px;padding:0 16px;border-radius:12px;font-size:17px;font-weight:800;background:linear-gradient(#45d683,#1fa158);box-shadow:0 3px 0 #0f6a37}
+  #nomeIni button.leve{background:none;box-shadow:none;color:#a9b1d8;text-decoration:underline;padding:0 6px}
+  #visual{min-height:64px;padding:10px 22px;border-radius:22px;font-size:22px;font-weight:800;background:linear-gradient(#4a58a6,#36418a);box-shadow:inset 0 -5px 0 rgba(0,0,0,.18),0 6px 0 #1b2147}
+  #visual:active{transform:translateY(4px);box-shadow:none}
   /* torcer: alvo grande, afunda ao tocar e fica apagado na recarga */
-  #torcer{min-width:min(70vw,360px);min-height:64px;padding:10px 28px;border-radius:22px;font-size:26px;font-weight:900;letter-spacing:1px;color:#3a2600;
+  #torcer{min-width:min(40vw,260px);min-height:64px;padding:10px 28px;border-radius:22px;font-size:26px;font-weight:800;color:#3a2600;
     background:linear-gradient(#ffe07a,#ffb81f);box-shadow:inset 0 -5px 0 rgba(0,0,0,.18),0 6px 0 #a86400;transition:transform .06s,filter .2s}
+  /* explicacao do minijogo: nome, dica e o desenho do controle ao lado do botao Entendi */
+  #botao.comEx{justify-content:center;gap:4vmin;padding:0 4vmin;box-sizing:border-box}
+  #botao.comEx #btG{width:38%;height:76%;font-size:38px}
+  #explica{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;text-align:left}
+  #explica[hidden]{display:none}
+  #explica small{font-size:15px;font-weight:700;color:#ffe08a}
+  #explica b{font-size:30px;font-weight:800;line-height:1}
+  #explica p{margin:0;font-size:20px;line-height:1.15;font-weight:600;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .fone{display:flex;align-items:center;justify-content:space-around;gap:6px;width:170px;height:62px;margin-top:4px;padding:4px 10px;box-sizing:border-box;border-radius:14px;border:2px solid #56609a;background:#171b30;font-size:12px;font-weight:800}
+  .fone .j{width:34px;height:34px;border-radius:50%;border:2px solid #56609a;background:radial-gradient(circle,var(--cor) 0 30%,#0000 32%)}
+  .fone .bt{min-width:34px;height:34px;padding:0 6px;border-radius:99px;display:grid;place-items:center;background:var(--cor);color:var(--tinta);white-space:nowrap;overflow:hidden}
+  .fone .bt.b{background:#555c7c;color:#fff}
+  .fone .op{padding:2px 6px;border-radius:8px;background:#3d4780}
+  @media (orientation:portrait){ #botao.comEx{flex-direction:column;padding:10px 6vw} #botao.comEx #btG{width:100%;height:30%} }
+  /* pausa no celular: cobre o controle, mas fica abaixo do topo (o botao Tempo segue tocavel) */
+  #pausaCel{position:fixed;left:0;right:0;bottom:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:10px;box-sizing:border-box;background:#0f1220f2}
+  #pausaCel[hidden]{display:none}
+  #pausaCel h2{margin:0;font-size:30px;font-weight:800}
+  #pausaCel .acoes{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;max-width:640px}
+  #pausaCel button{position:relative;overflow:hidden;min-height:56px;padding:6px 20px;border-radius:16px;font-size:19px;font-weight:800;background:linear-gradient(#3d4780,#2b3360);box-shadow:0 4px 0 #0a0d1a}
+  #pausaCel #continuar{background:linear-gradient(#7af0a2,#2fbf68);color:#06210f;box-shadow:0 4px 0 #0f6b39;font-size:24px;min-width:220px}
+  #pausaCel button.perigo{background:linear-gradient(#6a3045,#4a2030)}
+  #pausaCel button::after,#trocar::after{content:'';position:absolute;left:0;bottom:0;height:5px;width:0;background:#ffc531}
+  #pausaCel button.segura::after,#trocar.segura::after{width:100%;transition:width 1s linear}
+  #pausaJ1[hidden]{display:none}
   #torcer.ap{transform:translateY(5px) scale(.97);box-shadow:inset 0 -2px 0 rgba(0,0,0,.18),0 1px 0 #a86400}
   #torcer.recarga{filter:saturate(.3) brightness(.75)}
   #provoca{display:none;justify-content:center;align-items:center;gap:10px;padding:4px 10px 6px}
@@ -136,10 +196,10 @@
   #sairPrevia{width:40px;height:40px;border-radius:12px;background:#2a3052;box-shadow:0 3px 0 #141830;display:grid;place-items:center;font-size:16px}
   #placa{display:flex;align-items:center;gap:6px;height:40px;padding:0 10px;border-radius:12px;background:#12162a;border:2px solid #3a4478;color:#8f98c4;box-sizing:border-box}
   #placa:focus-within{border-color:var(--ouro);color:var(--ouro)}
-  #nome{flex:1;min-width:0;height:100%;background:none;border:0;outline:0;color:#fff;font:800 18px system-ui,sans-serif;text-align:center;user-select:text;-webkit-user-select:text}
+  #nome{flex:1;min-width:0;height:100%;background:none;border:0;outline:0;color:#fff;font:800 18px 'Baloo 2',system-ui,sans-serif;text-align:center;user-select:text;-webkit-user-select:text}
   #nome::placeholder{color:#5d668f;font-weight:600}
   #conta{font-size:11px;font-variant-numeric:tabular-nums}
-  #trocar{align-self:center;display:flex;align-items:center;gap:5px;font-size:12px;color:#8f98c4;padding:3px 10px}
+  #trocar{position:relative;overflow:hidden;align-self:center;display:flex;align-items:center;gap:5px;font-size:12px;color:#8f98c4;padding:3px 10px}
   #direita{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
   #cabeca{display:flex;gap:8px;align-items:center}
   #abas{flex:1;display:flex;gap:3px;padding:3px;min-width:0;background:#12162a;border-radius:12px}
@@ -199,7 +259,7 @@
   #aviso{position:fixed;z-index:20;left:50%;top:8px;transform:translate(-50%,-140%);transition:transform .35s cubic-bezier(.2,1.4,.4,1);pointer-events:none;display:flex;align-items:center;gap:10px;max-width:92vw;box-sizing:border-box;padding:8px 16px 8px 8px;border-radius:99px;background:linear-gradient(#3b3520,#211f14);border:2px solid var(--ouro);box-shadow:0 8px 24px rgba(0,0,0,.6),0 0 20px rgba(255,197,49,.35)}
   #aviso.on{transform:translate(-50%,0)}
   #aviso .tx{display:flex;flex-direction:column;line-height:1.2;min-width:0}
-  #aviso small{font-size:11px;color:var(--ouro);font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+  #aviso small{font-size:12px;color:var(--ouro);font-weight:800}
   #aviso b{font-size:16px;white-space:nowrap}
   #aviso span span{font-size:12px;color:#e9dfb5}
 
@@ -239,13 +299,9 @@
 </svg>
 
 <div id="escolha">
-  <h1>Quem é você?</h1>
-  <div class="dupla">
-    <button style="--c:#2f7df6" onclick="comecar(1)"><i class="carinha" aria-hidden="true"></i>Jogador 1</button>
-    <button style="--c:#f0458f" onclick="comecar(2)"><i class="carinha" aria-hidden="true"></i>Jogador 2</button>
-    <button style="--c:#35c26b" onclick="comecar(3)"><i class="carinha" aria-hidden="true"></i>Jogador 3</button>
-    <button style="--c:#ffc531" class="claro" onclick="comecar(4)"><i class="carinha" aria-hidden="true"></i>Jogador 4</button>
-  </div>
+  <div class="logo"><i></i>Almofadada</div>
+  <h1>Qual é o seu lugar no sofá?</h1>
+  <div class="dupla" id="lugares"></div>
 </div>
 
 <div id="jogo">
@@ -255,28 +311,35 @@
     <span id="cartaChip"></span>
     <span class="esp" id="nomeJogo"></span>
     <button id="reagir" aria-label="Reações" aria-expanded="false"><svg class="ic"><use href="#i-carinha"/></svg></button>
-    <button id="pausar" aria-label="Pausa"><svg class="ic"><use href="#i-pausa"/></svg><span>Pausa</span></button>
-    <button id="abrePerfil" aria-label="Perfil e loja"><svg class="ic"><use href="#i-perfil"/></svg><span>Perfil e loja</span><i class="novo"></i></button>
+    <button id="pausar" aria-label="Tempo"><svg class="ic"><use href="#i-pausa"/></svg><span>Tempo</span></button>
+    <button id="abrePerfil" aria-label="Loja"><svg class="ic"><use href="#i-perfil"/></svg><span>Loja</span><i class="novo"></i></button>
   </div>
   <div id="texto"></div>
   <div id="provoca" aria-label="Reações rápidas"></div>
   <div class="area" id="padrao">
     <div id="base"><div id="bola"></div><div id="seta"></div></div>
-    <div id="botoes"><button id="btB">PULA</button><button id="btA">EMPURRA</button></div>
+    <div id="botoes"><button id="btB">Pula</button><button id="btA">Empurra</button></div>
   </div>
-  <div class="area" id="botao"><button id="btG">APERTA!</button></div>
+  <div class="area" id="botao"><div id="explica" hidden><small>Agora é</small><b id="exNome"></b><p id="exDica"></p><div class="fone" id="exCtl"></div></div><button id="btG">Aperta</button></div>
   <div class="area" id="toque"><div id="pad"><span id="padDica">arraste aqui</span><div id="ponto"></div></div></div>
   <div class="area" id="opcoes"></div>
   <div class="area" id="menu">
     <div id="menuLista">
-      <button data-m="classico" style="--cor:#2f7df6;--tinta:#fff">Clássico (2 jogadores)</button>
-      <button data-m="vs" style="--cor:#f0458f;--tinta:#fff">Festa: todos contra todos</button>
-      <button data-m="times" style="--cor:#ff7a1a;--tinta:#1a0c00">Festa: times 2x2<small>só com 4 conectados</small></button>
-      <button data-m="coop" style="--cor:#35c26b;--tinta:#06210f">Festa: cooperativo</button>
+      <button data-m="classico" style="--cor:#2f7df6;--tinta:#fff"><svg class="des" viewBox="0 0 58 34" aria-hidden="true"><circle cx="17" cy="19" r="10"/><circle cx="41" cy="19" r="10"/><path d="M26 6l3 4 3-4" stroke="currentColor" stroke-width="2.5" fill="none"/></svg><b>Duelo</b><small class="lin"></small><small class="qtd"></small></button>
+      <button data-m="vs" style="--cor:#f0458f;--tinta:#fff"><svg class="des" viewBox="0 0 58 34" aria-hidden="true"><circle cx="9" cy="12" r="6.5"/><circle cx="25" cy="24" r="6.5"/><circle cx="36" cy="9" r="6.5"/><circle cx="50" cy="23" r="6.5"/></svg><b>Cada um por si</b><small class="lin"></small><small class="qtd"></small></button>
+      <button data-m="times" style="--cor:#ff7a1a;--tinta:#1a0c00"><svg class="des" viewBox="0 0 58 34" aria-hidden="true"><circle cx="8" cy="19" r="6.5"/><circle cx="20" cy="19" r="6.5"/><circle cx="38" cy="19" r="6.5"/><circle cx="50" cy="19" r="6.5"/></svg><b>Duplas</b><small class="lin"></small><small class="qtd"></small></button>
+      <button data-m="coop" style="--cor:#35c26b;--tinta:#06210f"><svg class="des" viewBox="0 0 58 34" aria-hidden="true"><path d="M8 24H50" stroke="currentColor" stroke-width="3"/><circle cx="8" cy="16" r="6.5"/><circle cx="22" cy="16" r="6.5"/><circle cx="36" cy="16" r="6.5"/><circle cx="50" cy="16" r="6.5"/></svg><b>Todos juntos</b><small class="lin"></small><small class="qtd"></small></button>
     </div>
-    <div id="menuLado"><div id="menuConectados" aria-label="Jogadores conectados"></div><button id="menuGo">COMEÇAR</button><div id="menuDica"></div></div>
+    <div id="menuLado"><div id="menuConectados" aria-label="Quem está no sofá"></div><button id="menuNome" hidden>Como te chamam?</button><button id="menuGo">Começar</button><div id="menuDica"></div></div>
   </div>
-  <div class="area" id="espera"><div id="esperaTx"><svg class="ic"><use href="#i-tela"/></svg>Olhe para a tela do PC</div><button id="torcer">TORCER!</button></div>
+  <div class="area" id="espera"><div id="esperaTx"><i class="carinha"></i><span class="visto"><svg class="ic"><use href="#i-check"/></svg></span><span id="esperaMsg">De olho na TV</span></div>
+    <div id="nomeIni" hidden><span>Como te chamam?</span><input id="nomeNovo" maxlength="10" placeholder="Seu nome" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"><button id="bora">Bora</button><button id="depois" class="leve">Depois eu ponho</button></div>
+    <div class="fila"><button id="torcer">Torcer</button><button id="visual">Mexer no visual</button></div></div>
+</div>
+<div id="pausaCel" hidden>
+  <h2 id="pausaQuem">Tempo!</h2>
+  <div class="acoes"><button id="continuar">Continuar</button></div>
+  <div class="acoes" id="pausaJ1" hidden><button id="pausaPula">Pular este minijogo</button><button id="pausaReinicia" class="perigo">Recomeçar a partida (segure)</button><button id="pausaMenu" class="perigo">Voltar ao menu (segure)</button></div>
 </div>
 
 <div id="barraRea" role="menu" aria-label="Reações"></div>
@@ -289,18 +352,18 @@
     <div id="palco">
       <canvas id="previa"></canvas>
       <span class="saldo" id="saldoPerfil"><i class="moeda"></i><span id="saldo">0</span></span>
-      <span id="tagPrevia"><svg class="ic"><use href="#i-olho"/></svg>Prévia</span>
+      <span id="tagPrevia"><svg class="ic"><use href="#i-olho"/></svg>Provando</span>
     </div>
     <div id="barraPrevia">
       <button id="comprar"></button>
-      <button id="sairPrevia" aria-label="Fechar prévia"><svg class="ic"><use href="#i-x"/></svg></button>
+      <button id="sairPrevia" aria-label="Tirar"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <label id="placa">
       <svg class="ic"><use href="#i-lapis"/></svg>
-      <input id="nome" maxlength="10" placeholder="Seu nome" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
+      <input id="nome" maxlength="10" placeholder="Como te chamam?" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
       <small id="conta">0/10</small>
     </label>
-    <button id="trocar"><svg class="ic"><use href="#i-troca"/></svg>Trocar de jogador</button>
+    <button id="trocar"><svg class="ic"><use href="#i-troca"/></svg>Mudar de lugar (segure)</button>
   </div>
   <div id="direita">
     <div id="cabeca">
@@ -309,19 +372,21 @@
         <button class="aba">Chapéus</button>
         <button class="aba">Reações</button>
         <button class="aba">Troféus<i class="novo"></i></button>
+        <button class="aba" hidden>Lanchonete</button>
       </div>
-      <button id="fechar"><svg class="ic"><use href="#i-check"/></svg>Pronto</button>
+      <button id="fechar"><svg class="ic"><use href="#i-check"/></svg>Voltar ao jogo</button>
     </div>
     <div id="paineis">
       <div class="painel"><div class="grade" id="lojaCores"></div></div>
       <div class="painel"><div class="grade" id="lojaChapeus"></div></div>
       <div class="painel"><div class="grade" id="lojaReacoes"></div></div>
       <div class="painel"><div id="resumo"></div><div id="trofeus"></div></div>
+      <div class="painel" hidden><div id="lanchonete"></div></div>
     </div>
   </div>
 </div>
 
-<div id="aviso"><span class="selo"><svg class="ic"><use id="avisoIc" href="#i-trofeu"/></svg></span><span class="tx"><small>Troféu conquistado</small><b id="avisoNome"></b><span id="avisoTx"></span></span></div>
+<div id="aviso"><span class="selo"><svg class="ic"><use id="avisoIc" href="#i-trofeu"/></svg></span><span class="tx"><small>Troféu novo!</small><b id="avisoNome"></b><span id="avisoTx"></span></span></div>
 
 <script>
 // ---------- catalogo (a tela do PC usa os mesmos indices) ----------
@@ -345,24 +410,24 @@ const LOJAS = { cor: [CORES, 'cores', 'lojaCores'], chapeu: [CHAPEUS, 'chapeus',
 const EST0 = { rodadas: 0, vitorias: 0, partidas: 0, empates: 0, seq: 0, maiorSeq: 0, ganho: 0, reacoes: 0, porJogo: {} };
 // id, icone, nome, descricao, meta, bonus em moedas, valor atual
 const TROFEUS = [
-  ['v1', 'estrela', 'Primeira vitória', 'Vença uma rodada', 1, 5, e => e.vitorias],
-  ['v10', 'medalha', 'Dez na conta', 'Vença 10 rodadas', 10, 10, e => e.vitorias],
-  ['v50', 'trofeu', 'Lenda da sala', 'Vença 50 rodadas', 50, 40, e => e.vitorias],
-  ['s3', 'fogo', 'Pegando fogo', 'Vença 3 rodadas seguidas', 3, 10, e => e.maiorSeq],
-  ['s5', 'fogo', 'Imparável', 'Vença 5 rodadas seguidas', 5, 20, e => e.maiorSeq],
-  ['p1', 'coroa', 'Campeão da noite', 'Vença uma partida', 1, 10, e => e.partidas],
-  ['p5', 'coroa', 'Dono do sofá', 'Vença 5 partidas', 5, 30, e => e.partidas],
-  ['d5', 'controle', 'Curioso', 'Vença em 5 minijogos diferentes', 5, 15, e => Object.keys(e.porJogo).length],
-  ['d10', 'controle', 'Mestre de tudo', 'Vença em 10 minijogos diferentes', 10, 30, e => Object.keys(e.porJogo).length],
-  ['m100', 'cofre', 'Cofrinho', 'Junte 100 moedas ao todo', 100, 5, e => e.ganho],
-  ['m500', 'cofre', 'Cofre cheio', 'Junte 500 moedas ao todo', 500, 20, e => e.ganho],
-  ['c1', 'chapeu', 'De chapéu novo', 'Compre o primeiro chapéu', 1, 5, () => perfil.chapeus.length - 1],
-  ['cT', 'chapeu', 'Chapelaria completa', 'Tenha todos os chapéus', CHAPEUS.length - 1, 40, () => perfil.chapeus.length - 1],
-  ['corT', 'gota', 'Arco-íris', 'Tenha todas as cores', CORES.length, 30, () => perfil.cores.length],
-  ['e3', 'igual', 'Empate técnico', 'Empate 3 rodadas', 3, 5, e => e.empates],
-  ['r30', 'raio', 'Veterano', 'Jogue 30 rodadas', 30, 10, e => e.rodadas],
-  ['rp1', 'carinha', 'Boca no mundo', 'Compre o primeiro pacote de reações', 1, 5, () => perfil.pacotes.length],
-  ['rpT', 'carinha', 'Coleção de emojis', 'Tenha todos os pacotes de reações', PACOTES.length, 25, () => perfil.pacotes.length],
+  ['v1', 'estrela', 'Estreia', 'Ganhe uma rodada', 1, 5, e => e.vitorias],
+  ['v10', 'medalha', 'Dez na conta', 'Ganhe 10 rodadas', 10, 10, e => e.vitorias],
+  ['v50', 'trofeu', 'Lenda da sala', 'Ganhe 50 rodadas', 50, 40, e => e.vitorias],
+  ['s3', 'fogo', 'Pegando fogo', '3 seguidas', 3, 10, e => e.maiorSeq],
+  ['s5', 'fogo', 'Ninguém segura', '5 seguidas', 5, 20, e => e.maiorSeq],
+  ['p1', 'coroa', 'Rei do sofá por uma noite', 'Ganhe uma partida', 1, 10, e => e.partidas],
+  ['p5', 'coroa', 'Dono do sofá', 'Ganhe 5 partidas', 5, 30, e => e.partidas],
+  ['d5', 'controle', 'Bom em tudo', 'Ganhe em 5 minijogos diferentes', 5, 15, e => Object.keys(e.porJogo).length],
+  ['d10', 'controle', 'Faz-tudo', 'Ganhe em 10 minijogos diferentes', 10, 30, e => Object.keys(e.porJogo).length],
+  ['m100', 'cofre', 'Cofrinho', 'Ganhe 100 moedas', 100, 5, e => e.ganho],
+  ['m500', 'cofre', 'Porquinho gordo', 'Ganhe 500 moedas', 500, 20, e => e.ganho],
+  ['c1', 'chapeu', 'Chapéu novo', 'Compre um chapéu', 1, 5, () => perfil.chapeus.length - 1],
+  ['cT', 'chapeu', 'Chapelaria', 'Todos os chapéus', CHAPEUS.length - 1, 40, () => perfil.chapeus.length - 1],
+  ['corT', 'gota', 'Arco-íris', 'Todas as cores', CORES.length, 30, () => perfil.cores.length],
+  ['e3', 'igual', 'Nem lá nem cá', 'Empate 3 rodadas', 3, 5, e => e.empates],
+  ['r30', 'raio', 'Sofá gasto', 'Jogue 30 rodadas', 30, 10, e => e.rodadas],
+  ['rp1', 'carinha', 'Boca no mundo', 'Compre um pacote de reações', 1, 5, () => perfil.pacotes.length],
+  ['rpT', 'carinha', 'Repertório', 'Todos os pacotes', PACOTES.length, 25, () => perfil.pacotes.length],
   ['rt50', 'carinha', 'Tagarela', 'Mande 50 reações', 50, 10, e => e.reacoes],
 ];
 
@@ -423,7 +488,7 @@ function mostraMoedas() {
   $('moedas').textContent = perfil.moedas;
   cancelAnimationFrame(animMoedas);
   const de = mostrado ?? perfil.moedas, para = perfil.moedas, t0 = performance.now();
-  const pinta = v => { mostrado = v; $('moedasVis').textContent = $('saldo').textContent = v; };
+  const pinta = v => { mostrado = v; $('moedasVis').textContent = $('saldo').textContent = milhar(v); };
   if (de === para) return pinta(para);
   for (const id of ['saldoTopo', 'saldoPerfil']) { $(id).classList.remove('pulsa'); void $(id).offsetWidth; $(id).classList.add('pulsa'); }
   const passo = agora => {
@@ -460,7 +525,7 @@ function confereTrofeus() {             // 1 = conquistado, falta pegar o bonus;
   for (const [id, icone, nome, , meta, bonus, valor] of TROFEUS)
     if (!perfil.trofeus[id] && valor(perfil.est) >= meta) {
       perfil.trofeus[id] = 1;
-      aviso(icone, nome, `Pegue +${bonus} moedas na aba Troféus`);
+      aviso(icone, nome, `Tem ${bonus} moedas te esperando em Troféus`);
       treme([40, 40, 120]);
     }
   document.body.classList.toggle('temPremio', Object.values(perfil.trofeus).includes(1));
@@ -499,7 +564,7 @@ function mostraPrevia() {
   if (!previa) return;
   const falta = LOJAS[previa.campo][0][previa.i][1] - perfil.moedas;
   $('comprar').className = falta > 0 ? 'nao' : '';
-  $('comprar').innerHTML = falta > 0 ? `${ic('cadeado')}Faltam ${MOEDA}${falta}` : `Comprar por ${MOEDA}${falta + perfil.moedas}`;
+  $('comprar').innerHTML = falta > 0 ? `${ic('cadeado')}Faltam ${MOEDA}${falta}` : `Levar por ${MOEDA}${falta + perfil.moedas}`;
 }
 $('comprar').onclick = () => { if (previa && !$('comprar').className) toca(previa.campo, previa.i); };
 $('sairPrevia').onclick = () => { previa = null; mostraPrevia(); desenhaLoja(); };
@@ -526,7 +591,7 @@ function loja(campo) {
       bt.append(fila); nome.textContent = rotulo;
     } else { bt.append(miniChapeu(i)); nome.textContent = rotulo; }
     etq.className = 'etq';
-    etq.innerHTML = usando ? ic('check') + 'Usando' : tem ? (campo === 'reacao' ? ic('check') + 'Seu' : 'Usar') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
+    etq.innerHTML = usando ? ic('check') + 'Vestindo' : tem ? (campo === 'reacao' ? ic('check') + 'É seu' : 'Vestir') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
     bt.append(nome, etq);
     bt.onclick = () => toca(campo, i);
     cartao.append(bt);
@@ -545,22 +610,23 @@ function desenhaLoja() { loja('cor'); loja('chapeu'); loja('reacao'); }
 function desenhaTrofeus() {
   const e = perfil.est, resumo = $('resumo'), lista = $('trofeus');
   const ganhos = Object.keys(perfil.trofeus).length;
-  resumo.innerHTML = [[e.vitorias, 'rodadas vencidas'], [e.partidas, 'partidas vencidas'], [e.seq, 'vitórias seguidas'], [e.maiorSeq, 'maior sequência'], [e.empates, 'empates'], [`${ganhos}/${TROFEUS.length}`, 'troféus']]
+  resumo.innerHTML = [[milhar(e.vitorias), 'rodadas ganhas'], [milhar(e.partidas), 'partidas ganhas'], [milhar(e.seq), 'sequência agora'], [milhar(e.maiorSeq), 'melhor sequência'], [milhar(e.empates), 'empates'], [`${ganhos}/${TROFEUS.length}`, 'troféus']]
     .map(([v, t]) => `<div class="num"><b>${v}</b>${t}</div>`).join('') + `<div id="melhor">${ic('trofeu')}<span></span></div>`;
-  const melhor = Object.values(e.porJogo).sort((a, b) => b[1] - a[1])[0];
+  // so entra minijogo com nome de verdade: nome que parece id de arquivo (corrida-dedos) ou vazio fica de fora da frase
+  const melhor = Object.values(e.porJogo).filter(v => Array.isArray(v) && typeof v[0] === 'string' && v[0] && !pareceId(v[0])).sort((a, b) => b[1] - a[1])[0];
   const frase = resumo.querySelector('#melhor span');
   if (melhor) {
     const forte = document.createElement('b');
-    forte.textContent = melhor[0];
-    frase.append('Seu melhor minijogo: ', forte, melhor[1] === 1 ? ', 1 vitória' : `, ${melhor[1]} vitórias`);
-  } else frase.textContent = 'Vença uma rodada para descobrir seu melhor minijogo';
+    forte.textContent = textoSeguro(melhor[0], 30);
+    frase.append('Você manda bem em ', forte, melhor[1] === 1 ? ' (1 vitória)' : ` (${milhar(melhor[1])} vitórias)`);
+  } else frase.textContent = 'Ganhe uma rodada e a gente descobre seu forte';
   lista.textContent = '';
   for (const [id, icone, nome, desc, meta, bonus, valor] of TROFEUS) {
     const estado = perfil.trofeus[id] | 0, v = Math.max(0, Math.min(meta, valor(e) | 0));
     const t = document.createElement(estado === 1 ? 'button' : 'div');
     t.className = 'trofeu' + ['', ' pegar', ' ganho'][estado];
     t.innerHTML = `<span class="selo">${ic(icone)}</span><span class="tx"><b>${nome}</b><small>${desc}</small><span class="barra"><i style="width:${v / meta * 100}%"></i></span></span><span class="premio">`
-      + (estado === 2 ? `<span>${ic('check')}Recebido</span>` : estado === 1 ? `Pegar<span>${MOEDA}+${bonus}</span>` : `<em>${v}/${meta}</em><span>${MOEDA}${bonus}</span>`) + '</span>';
+      + (estado === 2 ? `<span>${ic('check')}Guardado</span>` : estado === 1 ? `Pegar<span>${MOEDA}+${bonus}</span>` : `<em>${v}/${meta}</em><span>${MOEDA}${bonus}</span>`) + '</span>';
     if (estado === 1) t.onclick = () => {
       perfil.trofeus[id] = 2; perfil.moedas += bonus; perfil.est.ganho += bonus;
       flutua('+' + bonus); festa(); salvaPerfil();
@@ -578,13 +644,16 @@ paineis.addEventListener('scroll', () => {
 });
 
 $('nome').oninput = () => { $('conta').textContent = $('nome').value.length + '/10'; };
-seguraNaRodada($('abrePerfil'), () => {
+function abreLoja() {
   $('nome').value = perfil.nome; $('nome').oninput();
   fechaBarra(); previa = null; aberto = true; mostraPrevia();
   $('perfil').style.display = 'grid';
   desenhaLoja(); desenhaTrofeus(); mostraMoedas(); soltaTudo();
   requestAnimationFrame(quadro);
-});
+}
+seguraNaRodada($('abrePerfil'), abreLoja);
+$('visual').onclick = abreLoja;
+$('menuNome').onclick = abreLoja;
 $('fechar').onclick = () => {
   perfil.nome = $('nome').value.trim().slice(0, 10);
   aberto = false; previa = null; $('nome').blur();
@@ -627,8 +696,20 @@ function seguraNaRodada(el, acao) {
   for (const tipo of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(tipo, para);
   el.addEventListener('click', () => { if (agiu) { agiu = false; return; } if (!jogando) acao(); });
 }
-seguraNaRodada($('pausar'), () => { fetch('/pausa', { method: 'POST' }).catch(() => {}); });
-$('trocar').onclick = () => { try { localStorage.removeItem('slot'); } catch {} location.reload(); };
+seguraNaRodada($('pausar'), () => { fetch('/pausa', { method: 'POST', body: JSON.stringify({ j }) }).catch(() => {}); });
+// Segurar 1 s (barra enchendo) para acoes que nao tem volta: mudar de lugar, recomecar, voltar ao menu
+function segura1s(el, acao) {
+  let timer = 0;
+  const para = () => { clearTimeout(timer); timer = 0; el.classList.remove('segura'); };
+  el.addEventListener('pointerdown', e => { e.preventDefault(); el.classList.add('segura'); timer = setTimeout(() => { para(); treme([40, 40, 120]); acao(); }, 1000); });
+  for (const tipo of ['pointerup', 'pointercancel', 'pointerleave']) el.addEventListener(tipo, para);
+}
+segura1s($('trocar'), () => { try { localStorage.removeItem('slot'); } catch {} location.reload(); });
+const comando = c => fetch('/comando', { method: 'POST', body: JSON.stringify({ j, c }) }).catch(() => {});
+$('continuar').onclick = () => { treme(30); fetch('/pausa', { method: 'POST', body: JSON.stringify({ j, continua: true }) }).catch(() => {}); };
+$('pausaPula').onclick = () => { treme(30); comando('pula'); };
+segura1s($('pausaReinicia'), () => comando('reinicia'));
+segura1s($('pausaMenu'), () => comando('menu'));
 
 function premia(premio) {       // cada premio tem um id; so conta uma vez
   if (!premio?.id || perfil.premios.includes(premio.id)) return;
@@ -637,8 +718,10 @@ function premia(premio) {       // cada premio tem um id; so conta uma vez
   perfil.moedas += valor; e.ganho += valor; e.rodadas++;
   if (premio.venceu) {
     e.vitorias++; e.seq++; e.maiorSeq = Math.max(e.maiorSeq, e.seq);
-    if (/^[a-z0-9-]{1,30}$/.test(premio.jogo))      // id vem da rede: so o formato dos arquivos de minijogo
-      e.porJogo[premio.jogo] = [String(premio.nomeJogo ?? premio.jogo).slice(0, 30), (e.porJogo[premio.jogo]?.[1] | 0) + 1];
+    if (/^[a-z0-9-]{1,30}$/.test(premio.jogo)) {     // id vem da rede: so o formato dos arquivos de minijogo; sem nome de verdade, guarda vazio (conta, mas nao aparece)
+      const nm = textoSeguro(premio.nomeJogo, 30);
+      e.porJogo[premio.jogo] = [nm && !pareceId(nm) ? nm : '', (e.porJogo[premio.jogo]?.[1] | 0) + 1];
+    }
   } else if (premio.empate) e.empates++;
   else e.seq = 0;                                   // empate nao quebra a sequencia, derrota sim
   if (premio.partida) e.partidas++;
@@ -809,29 +892,37 @@ function aplica(s) {
     modo = novo; soltaTudo();
     for (const id of ['padrao', 'botao', 'toque', 'opcoes', 'menu', 'espera']) $(id).style.display = id === modo ? 'flex' : 'none';
   }
-  $('nomeJogo').textContent = s.jogo || '';
-  $('texto').textContent = s.texto || '';
+  $('nomeJogo').textContent = textoSeguro(s.jogo, 40);
+  $('texto').textContent = textoSeguro(s.texto, 120);
   jogando = !!s.jg; $('torcer').style.display = jogando ? 'none' : '';      // torcer so fora da rodada
   if (s.sala) mostraMenu(s.sala);
-  $('btA').textContent = $('btG').textContent = s.a ?? 'EMPURRA';
-  $('btB').textContent = s.b ?? 'PULA';
+  const a = s.a === undefined ? null : textoSeguro(s.a, 20);
+  $('btA').textContent = a ?? 'Empurra'; $('btG').textContent = a || 'Aperta';
+  $('btB').textContent = s.b === undefined ? 'Pula' : textoSeguro(s.b, 20);
   $('btB').style.visibility = s.b === '' ? 'hidden' : 'visible';
   $('btA').style.visibility = s.a === '' && modo === 'padrao' ? 'hidden' : 'visible';
   $('padrao').classList.toggle('semjoy', s.joy === false);
-  $('padDica').textContent = s.a ?? 'arraste aqui';
+  $('padDica').textContent = a || 'arraste aqui';
+  mostraExplica(s.explica && typeof s.explica === 'object' ? s.explica : null);
+  $('espera').classList.toggle('pronto', s.pronto === true);
+  $('esperaMsg').textContent = s.pronto === true ? 'Entendido. De olho na TV' : 'De olho na TV';
+  $('nomeIni').hidden = !pedeNome || modo !== 'espera';
+  mostraPausa(s.pausa && typeof s.pausa === 'object' ? s.pausa : null);
   const cartas = Array.isArray(s.cartas) ? s.cartas : null;      // opcoes que sao cartas de poder: nome, dica e cor
-  const ops = JSON.stringify([s.opcoes || [], cartas]);
+  const coresOp = Array.isArray(s.coresOp) ? s.coresOp : null, linha = s.linha === true;
+  const ops = JSON.stringify([s.opcoes || [], cartas, coresOp, linha]);
   if ($('opcoes').dataset.ops !== ops) {
-    $('opcoes').dataset.ops = ops; $('opcoes').textContent = '';
+    $('opcoes').dataset.ops = ops; $('opcoes').textContent = ''; $('opcoes').classList.toggle('linha', linha);
     (s.opcoes || []).slice(0, 4).forEach((rotulo, i) => {
       const bt = document.createElement('button'), k = cartas?.[i];
       if (k && typeof k === 'object') {
         bt.className = 'carta';
         const nomeC = document.createElement('b'), dica = document.createElement('small');
-        nomeC.textContent = String(k.nome ?? rotulo).slice(0, 30); dica.textContent = String(k.dica ?? '').slice(0, 60);
+        nomeC.textContent = textoSeguro(k.nome ?? rotulo, 30); dica.textContent = textoSeguro(k.dica, 60);
         bt.append(nomeC, dica);
         if (COR_OK.test(k.cor)) bt.style.setProperty('--cc', k.cor);
-      } else bt.textContent = rotulo;
+      } else bt.textContent = textoSeguro(rotulo, 30);
+      if (coresOp && COR_OK.test(coresOp[i])) { bt.classList.add('colorido'); bt.style.setProperty('--bc', coresOp[i]); }
       bt.addEventListener('touchstart', e => {
         e.preventDefault();
         op = i; nop++; treme(30); envia();
@@ -853,10 +944,41 @@ function aplica(s) {
   // carta de poder ativa nesta rodada: selo no topo
   const chip = $('cartaChip'), carta = s.carta && typeof s.carta === 'object' ? s.carta : null;
   chip.classList.toggle('on', !!carta);
-  chip.textContent = carta ? 'Carta: ' + String(carta.nome ?? '').slice(0, 30) : '';
+  chip.textContent = carta ? textoSeguro(carta.nome, 30) : '';
   chip.style.setProperty('--cc', COR_OK.test(carta?.cor) ? carta.cor : '#ffc531');
   mostraProvoca(s.provoca === true);
   premia(s.premio);
+}
+
+// Explicacao: nome, dica e o desenho do controle do minijogo (o mesmo que a TV mostra), tudo como texto
+let exVis = '';
+function mostraExplica(ex) {
+  const chave = ex ? JSON.stringify(ex) : '';
+  if (chave === exVis) return;
+  exVis = chave;
+  $('explica').hidden = !ex; $('botao').classList.toggle('comEx', !!ex);
+  if (!ex) return;
+  $('exNome').textContent = textoSeguro(ex.nome, 40); $('exDica').textContent = textoSeguro(ex.dica, 200);
+  const ctl = ex.ctl && typeof ex.ctl === 'object' ? ex.ctl : {}, fone = $('exCtl'), peca = (cls, tx) => { const e = document.createElement('i'); e.className = cls; e.textContent = tx; fone.append(e); };
+  fone.textContent = '';
+  if (ctl.modo === 'botao') peca('bt', textoSeguro(ctl.a, 16) || 'Aperta');
+  else if (ctl.modo === 'toque') peca('op', 'arraste o dedo');
+  else if (ctl.modo === 'opcoes') (Array.isArray(ctl.opcoes) ? ctl.opcoes : ['escolha']).slice(0, 3).forEach(o => peca('op', textoSeguro(o, 12)));
+  else if (ctl.modo === 'espera') peca('op', 'de olho na TV');
+  else {
+    if (ctl.joy !== false) peca('j', '');
+    if (textoSeguro(ctl.b, 16)) peca('bt b', textoSeguro(ctl.b, 16));
+    if (textoSeguro(ctl.a, 16)) peca('bt', textoSeguro(ctl.a, 16));
+  }
+}
+// Pausa: quem pediu, Continuar para todos; o Jogador 1 tambem pula, recomeca ou volta ao menu
+function mostraPausa(pz) {
+  $('pausaCel').hidden = !pz;
+  if (!pz) return;
+  $('pausaCel').style.top = $('topo').getBoundingClientRect().bottom + 'px';
+  const quem = textoSeguro(pz.quem, 10);
+  $('pausaQuem').textContent = quem ? quem + ' pediu um tempo' : 'Tempo!';
+  $('pausaJ1').hidden = j !== 1;
 }
 
 // ---------- quem venceu a rodada ganha 3 reacoes rapidas em destaque (as melhores que ele tem) ----------
@@ -871,7 +993,7 @@ function mostraProvoca(on) {
   caixa.textContent = '';
   if (!on) return;
   const tem = minhasReacoes(), lista = PROVOCA.filter(k => tem.includes(k)).slice(0, 3);
-  const rot = document.createElement('span'); rot.textContent = 'Provoque:'; caixa.append(rot);
+  const rot = document.createElement('span'); rot.textContent = 'Tire onda:'; caixa.append(rot);
   for (const k of lista) {
     const bt = document.createElement('button');
     bt.className = 'emoji'; bt.textContent = REACOES[k][0]; bt.setAttribute('aria-label', REACOES[k][1]);
@@ -903,21 +1025,27 @@ function mandaModo(modo, comeca) {
 }
 // O modo marcado e o do proprio clique (escolhaLocal), nao o que a tela devolve 150 a 300 ms depois: o COMECAR manda so ele, numa requisicao.
 // Se a sala passa a trazer outro modo (outro aparelho do J1, a tela), a escolha local acompanha.
-let escolhaLocal = 'classico', modoDaSala = null, salaAtual = {};
+let escolhaLocal = 'classico', modoDaSala = null, salaAtual = {}, autoVisto = null, onVisto = [];
+const LINHA_MODO = { classico: '2 jogadores', vs: '2 a 4', times: 'precisa de 4', coop: '2 a 4' };
+const objeto = v => v && typeof v === 'object' ? v : {};
 function pintaMenu() {
-  const faltas = salaAtual.faltas && typeof salaAtual.faltas === 'object' ? salaAtual.faltas : {};       // o que impede cada modo agora (a tela decide)
+  const faltas = objeto(salaAtual.faltas), qtd = objeto(salaAtual.qtd);       // o que impede cada modo agora e quantos minijogos tem (a tela decide)
   for (const bt of $('menuLista').children) {
-    const motivo = typeof faltas[bt.dataset.m] === 'string' ? faltas[bt.dataset.m].slice(0, 80) : '';
-    bt.classList.toggle('sel', bt.dataset.m === escolhaLocal);
-    bt.disabled = !!faltas[bt.dataset.m];
-    let sm = bt.querySelector('small');
-    if (!sm && motivo) { sm = document.createElement('small'); sm.dataset.fixo = ''; bt.append(sm); }
-    if (sm) { sm.dataset.fixo ??= sm.textContent; sm.textContent = motivo || sm.dataset.fixo; sm.hidden = !sm.textContent; }
+    const m = bt.dataset.m, motivo = textoSeguro(faltas[m], 80), q = Number.isInteger(qtd[m]) ? qtd[m] : null;
+    bt.classList.toggle('sel', m === escolhaLocal);
+    bt.classList.toggle('trava', !!motivo); bt.setAttribute('aria-disabled', motivo ? 'true' : 'false');
+    bt.querySelector('.lin').textContent = motivo || LINHA_MODO[m];
+    bt.querySelector('.qtd').textContent = m === escolhaLocal && !motivo && q !== null ? (q === 1 ? '1 minijogo nesta brincadeira' : q + ' minijogos nesta brincadeira') : '';
   }
-  const falta = typeof faltas[escolhaLocal] === 'string' ? faltas[escolhaLocal].slice(0, 80) : '';
-  $('menuGo').disabled = !!faltas[escolhaLocal];
+  const falta = textoSeguro(faltas[escolhaLocal], 80);
+  $('menuGo').disabled = !!falta;
   const auto = Number.isInteger(salaAtual.auto) ? salaAtual.auto : null;
-  $('menuDica').textContent = falta || (auto !== null ? 'O Clássico começa sozinho em ' + auto + ' s' : '');
+  $('menuGo').style.setProperty('--f', auto !== null ? Math.min(1, auto / 6) : 0);
+  if (auto !== null && auto <= 3 && auto !== autoVisto) treme(30);        // a contagem vibra nos 3 ultimos segundos
+  autoVisto = auto;
+  const nomeSala = $('menuLista').querySelector(`[data-m="${CSS.escape(String(salaAtual.modo ?? ''))}"] b`)?.textContent ?? 'jogo';       // o nome vem do proprio botao do menu, nunca do texto da sala
+  $('menuDica').textContent = falta || (auto !== null ? `Se ninguém mexer, ${nomeSala} começa em ${auto}` : '');
+  $('menuNome').hidden = !!perfil?.nome;
 }
 function mostraMenu(sa) {
   const chave = JSON.stringify(sa);
@@ -926,12 +1054,27 @@ function mostraMenu(sa) {
   const on = Array.isArray(sa.on) ? sa.on : [], modoSala = typeof sa.modo === 'string' ? sa.modo : 'classico';
   if (modoSala !== modoDaSala) { modoDaSala = modoSala; escolhaLocal = modoSala; }       // so muda o que o clique local ja marcou quando a sala muda de verdade
   salaAtual = sa;
+  // pilulas com o nome e a cor de quem esta no sofa; quem acabou de chegar entra com um pulinho
+  const nomes = Array.isArray(sa.nomes) ? sa.nomes : [], cores = Array.isArray(sa.cores) ? sa.cores : [];
   $('menuConectados').textContent = '';
-  for (let n = 0; n < 4; n++) { const i = document.createElement('i'); i.textContent = n + 1; i.className = on[n] ? 'on' : ''; $('menuConectados').append(i); }
+  for (let n = 0; n < 4; n++) {
+    if (!on[n]) continue;
+    const i = document.createElement('i'), cor = COR_OK.test(cores[n]) ? cores[n] : '#3d4780';
+    i.textContent = textoSeguro(nomes[n], 10) || 'Jogador ' + (n + 1);
+    i.style.setProperty('--pc', cor);
+    const [r, g, az] = [1, 3, 5].map(k => parseInt(cor.slice(k, k + 2), 16));
+    if (r * 299 + g * 587 + az * 114 > 160000) i.style.setProperty('--pt', '#141a36');
+    if (onVisto.length && !onVisto[n]) i.className = 'pula';
+    $('menuConectados').append(i);
+  }
+  onVisto = on.slice(0, 4);
   pintaMenu();
 }
-for (const bt of $('menuLista').children) bt.addEventListener('click', () => { if (!bt.disabled) { treme(20); escolhaLocal = bt.dataset.m; pintaMenu(); mandaModo(escolhaLocal, false); } });
-$('menuGo').addEventListener('click', () => { if (!$('menuGo').disabled) { treme(40); mandaModo(escolhaLocal, true); } });
+for (const bt of $('menuLista').children) bt.addEventListener('click', () => {
+  if (bt.classList.contains('trava')) { treme([30, 60, 30]); bt.classList.remove('treme'); void bt.offsetWidth; bt.classList.add('treme'); return; }      // travado: vibra duas vezes e balanca
+  treme(20); escolhaLocal = bt.dataset.m; pintaMenu(); mandaModo(escolhaLocal, false);
+});
+$('menuGo').addEventListener('click', () => { if (!$('menuGo').disabled) { treme([40, 40, 120]); mandaModo(escolhaLocal, true); } });
 
 function comecar(num) {
   j = num; guarda('slot', j);
@@ -951,6 +1094,7 @@ function comecar(num) {
   for (const k in EST0) if (k !== 'porJogo') perfil.est[k] = Math.max(0, perfil.est[k] | 0);
   if (!perfil.est.porJogo || typeof perfil.est.porJogo !== 'object') perfil.est.porJogo = {};
   if (!perfil.trofeus || typeof perfil.trofeus !== 'object') perfil.trofeus = {};
+  pedeNome = !perfil.nome && !le('semNome' + j);       // primeira vez neste lugar sem nome: a espera pergunta "Como te chamam?" (pode pular)
   $('escolha').style.display = 'none';
   $('jogo').style.display = 'flex';
   salvaPerfil(); aplica({});
@@ -989,6 +1133,12 @@ function botaoNaPos(px, py, ca, cb, temA = true, temB = true, atual = null) {
   return dA <= dB ? 'A' : 'B';
 }
 // @fim-puras
+// @puras-texto (funcoes sem DOM: o tela.test.mjs le este trecho)
+const CRU = /\[object \w+\]|\b(?:undefined|NaN|null)\b/g;
+function textoSeguro(s, max = 120) { if (typeof s === 'number') return Number.isFinite(s) ? s.toLocaleString('pt-BR') : ''; if (typeof s !== 'string') return ''; return s.replace(CRU, ' ').replace(/\s+/g, ' ').trim().slice(0, max); }
+const milhar = n => (Number.isInteger(n) ? n : 0).toLocaleString('pt-BR');
+const pareceId = s => typeof s === 'string' && /^[a-z0-9-]+$/.test(s);
+// @fim-puras-texto
 const bordaJoy = { x: false };       // dedo na borda: vibra uma vez por chegada
 let dedo = null, origem = null, casa = null;      // origem: centro atual; casa: centro de repouso do desenho
 function mover(t) {
@@ -1114,6 +1264,32 @@ document.addEventListener('touchend', () => {
   document.documentElement.requestFullscreen?.({ navigationUI: 'hide' })
     .then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
 });
+
+// ---------- escolha do lugar: nome salvo neste celular, a cor do lugar e se alguem ja esta nele ----------
+let pedeNome = false;
+const LUGARES = [['#2f7df6', 'azul'], ['#f0458f', 'rosa'], ['#35c26b', 'verde'], ['#ffc531', 'amarelo']];
+function montaEscolha(ocupado = []) {
+  const caixa = $('lugares');
+  caixa.textContent = '';
+  LUGARES.forEach(([c, palavra], k) => {
+    const n = k + 1, salvoN = le('perfil' + n), nm = textoSeguro(salvoN?.nome, 10), tomado = ocupado[k] === true;
+    const bt = document.createElement('button'), cara = document.createElement('i'), tx = document.createElement('span'), b = document.createElement('b'), sm = document.createElement('small');
+    bt.style.setProperty('--c', c); bt.className = (k === 3 ? 'claro' : '') + (tomado ? ' ocupado' : '');      // ocupado fica apagado, mas tocavel (pode ser uma aba velha deste mesmo celular)
+    cara.className = 'carinha'; cara.setAttribute('aria-hidden', 'true'); tx.className = 'tx';
+    b.textContent = nm || 'Jogador ' + n; sm.textContent = tomado ? 'ocupado' : palavra;
+    tx.append(b, sm); bt.append(cara, tx); bt.onclick = () => comecar(n);
+    caixa.append(bt);
+  });
+}
+montaEscolha();
+fetch('/lugares', typeof AbortSignal.timeout === 'function' ? { signal: AbortSignal.timeout(2000) } : {}).then(r => r.json()).then(v => { if (!j && Array.isArray(v)) montaEscolha(v); }).catch(() => {});
+function guardaNome(nm) {
+  pedeNome = false; $('nomeIni').hidden = true;
+  if (nm) { perfil.nome = nm; salvaPerfil(); treme([40, 30, 80]); } else guarda('semNome' + j, true);
+}
+$('bora').onclick = () => guardaNome(textoSeguro($('nomeNovo').value, 10));
+$('nomeNovo').addEventListener('keydown', e => { if (e.key === 'Enter') guardaNome(textoSeguro($('nomeNovo').value, 10)); });
+$('depois').onclick = () => guardaNome('');
 
 const salvo = le('slot');
 if (Number.isInteger(salvo) && salvo >= 1 && salvo <= 4) comecar(salvo);

@@ -1,8 +1,9 @@
 // Boliche: cada um na sua pista. Mire com o joystick, SEGURE o botão (a barra de força sobe e desce) e SOLTE no ponto bom.
-// 3 lançamentos, os 10 pinos voltam em pé a cada um. Quem derrubar mais pinos vence.
+// 5 lançamentos, os 10 pinos voltam em pé a cada um. Quem derrubar mais pinos vence.
 import { maiorPlacar } from '../logica.mjs';
 
-const LIMITE = 50, LANCES = 3;
+const LIMITE = 55;
+export const LANCES = 5;
 const PX = 5.5, PISTA = 1.55, CANAL = 2.05;                       // centro da pista de cada um, meia-largura útil e com canaleta
 const Z_SAI = 6.5, Z_FUNDO = -8.6, Z_CABECA = -4.8, Z_BARRA = 7.7;
 const R_BOLA = 0.45, R_PINO = 0.28, ESP_X = 0.7, ESP_Z = 0.75;
@@ -85,8 +86,11 @@ function pinos(p, i, dt) {
 }
 
 export default {
-  id: 'boliche', nome: 'Boliche', dica: 'Mire, SEGURE o botão e SOLTE no ponto verde da barra para derrubar mais pinos em 3 lances',
+  id: 'boliche', genero: 'mira', nome: 'Boliche', dica: 'Mire, segure o botão e solte no ponto verde da barra. Mais pinos em 5 lances vence!',
   controle: { modo: 'padrao', a: 'SEGURA', b: '' }, semMovimento: true, semDash: true, semPulo: true, rotulo: 'pinos',
+
+  // Camera atras da linha de falta, baixa e olhando pista adentro: os pinos do fundo aparecem grandes (a camera padrao os deixava com 10 px).
+  camera() { return { x: 0, y: 14.5, z: 18.5, ox: 0, oy: 0, oz: -1.6 }; },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 11, lz: 9, parede: true };
@@ -121,7 +125,7 @@ export default {
         if (jg.t >= T_ASSENTA) {
           const n = jg.pinos.filter(x => x.caido).length;
           d.placar[i] += n; jg.lances++; jg.ultimo = n; jg.livre = false; jg.bola = null;
-          if (n === 10) { d.aviso = 'STRIKE!'; d.tAviso = 1.4; p.eventos.push('gol'); }
+          if (n === 10) { d.aviso = 'Strike!'; d.tAviso = 1.4; p.eventos.push('gol'); }
           if (jg.lances >= LANCES) { jg.fase = 'fim'; texto(p, i, 'Fim dos lances: ' + d.placar[i] + ' pinos', 'espera'); }
           else { jg.fase = 'mira'; jg.pinos = novosPinos(i); texto(p, i, 'Lance ' + (jg.lances + 1) + ' de ' + LANCES + '. Mire e segure o botão'); }
         }
@@ -138,18 +142,19 @@ export default {
     pecas.bola = []; pecas.seta = []; pecas.barra = [];
     for (const i of [0, 1]) {
       const cx = lado(i) * PX, comp = Z_SAI - Z_FUNDO + 3, zc = (Z_SAI + 1.5 + Z_FUNDO) / 2;
-      caixa(PISTA * 2, 0.1, comp, 0xc98a4b, cx, -0.05, zc, { roughness: 0.55 });                     // pista de madeira
-      for (let k = -3; k <= 3; k++) caixa(0.03, 0.02, comp, 0x9c6430, cx + k * 0.4, 0.005, zc);       // tábuas
+      const semSombra = m => { m.castShadow = false; return m; };
+      semSombra(caixa(PISTA * 2, 0.1, comp, 0xc98a4b, cx, -0.03, zc, { roughness: 0.55 }));                   // pista de madeira
+      for (let k = -3; k <= 3; k++) semSombra(caixa(0.03, 0.02, comp, 0x9c6430, cx + k * 0.4, 0.03, zc));       // tábuas
       for (const s of [-1, 1]) {
-        caixa(CANAL - PISTA, 0.06, comp, 0x23232b, cx + s * (PISTA + CANAL) / 2, -0.12, zc);          // canaletas
-        caixa(0.12, 0.35, comp, 0x3a3a46, cx + s * (CANAL + 0.06), 0.1, zc);                          // muretas
+        semSombra(caixa(CANAL - PISTA, 0.06, comp, 0x23232b, cx + s * (PISTA + CANAL) / 2, -0.12, zc));        // canaletas
+        semSombra(caixa(0.12, 0.35, comp, 0x3a3a46, cx + s * (CANAL + 0.06), 0.1, zc));                        // muretas
       }
       caixa(CANAL * 2 + 0.3, 1.2, 0.3, 0x2a2f4a, cx, 0.5, Z_FUNDO - 0.35);                              // fundo da pista
       for (let k = 0; k < 7; k++) {                                                                     // setas de mira no piso
         const s = malha(new THREE.ConeGeometry(0.12, 0.35, 3), 0x7a4a1e); s.rotation.x = -Math.PI / 2;
         s.position.set(cx + (k - 3) * 0.32, 0.02, 2 - Math.abs(k - 3) * 0.3); grupo.add(s);
       }
-      caixa(PISTA * 2, 0.02, 0.1, cores[i], cx, 0.015, Z_SAI + 0.7, { emissive: cores[i], emissiveIntensity: 0.6 });   // linha de falta
+      caixa(PISTA * 2, 0.02, 0.1, cores[i], cx, 0.04, Z_SAI + 0.7, { emissive: cores[i], emissiveIntensity: 0.6 });   // linha de falta
       const bola = malha(new THREE.SphereGeometry(R_BOLA, 20, 14), cores[i], { emissive: cores[i], emissiveIntensity: 0.25, roughness: 0.2, metalness: 0.3 });
       for (const [ax, ay] of [[0.2, 0.38], [-0.12, 0.4], [0.05, 0.28]]) {      // furos
         const f = malha(new THREE.SphereGeometry(0.07, 8, 6), 0x111118); f.position.set(ax, ay, 0.4); bola.add(f);
@@ -179,7 +184,7 @@ export default {
         const pescoco = c.malha(new THREE.CylinderGeometry(0.1, 0.17, 0.2, 12), 0xf5f5f0); pescoco.position.y = 0.72;
         const cabeca = c.malha(new THREE.SphereGeometry(0.14, 12, 10), 0xf5f5f0); cabeca.position.y = 0.9;
         const faixa = c.malha(new THREE.CylinderGeometry(0.105, 0.1, 0.05, 12), 0xe02424); faixa.position.y = 0.8;
-        g.add(corpo, listra, pescoco, cabeca, faixa); return g;
+        g.add(corpo, listra, pescoco, cabeca, faixa); g.scale.setScalar(1.3); return g;       // so o desenho cresce: a fisica segue R_PINO
       });
       jg.pinos.forEach((pn, k) => {
         const g = lista[k];

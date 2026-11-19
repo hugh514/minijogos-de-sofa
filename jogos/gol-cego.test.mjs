@@ -88,11 +88,20 @@ test('gol-cego: aos 55 s vence quem fez mais gols; igual empata', () => {
   assert.equal(p.fase, 'jogando');
   roda(p, 1.5);
   assert.equal(p.vencedor, 1);
+});
+
+test('gol-cego: empatado aos 55 s vale o proximo gol; sem gol ate 60 s, empate', () => {
   const q = partidaCom(jogo);
-  roda(q, 54);
-  assert.equal(q.fase, 'jogando');
-  roda(q, 1.5);
-  assert.equal(q.vencedor, -1);
+  roda(q, 57);
+  assert.equal(q.fase, 'jogando', 'segue no gol de ouro');
+  gol(q, 15);
+  assert.equal(q.vencedor, 0);
+  const r = partidaCom(jogo);
+  roda(r, 59);
+  assert.equal(r.fase, 'jogando');
+  roda(r, 2);
+  assert.equal(r.vencedor, -1);
+  assert.match(jogo.dica, /próximo gol/);
 });
 
 test('gol-cego: placar de gols na tela e no celular, 55 s e a regra na dica', () => {

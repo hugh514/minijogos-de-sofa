@@ -1,13 +1,15 @@
-// Um de nos: 8 esferas iguais, 6 robos e 2 jogadores. Cada jogador tem um tiro so.
-// No comeco as esferas pulam uma por vez; o celular vibra na hora em que a sua pula.
+// Um de nos: 8 esferas iguais, 6 robos e 2 jogadores. Cada jogador tem um tiro por vez; o tiro volta 6 s depois de gasto.
+// Quem atira se revela (a esfera ganha a sua cor), entao errar vira cacada: o outro ja sabe quem voce e.
+// No comeco as esferas pulam uma por vez; o celular vibra na hora em que a sua pula. Sem vibracao (iPhone) tambem da:
+// a TV conta os pulos (PULO 3 DE 8) e o celular diz em que pulo esta a sua esfera e avisa quando ela pula.
 import { posiciona } from '../logica.mjs';
 
 const TEMPO = 35, LX = 10, LZ = 6.5;
 const N = 8, R = 0.7, VEL = 5, RESPOSTA = 8;         // todas andam igual: mesma velocidade, mesma inercia
 const ALCANCE = 2.5;
 const SEQ_INI = 0.5, SEQ_ESPACO = 0.5, SEQ_FIM = SEQ_INI + N * SEQ_ESPACO, T_SALTO = 0.4;
-const T_RAIO = 0.3, T_AVISO = 1.3;
-const NEUTRA = 0xcfd6e6;
+const T_RAIO = 0.3, T_AVISO = 1.3, T_RECARGA = 6;
+const NEUTRA = 0xcfd6e6, T_PULSO = 0.6;
 
 function vibra(p, i) { p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 }; }
 
@@ -22,8 +24,8 @@ function decide(p, e) {
 }
 
 export default {
-  id: 'um-de-nos', nome: 'Um de nós',
-  dica: 'Você é uma das esferas. Descubra qual é o outro jogador e acerte seu único tiro!',
+  id: 'um-de-nos', genero: 'blefe', nome: 'Um de nós',
+  dica: 'Uma esfera é sua, outra é do rival e as demais são robôs. Atire no rival! Errar te revela.',
   controle: { modo: 'padrao', a: 'ATIRAR', b: '' },
   semMovimento: true, semDash: true, semPulo: true, duracao: TEMPO,
 
@@ -40,10 +42,10 @@ export default {
     const ordem = esf.map((_, k) => k);
     for (let i = N - 1; i > 0; i--) { const k = Math.floor(p.rng() * (i + 1)); [ordem[i], ordem[k]] = [ordem[k], ordem[i]]; }
     p.dados = {
-      esf, dono: [a, b], ordem, vez: 0, tiro: [true, true], revelado: [false, false],
-      raios: [], faiscas: [], tAviso: 0, aviso: 'QUAL É VOCÊ? SINTA O CELULAR', avisoCor: '#ffd84d',
+      esf, dono: [a, b], ordem, vez: 0, tiro: [true, true], recarga: [0, 0], revelado: [false, false],
+      raios: [], faiscas: [], pulsos: [], tAviso: 0, aviso: 'Qual é você? Conte os pulos', avisoCor: '#ffd84d',
     };
-    for (const i of [0, 1]) p.celular[i] = { texto: 'Sua esfera pula quando o celular vibrar', vibra: 0 };
+    for (const i of [0, 1]) p.celular[i] = { texto: `Sua esfera é a ${ordem.indexOf(p.dados.dono[i]) + 1}ª a pular. Conte os pulos na TV`, vibra: 0 };
   },
 
   atualiza(p, dt) {
@@ -53,15 +55,28 @@ export default {
     while (d.vez < N && p.t >= SEQ_INI + d.vez * SEQ_ESPACO) {
       const k = d.ordem[d.vez++];
       d.esf[k].salto = T_SALTO; p.eventos.push('pulo');
+      d.pulsos.push({ x: d.esf[k].x, z: d.esf[k].z, t: 0 });
+      d.aviso = `Pulo ${d.vez} de ${N}`; d.avisoCor = '#ffd84d';
+      for (const j of [0, 1]) {                        // so o dono recebe o "é você", e o texto fica igual para quem nao tem vibracao
+        const meu = d.ordem.indexOf(d.dono[j]) + 1;
+        p.celular[j] = { ...p.celular[j], texto: meu === d.vez ? 'É você! Guarde onde ela está' : `Pulo ${d.vez} de ${N}. A sua é a ${meu}ª` };
+      }
       const i = d.dono.indexOf(k);
       if (i >= 0) vibra(p, i);
     }
     if (livre && !d.liberou) {
       d.liberou = true; d.aviso = '';
-      for (const i of [0, 1]) p.celular[i] = { ...p.celular[i], texto: 'Você tem 1 tiro: chegue perto do outro e ATIRE' };
+      for (const i of [0, 1]) p.celular[i] = { ...p.celular[i], texto: 'Você tem 1 tiro: chegue perto do outro e atire' };
     }
     d.tAviso -= dt;
+    for (const i of [0, 1]) {                        // o tiro gasto volta depois de T_RECARGA
+      if (!livre || d.tiro[i]) continue;
+      d.recarga[i] -= dt;
+      if (d.recarga[i] <= 0) { d.tiro[i] = true; p.celular[i] = { ...p.celular[i], texto: 'Tiro de volta! Cace o outro, ele já foi revelado' }; vibra(p, i); }
+    }
     if (d.liberou && d.tAviso <= 0) d.aviso = '';
+    for (const o of d.pulsos) o.t += dt;
+    d.pulsos = d.pulsos.filter(o => o.t < T_PULSO);
     for (const r of d.raios) r.t -= dt;
     d.raios = d.raios.filter(r => r.t > 0);
 
@@ -105,29 +120,29 @@ export default {
         const dist = Math.hypot(e.x - eu.x, e.z - eu.z);
         if (e !== eu && !e.morta && dist <= menor) { menor = dist; alvo = k; }
       }
-      d.tiro[i] = false; d.revelado[i] = true;
-      p.eventos.push('dash');
-      if (alvo < 0) {                                  // tiro no vazio: gastou e se entregou
-        d.faiscas.push({ x: eu.x, z: eu.z, de: i, n: 10 });
-        d.aviso = 'TIRO NO VAZIO!'; d.tAviso = T_AVISO;
-      } else {
-        const e = d.esf[alvo];
-        d.raios.push({ x1: eu.x, z1: eu.z, x2: e.x, z2: e.z, t: T_RAIO, de: i });
-        e.morta = true; p.eventos.push('explosao');
-        if (alvo === d.dono[1 - i]) {                  // acertou o outro jogador
-          d.revelado = [true, true]; d.aviso = '';
-          d.faiscas.push({ x: e.x, z: e.z, de: 1 - i, n: 30 });
-          vibra(p, 1 - i);
-          const j = p.jogadores[i]; j.x = eu.x; j.z = eu.z;      // a festa do vencedor sai da esfera dele
-          return i;
-        }
-        d.faiscas.push({ x: e.x, z: e.z, de: -1, n: 18 });
-        d.aviso = 'ERA UM ROBÔ!'; d.tAviso = T_AVISO;
+      if (alvo < 0) {                                  // ninguem no alcance: o tiro nao sai (toque sem querer nao gasta nem entrega)
+        p.celular[i] = { ...p.celular[i], texto: 'Ninguém perto: chegue em outra esfera e atire' };
+        vibra(p, i);
+        continue;
       }
-      p.celular[i] = { ...p.celular[i], texto: 'Sem tiro e revelado: fuja do outro!' };
+      d.tiro[i] = false; d.recarga[i] = T_RECARGA; d.revelado[i] = true;
+      p.eventos.push('dash');
+      const e = d.esf[alvo];
+      d.raios.push({ x1: eu.x, z1: eu.z, x2: e.x, z2: e.z, t: T_RAIO, de: i });
+      e.morta = true; p.eventos.push('explosao');
+      if (alvo === d.dono[1 - i]) {                  // acertou o outro jogador
+        d.revelado = [true, true]; d.aviso = '';
+        d.faiscas.push({ x: e.x, z: e.z, de: 1 - i, n: 30 });
+        vibra(p, 1 - i);
+        const j = p.jogadores[i]; j.x = eu.x; j.z = eu.z;      // a festa do vencedor sai da esfera dele
+        return i;
+      }
+      d.faiscas.push({ x: e.x, z: e.z, de: -1, n: 18 });
+      d.aviso = 'Era um robô!'; d.tAviso = T_AVISO;
+      p.celular[i] = { ...p.celular[i], texto: 'Você foi revelado! Fuja do outro: o tiro volta em 6 s' };
     }
 
-    if ((!d.tiro[0] && !d.tiro[1]) || p.t >= TEMPO) { d.revelado = [true, true]; d.aviso = ''; return -1; }
+    if (p.t >= TEMPO) { d.revelado = [true, true]; d.aviso = ''; return -1; }
   },
 
   monta(c) {
@@ -162,6 +177,15 @@ export default {
       m.rotation.y = -Math.atan2(dz, dx);
       m.scale.set(Math.max(0.1, Math.hypot(dx, dz)), 1, 1);
       m.material.color.set(cores[r.de]); m.material.emissive.set(cores[r.de]);
+    });
+    // anel branco no chao a cada pulo da abertura: ajuda a contar, sem entregar de quem e a esfera
+    const os = c.pool('pulsos', d.pulsos.length, () => {
+      const m = c.malha(new THREE.RingGeometry(0.8, 1, 36), 0xffffff, { emissive: 0xffffff, emissiveIntensity: 1, transparent: true, side: THREE.DoubleSide, depthWrite: false });
+      m.rotation.x = -Math.PI / 2; m.castShadow = false; return m;
+    });
+    d.pulsos.forEach((o, n) => {
+      const f = o.t / T_PULSO, r = 0.9 + f * 1.6;
+      os[n].position.set(o.x, 0.06, o.z); os[n].scale.set(r, r, 1); os[n].material.opacity = 0.9 * (1 - f);
     });
     for (const f of d.faiscas.splice(0)) c.particulas(f.x, R, f.z, f.de < 0 ? NEUTRA : cores[f.de], f.n, f.n > 20 ? 11 : 8);
   },

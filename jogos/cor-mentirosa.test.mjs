@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrada, passo } from '../logica.mjs';
 import { partidaCom, roda, fumaca, DT } from '../jogos/_teste.mjs';
-import jogo from './cor-mentirosa.mjs';
+import jogo, { prazoDe } from './cor-mentirosa.mjs';
 
 function nova() {
   const p = partidaCom(jogo);
@@ -63,9 +63,54 @@ test('cor-mentirosa: em 45 s vence o maior placar; igual, empata', () => {
   assert.equal(p.vencedor, 0);
   const q = nova();
   roda(q, 46);
-  assert.equal(q.vencedor, -1);
+  assert.equal(q.vencedor, undefined, 'empate no tempo nao fecha: morte subita');
+  roda(q, 12);
+  assert.equal(q.vencedor, -1, 'e a morte subita tem fim');
+});
+
+test('cor-mentirosa: errar tira 1 ponto (nunca abaixo de zero)', () => {
+  const p = nova();
+  desafio(p, true); toca(p, 0, 1);
+  assert.deepEqual(p.dados.placar, [1, 0]);
+  roda(p, 1.2);
+  desafio(p, true); toca(p, 0, 0);          // 0 e a palavra: errado no comando TINTA
+  assert.deepEqual(p.dados.placar, [0, 0]);
+  roda(p, 2.5); desafio(p, true); toca(p, 0, 0);
+  assert.deepEqual(p.dados.placar, [0, 0], 'zero continua zero');
+});
+
+test('cor-mentirosa: o prazo encurta com o placar do lider, ate um minimo', () => {
+  assert.equal(prazoDe([0, 0]), 6);
+  assert.equal(prazoDe([2, 4]), 4);
+  assert.equal(prazoDe([5, 1]), 3.5);
+});
+
+test('cor-mentirosa: na morte subita o primeiro ponto decide e a TV avisa', () => {
+  const p = nova();
+  roda(p, 46);
+  roda(p, 1);
+  assert.match(p.dados.aviso + p.dados.comando, /Desempate|TOQUE/);
+  desafio(p, true); toca(p, 1, 1);
+  assert.equal(p.vencedor, 1);
 });
 
 test('cor-mentirosa: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   assert.equal(fumaca(jogo).length, 15);
+});
+
+test('cor-mentirosa: os 4 botoes do celular saem em linha e coloridos, na ordem dos blocos da TV', () => {
+  const p = nova();
+  roda(p, 1);
+  const c = p.celular[0];
+  assert.equal(c.modo, 'opcoes');
+  assert.equal(c.linha, true);
+  assert.equal(c.coresOp.length, 4);
+  assert.deepEqual(c.opcoes, ['Vermelho', 'Azul', 'Verde', 'Amarelo']);
+  assert.ok(c.coresOp.every(x => /^#[0-9a-f]{6}$/i.test(x)));
+});
+
+test('cor-mentirosa: a TV diz o comando por escrito (comando exportado para o desenho)', () => {
+  const p = nova();
+  roda(p, 1);
+  assert.equal(p.dados.comando, p.dados.modoTinta ? 'TOQUE A TINTA' : 'TOQUE A PALAVRA');
 });

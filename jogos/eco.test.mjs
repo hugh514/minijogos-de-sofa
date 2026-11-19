@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrada, passo } from '../logica.mjs';
 import { partidaCom, roda, fumaca, DT } from '../jogos/_teste.mjs';
-import jogo, { erroMedio, nota, completa } from './eco.mjs';
+import jogo, { erroMedio, nota, completa, quemVenceu } from './eco.mjs';
 
 function bate(p, i) {
   const j = p.jogadores[i];
@@ -73,6 +73,7 @@ test('eco: quem imita melhor vence e os papeis trocam', () => {
   assert.ok(d.notas[b] >= 95, 'nota de b: ' + d.notas[b]);
   assert.equal(d.placar[b], d.notas[b]);
   ate(p, 'prepara');
+  roda(p, 0.1);
   assert.equal(d.criador, b, 'papeis trocaram');
   turno(p, [0.3, 0.8, 0.3], [0.6, 0.4, 0.6]);       // a imita torto
   assert.ok(d.notas[a] < 60, 'nota de a: ' + d.notas[a]);
@@ -108,4 +109,55 @@ test('eco: ninguem bate: ritmo automatico, nota zero, empate em menos de 60 s', 
 test('eco: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   const vencedores = fumaca(jogo);
   assert.equal(vencedores.length, 15);
+});
+
+test('eco: o jogo e de ouvido, entao a dica e o aviso do comeco mandam ligar o som', () => {
+  assert.match(jogo.dica, /som/i);
+  const p = partidaCom(jogo), d = p.dados;
+  assert.equal(d.fase, 'prepara');
+  roda(p, 0.1);
+  assert.match(d.aviso, /som/i);
+  roda(p, 1.5);
+  assert.equal(d.fase, 'prepara', 'o primeiro aviso fica mais tempo na tela');
+  assert.match(p.celular[0].texto + p.celular[1].texto, /som/i);
+  roda(p, 2);
+  assert.equal(d.fase, 'cria');
+  assert.doesNotMatch(d.aviso, /ligue/i, 'depois que comeca, so o aviso da vez');
+});
+
+test('eco: cada nota acende uma luz grande na TV (luzes e ultima), para quem esta sem som', () => {
+  const p = partidaCom(jogo), d = p.dados;
+  ate(p, 'cria');
+  assert.equal(d.luzes, 0);
+  ritmo(p, d.criador, [0.3, 0.3]);
+  assert.equal(d.luzes, 3, 'tres batidas ate aqui');
+  ate(p, 'toca');
+  const vistos = new Set();
+  while (d.fase === 'toca') { passo(p, DT); vistos.add(d.luzes); }
+  assert.deepEqual([...vistos].sort(), [0, 1, 2, 3, 4].filter(n => vistos.has(n)));
+  assert.ok(vistos.has(4), 'as 4 luzes acenderam no eco');
+  assert.match(d.aviso, /Escute o eco/);
+});
+
+test('eco: nota igual desempata pelo menor erro, so se a diferenca passar de 5 ms', () => {
+  assert.equal(quemVenceu([80, 70], [0.1, 0.2]), 0);
+  assert.equal(quemVenceu([70, 80], [0.2, 0.1]), 1);
+  assert.equal(quemVenceu([80, 80], [0.08, 0.09]), 0, 'erro menor ganha');
+  assert.equal(quemVenceu([80, 80], [0.081, 0.08]), -1, 'diferenca de 1 ms e empate');
+  assert.equal(quemVenceu([80, 80], [0.1, 0.1]), -1);
+});
+
+test('eco: na segunda vez a TV e o celular mostram a nota a passar, e o final mostra o placar', () => {
+  const p = partidaCom(jogo), d = p.dados;
+  const primeiro = d.criador;
+  turno(p, [0.5, 0.5, 0.5], [0.5, 0.5, 0.5]);
+  const nota1 = d.notas[1 - primeiro];
+  ate(p, 'prepara');
+  roda(p, 0.1);
+  assert.match(d.aviso, new RegExp('passar de ' + nota1));
+  ate(p, 'imita');
+  assert.match(p.celular[1 - d.criador].texto, new RegExp('Passe de ' + nota1));
+  ate(p, 'fim');
+  roda(p, 0.1);
+  assert.match(d.aviso, /[0-9]+ a [0-9]+/);
 });

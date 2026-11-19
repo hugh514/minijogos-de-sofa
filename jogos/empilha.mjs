@@ -1,11 +1,11 @@
 // Empilha: cada um tem a sua torre. Um bloco desliza de um lado para o outro em cima dela; APERTE para soltar.
-// O que passar da borda é cortado e cai, e o próximo bloco fica mais estreito. Errar o bloco inteiro perde na hora.
+// O que passar da borda é cortado e cai, e o próximo bloco fica mais estreito. Errar o bloco inteiro só perde o bloco (e um tempinho).
 // Em 30 s vence a torre mais alta.
 import { elimina, maiorPlacar } from '../logica.mjs';
 
 const DUR = 30, PX = 5.5, AMP = 3.2, H = 0.45, PROF = 2;
 export const L0 = 2.4, V0 = 2.6;
-const DV = 0.3, V_MAX = 8, PERFEITO = 0.1, MINIMO = 0.05, ESPERA = 0.25;
+const DV = 0.3, V_MAX = 8, PERFEITO = 0.1, MINIMO = 0.05, ESPERA = 0.25, ESPERA_ERRO = 0.9;
 
 const lado = i => (i ? 1 : -1);
 const velocidade = n => Math.min(V_MAX, V0 + DV * n);
@@ -14,21 +14,23 @@ function novoEstado() {
   return { blocos: [{ x: 0, l: L0 }], bx: -AMP, dir: 1, v: V0, l: L0, espera: 0.8 };
 }
 
-// Solta o bloco do jogador i. Devolve true se errou o bloco inteiro.
+// Solta o bloco do jogador i. Errou o bloco inteiro: ele cai, a torre fica igual e o próximo demora um pouco.
 function solta(p, i) {
   const d = p.dados, e = d.e[i], topo = e.blocos[e.blocos.length - 1];
   const nivel = e.blocos.length * H + H / 2;
   const ae = Math.max(topo.x - topo.l / 2, e.bx - e.l / 2), ad = Math.min(topo.x + topo.l / 2, e.bx + e.l / 2);
   const sobra = ad - ae;
-  if (sobra <= MINIMO) {                                   // errou tudo: o bloco inteiro cai
+  if (sobra <= MINIMO && Math.abs(e.bx - topo.x) > PERFEITO) {                                   // errou tudo: o bloco inteiro cai
     d.cortes.push({ i, x: e.bx, y: nivel, l: e.l, vx: 1.5 * Math.sign(e.bx - topo.x || 1), vy: 2, rot: 0, vr: 2 * Math.sign(e.bx - topo.x || 1), t: 0 });
-    e.queda = true;
     p.eventos.push('queda');
-    return true;
+    d.aviso = `Jogador ${i + 1} errou o bloco!`; d.avisoCor = '#ff4a4a'; d.tAviso = 0.9;
+    p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 };
+    e.espera = ESPERA_ERRO; e.dir = -e.dir; e.bx = e.dir > 0 ? -AMP : AMP;
+    return;
   }
   if (Math.abs(e.bx - topo.x) <= PERFEITO) {               // quase no centro: encaixa sem cortar
     e.blocos.push({ x: topo.x, l: topo.l });
-    d.aviso = 'PERFEITO!'; d.avisoCor = '#ffd84d'; d.tAviso = 0.7;
+    d.aviso = 'Perfeito!'; d.avisoCor = '#ffd84d'; d.tAviso = 0.7;
     p.eventos.push('moeda');
   } else {
     const esq = e.bx < topo.x, borda = esq ? e.bx - e.l / 2 : e.bx + e.l / 2, lim = esq ? ae : ad;
@@ -40,11 +42,10 @@ function solta(p, i) {
   const novo = e.blocos[e.blocos.length - 1];
   e.l = novo.l; e.v = velocidade(d.placar[i]); e.espera = ESPERA;
   e.dir = -e.dir; e.bx = e.dir > 0 ? -AMP : AMP;           // o próximo vem do lado oposto
-  return false;
 }
 
 export default {
-  id: 'empilha', nome: 'Empilha', dica: 'Aperte para soltar o bloco na torre. O que passar da borda cai. Errar tudo perde!',
+  id: 'empilha', genero: 'equilibrio', nome: 'Empilha', dica: 'Aperte para soltar o bloco em cima da torre. O que passar da borda cai. Torre mais alta em 30 s vence!',
   controle: { modo: 'botao', a: 'SOLTA!' }, semMovimento: true, semDash: true, semPulo: true, rotulo: 'andares', duracao: DUR,
 
   inicia(p) {
@@ -57,22 +58,23 @@ export default {
     const d = p.dados;
     d.tAviso -= dt;
     if (d.tAviso <= 0) d.aviso = '';
-    const errou = [false, false];
     p.jogadores.forEach((j, i) => {
       const e = d.e[i];
       j.vx = j.vz = 0;
       if (e.espera > 0) e.espera -= dt;                    // logo depois de soltar, toques não valem (evita erro por toque duplo)
-      else if (j.apertouA > 0) { errou[i] = solta(p, i); if (errou[i]) return; }
-      if (e.espera > 0 || errou[i]) return;
+      else if (j.apertouA > 0) solta(p, i);
+      if (e.espera > 0) return;
       e.bx += e.dir * e.v * dt;
       if (e.bx > AMP) { e.bx = AMP; e.dir = -1; }
       else if (e.bx < -AMP) { e.bx = -AMP; e.dir = 1; }
     });
     for (const c of d.cortes) { c.t += dt; c.vy -= 25 * dt; c.y += c.vy * dt; c.x += c.vx * dt; c.rot += c.vr * dt; }
     d.cortes = d.cortes.filter(c => c.t < 1.8);
-    if (errou[0] && errou[1]) { elimina(p, p.jogadores[0]); elimina(p, p.jogadores[1]); return maiorPlacar(p); }
-    for (const i of [0, 1]) if (errou[i]) { elimina(p, p.jogadores[i]); return 1 - i; }
-    if (p.t >= DUR) return maiorPlacar(p);
+    if (p.t >= DUR) {
+      const v = maiorPlacar(p);
+      if (v >= 0) elimina(p, p.jogadores[1 - v]);          // o dono da torre mais baixa sai voando
+      return v;
+    }
   },
 
   monta(c) {
@@ -103,7 +105,7 @@ export default {
     pecas.sobe = 0;                     // a torre cresce de verdade; quem sobe e a camera (camera abaixo)
     const cor = new THREE.Color();
     for (const i of [0, 1]) {
-      const e = d.e[i], n = e.blocos.length + (e.queda ? 0 : 1);
+      const e = d.e[i], n = e.blocos.length + 1;
       const lista = c.pool('torre' + i, n, () => { const m = c.malha(new THREE.BoxGeometry(1, H, PROF), 0xffffff, { roughness: 0.5 }); return m; });
       lista.forEach((m, k) => {
         if (k >= n) return;                 // pecas a mais do pool ficam escondidas

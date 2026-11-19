@@ -22,7 +22,7 @@ function sorteia(p) {
 const espera = (p, calma = 0) => ({ fase: 'espera', t: 1.2 + p.rng() * 3, tipo: -1, barra: 0, calma });
 
 export default {
-  id: 'pesca', nome: 'Pescaria', dica: 'A boia afundou e o celular vibrou? Aperte! Depois martele para puxar. Apertar antes espanta os peixes.',
+  id: 'pesca', genero: 'reflexo', nome: 'Pescaria', dica: 'Quando a sua boia afundar e aparecer o sinal amarelo, aperte. Depois martele para puxar. Apertar antes espanta os peixes.',
   controle: { modo: 'botao', a: 'PUXA' }, semMovimento: true, rotulo: 'quilos', duracao: TEMPO,
 
   inicia(p) {
@@ -52,9 +52,9 @@ export default {
         s.barra += toques * tipo.ganho - tipo.puxa * dt;
         if (s.barra >= 1) {
           d.placar[i] += tipo.peso; d.pegos[i].push(s.tipo); d.voos.push({ i, tipo: s.tipo, t: 0 });
-          if (tipo.id === 'bota') { d.aviso = 'BOTA VELHA!'; d.avisoCor = '#c98a4a'; d.avisoT = 1.3; p.eventos.push('queda'); vibra(0); vibra(1); efeito('bota', i); }
+          if (tipo.id === 'bota') { d.aviso = 'Bota velha!'; d.avisoCor = '#c98a4a'; d.avisoT = 1.3; p.eventos.push('queda'); vibra(0); vibra(1); efeito('bota', i); }
           else {
-            if (tipo.id === 'grande') { d.aviso = 'PEIXÃO!'; d.avisoCor = '#b46bff'; d.avisoT = 1.1; }
+            if (tipo.id === 'grande') { d.aviso = 'Peixão!'; d.avisoCor = '#b46bff'; d.avisoT = 1.1; }
             p.eventos.push('moeda'); efeito('pegou', i);
           }
           d.pesc[i] = espera(p, T_CALMA);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrada, passo, RAIO } from '../logica.mjs';
-import { partidaCom, roda, fumaca, DT } from '../jogos/_teste.mjs';
+import { partidaCom, roda, fumaca, sorteio, DT } from '../jogos/_teste.mjs';
 import jogo from './hoquei.mjs';
 
 const disco = (x, z, vx, vz) => ({ x, z, vx, vz, pausa: 0, lado: 1, sz: 0, lento: 0, som: 0 });
@@ -110,6 +110,16 @@ test('hoquei: no tempo vence o maior placar; igual empata', () => {
   assert.equal(p.fase, 'jogando');
   roda(p, 2);
   assert.equal(p.vencedor, 0);
+});
+
+test('hoquei: o saque nunca entra direto no gol de quem esta parado (sai na diagonal e bate no fundo)', () => {
+  for (let semente = 1; semente <= 40; semente++) {
+    const p = partidaCom(jogo, sorteio(semente));
+    p.dados.segundo = true;
+    for (const j of p.jogadores) j.vivo = false;   // ninguem toca no disco (o choque so vale para quem esta vivo)
+    roda(p, 2.9);                                  // a pausa e a primeira ida ate o fundo
+    assert.deepEqual(p.dados.placar, [0, 0], 'semente ' + semente);
+  }
 });
 
 test('hoquei: roda inteiro, parado e com dedos aleatorios, sem erro', () => {

@@ -1,7 +1,7 @@
 // Bocha de discos: estilingue no celular, em turnos. Quem deixar um disco mais perto do centro vence.
 import { colide, posiciona } from '../logica.mjs';
 
-const R_ARENA = 8, R_DISCO = 0.65, SAIDA = 5.6, N = 3, V_MAX = 18, T_TURNO = 6, T_ROLA = 3.2, LIMITE = 58;
+const R_ARENA = 8, R_DISCO = 0.65, SAIDA = 5.6, N = 3, V_MAX = 12, T_TURNO = 6, T_ROLA = 3.2, LIMITE = 58;
 const ATRITO_K = 1.2, ATRITO_C = 1.5, ARRASTO_CHEIO = 0.9, ARRASTO_MIN = 0.08, SETA = 4.5;
 
 // Estilingue: devolve { dx, dz, f } (direcao oposta ao arrasto, forca de 0 a 1) no quadro em que o dedo solta.
@@ -43,7 +43,6 @@ function lanca(p, tiro) {
   const d = p.dados, o = d.discos[d.atual];
   o.vx = tiro.dx * tiro.f * V_MAX; o.vz = tiro.dz * tiro.f * V_MAX;
   d.jogados[d.vez]++; d.fase = 'rola'; d.tempo = 0; d.aviso = '';
-  d.placar = [N - d.jogados[0], N - d.jogados[1]];
   p.eventos.push('dash');
 }
 
@@ -53,6 +52,13 @@ function maisPerto(d, dono) {
   return melhor;
 }
 
+// Placar ao vivo: distancia (cm) do disco mais perto do centro de cada um; sem disco valido, 999. Os discos que restam vao nos selos.
+function placar(p) {
+  const d = p.dados;
+  d.placar = [0, 1].map(i => { const m = maisPerto(d, i); return m === Infinity ? 999 : Math.min(999, Math.round(m * 100)); });
+  d.inventario = [0, 1].map(i => ['Discos ' + (N - d.jogados[i])]);
+}
+
 function resultado(d) {
   const a = maisPerto(d, 0), b = maisPerto(d, 1);
   if (a === b || Math.abs(a - b) < 1e-6) return -1;
@@ -60,13 +66,13 @@ function resultado(d) {
 }
 
 export default {
-  id: 'bocha', nome: 'Bocha de discos', dica: 'Na sua vez, arraste para trás e solte. Vence o disco mais perto do centro!',
-  semMovimento: true, semDash: true, semPulo: true, rotulo: 'discos para lançar',
+  id: 'bocha', genero: 'mira', nome: 'Bocha de discos', dica: 'Na sua vez, arraste para trás e solte. Vence o disco mais perto do centro!',
+  semMovimento: true, semDash: true, semPulo: true, rotulo: 'mais perto (cm)',
   controle: { modo: 'toque' },
 
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: R_ARENA, parede: false };
-    p.dados = { discos: [], jogados: [0, 0], placar: [N, N], fx: [], lider: -1, aviso: '', avisoCor: '#ffd84d' };
+    p.dados = { discos: [], jogados: [0, 0], placar: [999, 999], fx: [], lider: -1, aviso: '', avisoCor: '#ffd84d' };
     novoTurno(p, p.rng() < 0.5 ? 0 : 1);
     p.eventos.length = 0;                                    // o som e o pulo do primeiro turno ficam para a hora do jogo
     for (const j of p.jogadores) j.vy = 0;
@@ -109,6 +115,7 @@ export default {
       }
     }
 
+    placar(p);
     // quem esta ganhando agora (so para o destaque)
     d.lider = -1;
     let menor = Infinity;

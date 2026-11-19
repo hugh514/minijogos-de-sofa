@@ -1,10 +1,11 @@
 // Pula onda: o nucleo do centro solta aneis que varrem o chao. Quem estiver no chao quando o anel passa perde uma vida.
 import { posiciona, quemSobrou, maiorPlacar, elimina, RAIO } from '../logica.mjs';
 
-const R_NUCLEO = 1, LIMITE = 55, ALT_SALVA = 0.35, MEIA_FAIXA = 0.25, T_IMUNE = 1, T_DUPLA = 0.7, VIDAS = 2;
+const R_NUCLEO = 1, LIMITE = 55, ALT_SALVA = 0.35, MEIA_FAIXA = 0.25, T_IMUNE = 1, T_DUPLA = 0.7;
+export const VIDAS = 3;
 const COR_ONDA = 0x35e0ff, COR_DUPLA = 0xff4ad8;
 
-const intervalo = t => Math.max(0.55, 2.6 - t * 0.045);   // os pulsos vem cada vez mais juntos
+const intervalo = t => Math.max(0.55, 3 - t * 0.05);   // os pulsos vem cada vez mais juntos
 const velocidade = t => Math.min(12, 5 + t * 0.12);       // e cada vez mais rapidos
 
 function solta(p, dupla) {
@@ -13,13 +14,13 @@ function solta(p, dupla) {
 }
 
 export default {
-  id: 'onda', nome: 'Pula onda', dica: 'B pula. Pule o anel que sai do centro! Cada um tem 2 vidas.',
+  id: 'onda', genero: 'ritmo', nome: 'Pula onda', dica: 'Aperte B para pular o anel que sai do centro! Cada um tem 3 vidas.',
   rotulo: 'vidas',
 
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 8, parede: true };
     posiciona(p, 4.5);
-    p.dados = { ondas: [], prox: 2.5, extra: 0, carga: 0, vidas: [VIDAS, VIDAS], placar: [VIDAS, VIDAS], imune: [0, 0], golpes: [] };
+    p.dados = { ondas: [], prox: 3.5, extra: 0, carga: 0, vidas: [VIDAS, VIDAS], placar: [VIDAS, VIDAS], imune: [0, 0], golpes: [] };
   },
 
   atualiza(p, dt) {
@@ -98,12 +99,12 @@ export default {
     });
 
     // vidas: bolinhas girando em volta de cada boneco; quem acabou de apanhar pisca
-    const vidas = pool('vidas', 4, () => malha(new THREE.SphereGeometry(0.2, 12, 8), 0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.6 }));
+    const vidas = pool('vidas', 2 * VIDAS, () => malha(new THREE.SphereGeometry(0.2, 12, 8), 0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.6 }));
     p.jogadores.forEach((j, i) => {
       const b = bonecos[i];
       if (j.vivo) b.visible = !(d.imune[i] > 0 && Math.sin(t * 40) < 0);
-      for (let v = 0; v < 2; v++) {
-        const m = vidas[i * 2 + v], ang = t * 3 + v * Math.PI + i;
+      for (let v = 0; v < VIDAS; v++) {
+        const m = vidas[i * VIDAS + v], ang = t * 3 + v * 2 * Math.PI / VIDAS + i;
         m.visible = j.vivo && v < d.vidas[i];
         m.position.set(j.x + Math.cos(ang) * 1.2, RAIO + j.y, j.z + Math.sin(ang) * 1.2);
         m.material.color.set(cores[i]); m.material.emissive.set(cores[i]);

@@ -53,7 +53,7 @@ test('bocha: estourou o tempo do turno, o disco sai sozinho', () => {
 test('bocha: disco bate no do adversario e o empurra', () => {
   const p = partidaCom(jogo), vez = p.dados.vez, lado = vez ? 1 : -1;
   p.dados.discos.push(disco(0, 0, 1 - vez));
-  arrasta(p, vez, 0, 0, lado * 0.6, 0);
+  arrasta(p, vez, 0, 0, lado * 0.9, 0);       // forca maxima (com V_MAX 12 o disco chega ao centro)
   roda(p, 3);
   const alvo = p.dados.discos[1];
   assert.ok(Math.abs(alvo.x) > 1, 'o disco do centro foi tirado do lugar');
@@ -86,4 +86,32 @@ test('bocha: parado, a rodada acaba sozinha em menos de 60 s', () => {
 test('bocha: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   const vencedores = fumaca(jogo);
   assert.equal(vencedores.length, 15);
+});
+
+test('bocha: puxar ate o fim leva o disco pouco alem do centro, sem jogar para fora', () => {
+  for (const vez of [0, 1]) {
+    const p = partidaCom(jogo, () => (vez ? 0.9 : 0.1));
+    const v = p.dados.vez, lado = v ? 1 : -1;
+    arrasta(p, v, 0, 0, lado * 1, 0);                    // arrasto maximo
+    roda(p, 3.5);
+    const o = p.dados.discos[0];
+    assert.ok(!o.fora, 'o disco ficou na arena (x = ' + o.x.toFixed(1) + ')');
+    assert.ok(Math.abs(o.x) < 4, 'parou perto do centro, nao na borda do outro lado: ' + o.x.toFixed(1));
+    assert.ok(o.x * lado < 0, 'passou do centro');
+  }
+});
+
+test('bocha: o placar mostra a distancia do disco mais perto de cada um (menor ganha) e os discos que restam', () => {
+  assert.equal(jogo.rotulo, 'mais perto (cm)');
+  const p = partidaCom(jogo);
+  Object.assign(p.dados, { discos: [disco(1.5, 0, 0), disco(0, 3, 1), disco(-0.5, 0.5, 1)], jogados: [1, 2], fase: 'rola', tempo: 0 });
+  roda(p, 0.1);
+  assert.deepEqual(p.dados.placar, [150, 71]);
+  assert.deepEqual(p.dados.inventario, [['Discos 2'], ['Discos 1']]);
+  p.dados.discos[2].fora = true;
+  roda(p, 0.1);
+  assert.deepEqual(p.dados.placar, [150, 300]);
+  p.dados.discos = [];
+  roda(p, 0.1);
+  assert.deepEqual(p.dados.placar, [999, 999], 'sem disco valido: 999');
 });

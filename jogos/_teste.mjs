@@ -23,13 +23,22 @@ export function partidaCom(jogo, rng = sorteio(1), opcoes = {}) {
 }
 
 export function roda(p, segundos) { for (let i = 0; i < segundos * 60; i++) passo(p, DT); }
+// Roda ate a rodada fechar (com comMinimo, a rodada so fecha aos 5 s de jogo), no maximo 6 s.
+export function ateFechar(p) { for (let i = 0; i < 6 * 60 && p.fase === 'jogando'; i++) passo(p, DT); }
 
 // Contexto de desenho igual ao da tela (mesmos nomes), com three de verdade e sem WebGL.
-export function contexto(p) {
+// comModelos: c.modelo devolve um grupo de mentira (como a tela com o glb carregado); sem, devolve null (modelo ainda nao chegou ou falhou: o minijogo usa a forma simples).
+export function contexto(p, comModelos = false) {
   const malha = (geo, cor, extra = {}) => new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: cor, ...extra }));
   const c = {
     THREE, grupo: new THREE.Group(), pecas: {}, base: {}, p, malha,
-    particulas() {}, som() {}, cores: [0x2f7df6, 0xf0458f, 0x35c26b, 0xffc531].slice(0, p.n), times: [0xff7a1a, 0x9a4dff],
+    modelo: (nome, { altura, escala = 1 } = {}) => {
+      if (!comModelos) return null;
+      const g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial()));
+      g.scale.setScalar(altura ?? escala); g.userData.toca = (anim, vel) => (g.userData.chamadas ??= []).push([anim, vel]);       // guarda o que o minijogo pediu
+      return g;
+    },
+    mixers: [], particulas() {}, som() {}, cores: [0x2f7df6, 0xf0458f, 0x35c26b, 0xffc531].slice(0, p.n), times: [0xff7a1a, 0x9a4dff],
     bonecos: p.jogadores.map(() => new THREE.Group()),
     pool(nome, n, cria) {
       const lista = c.pecas[nome] ??= [];
@@ -52,7 +61,7 @@ function confere(p, jogo) {
 // Falha se der erro, se alguma posicao ficar invalida ou se a rodada nao acabar em 75 s.
 export function rodada(jogo, aperta = () => {}, semente = 1, opcoes = {}) {
   const rng = sorteio(semente), p = partidaCom(jogo, sorteio(semente + 1000), opcoes);
-  const c = contexto(p);
+  const c = contexto(p, semente % 2 === 0);       // sementes pares desenham com modelos, as impares com as formas simples
   jogo.monta?.(c);
   let quadro = 0;
   for (; quadro < 75 * 60 && p.fase === 'jogando'; quadro++) {

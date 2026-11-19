@@ -1,8 +1,8 @@
 // Chute simultaneo: os dois miram com estilingue e sao lancados juntos. 3 gols vencem; no fim do tempo, quem fez mais.
 import { posiciona, colide, elimina, maiorPlacar, RAIO } from '../logica.mjs';
 
-const LX = 11, LZ = 6.5, GOL = 3, R_BOLA = 0.6, M_BOLA = 0.3;
-const T_MIRA = 4, T_ROLA = 4, LIMITE = 55, GOLS = 3, V_MAX = 20, V_BOLA_MAX = 26;
+const LX = 11, LZ = 6.5, GOL = 3.6, R_BOLA = 0.6, M_BOLA = 0.3;
+const T_MIRA = 4, T_ROLA = 4, LIMITE = 55, TETO = 60, GOLS = 3, V_MAX = 20, V_BOLA_MAX = 26;
 const FREIO = 2, BOLA_K = 1.1, PARADO = 0.3;
 const ARRASTO_CHEIO = 0.9, ARRASTO_MIN = 0.08, SETA = 5;
 
@@ -46,7 +46,7 @@ function novaMira(p, vibra) {
 function miraDe(d, i) { return (d.miras[i].d ? pontaria(d.miras[i]) : null) ?? d.tiros[i]; }
 
 export default {
-  id: 'gol-cego', nome: 'Chute simultâneo', dica: 'Mirem juntos: arraste para trás e solte. Os dois saem ao mesmo tempo. 3 gols vencem!',
+  id: 'gol-cego', genero: 'gol', nome: 'Chute simultâneo', dica: 'Arraste para trás e solte para lançar o seu boneco na bola. Os dois saem juntos. 3 gols vencem. Empate no fim: vale o próximo gol!',
   semMovimento: true, semDash: true, semPulo: true, rotulo: 'gols', duracao: LIMITE,
   controle: { modo: 'toque' },
 
@@ -97,7 +97,7 @@ export default {
             const perdedor = b.x > 0 ? 1 : 0;
             p.eventos.push('gol');
             d.fx.push({ x: b.x, y: 1, z: b.z, cor: 1 - perdedor, q: 40, forca: 9 });
-            if (++d.placar[1 - perdedor] >= GOLS) { elimina(p, p.jogadores[perdedor], 12); return 1 - perdedor; }
+            if (++d.placar[1 - perdedor] >= GOLS || p.t > LIMITE) { elimina(p, p.jogadores[perdedor], 12); return 1 - perdedor; }
             Object.assign(b, { x: 0, z: 0, vx: 0, vz: 0 });          // bola ao meio, cada um volta ao seu lado, nova mira
             posiciona(p, 6);
             for (const j of p.jogadores) j.vx = j.vz = 0;
@@ -113,7 +113,9 @@ export default {
         novaMira(p, true);
       }
     }
-    if (p.t > LIMITE) return maiorPlacar(p);
+    if (p.t > LIMITE && d.placar[0] === d.placar[1]) {            // empatado no fim do tempo: o proximo gol decide
+      if (p.t > TETO) return -1;
+    } else if (p.t > LIMITE) return maiorPlacar(p);
   },
 
   monta(c) {
