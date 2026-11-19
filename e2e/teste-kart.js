@@ -81,7 +81,7 @@ async function celular(browser, botao) {
   console.log('ok os dois celulares conectaram');
 
   await tela.waitForFunction(() => { window.__jogo('kart'); return window.__p.jogo?.id === 'kart'; }, null, { timeout: 30000, polling: 500 });
-  await tela.waitForFunction(() => document.getElementById('msg').textContent.includes('PRONTO'));
+  await tela.waitForFunction(() => document.getElementById('msg').textContent.includes('Entendi'));
   for (const c of cel) { await c.page.locator('#btG').waitFor({ state: 'visible' }); await c.toca('#btG'); }
   const fotos = {};
   const foto = async (nome, cond = true) => {

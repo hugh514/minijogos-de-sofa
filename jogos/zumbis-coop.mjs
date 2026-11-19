@@ -1,549 +1,390 @@
-// Noite dos Zumbis (Festa, cooperativo de 2 a 4 jogadores): uma vila com a casa segura no meio do quintal, zumbis lentos vindo das bordas em ondas.
-// Todos andam com o joystick. A = USAR (reviver, tapar porta ou janela com tábua, usar a lanterna), B = CORRER.
-// Pegue tábuas, lanternas e moedas e se abrigue na casa. Zumbi que encosta derruba o jogador, e um parceiro revive segurando A por 1,5 s
-// (ou com o kit médico, na hora). Cooperativo: atualiza devolve 2 (todos vencem) se sobrar pelo menos um em pé aos 45 s, e -1 quando todos caem.
-import { posicionaRoda, RAIO } from '../logica.mjs';
+// Noite dos Zumbis (Festa, cooperativo de 2 a 4 jogadores).
+// Objetivo unico: aguentar ate o sol nascer. O sol anda numa faixa no alto da tela e o placar conta os segundos que faltam.
+// Zumbis saem das covas e vao atras de quem esta em pe. Zumbi que encosta derruba o jogador.
+// Uma acao so, o botao Luz: afasta e deixa tontos os zumbis perto. Se um amigo em pe esta perto, a luz dos dois destroi os zumbis.
+// Quem caiu levanta quando um amigo encosta nele. Venceram se ainda houver alguem em pe quando o sol nascer; perdem se todos cairem.
+import { posicionaRoda, quem, RAIO } from '../logica.mjs';
 
 export const LX = 11, LZ = 7.5;                 // meia largura e meia profundidade da arena
-export const HX = 3.6, HZ = 2.4, ESP = 0.25;    // meia casa (x e z) e meia espessura das paredes
-const GAP = 1.1;                                // meia largura de cada porta ou janela
-export const TEMPO = 45, MAX_ZUMBIS = 20;
-const ZR = 0.55, CONTATO = ZR + RAIO - 0.3;     // raio do zumbi e distância em que ele derruba
-const V_ANDA = 7.5, V_CORRE = 11.5, CORRE_T = 1.1, CORRE_CD = 3;
-const T_REVIVE = 1.5, R_REVIVE = 2.3, R_TAPAR = 2.9, T_IMUNE = 2.2;
-const HP_TABUA = 8, DANO_TABUA = 1;             // um zumbi leva 8 s para quebrar; vários, bem menos
-const R_LANTERNA = 6, T_ATORDOA = 4;
-const INTERVALO = 9, PRIMEIRA = 3.5, ONDAS = [2, 3, 3, 4, 4, 5];       // para 2 jogadores; com mais gente cada onda cresce
-const T_ITEM = 3.2, MAX_ITENS = 5, VIDA_ITEM = 16, R_PEGA = RAIO + 0.55;
-const PELE = 0xb8ad94;       // pele de zumbi: cinza amarelado, longe de todas as cores de jogador
-const PTS = { moeda: 10, tabua: 5, lanterna: 5, kit: 5, reviver: 25, onda: 20 };
-const MAX_INV = { tabua: 2, lanterna: 1, kit: 1 };
-
-const ALTURA = 0.8;       // paredes e caixas baixas: nada alto entre a camera e os jogadores
-const caixa = (x, z, h) => ({ x0: x - h, x1: x + h, z0: z - h, z1: z + h });
-const T = ESP;
-// Paredes da casa, já com os vãos das portas e da janela.
-export const PAREDES = [
-  { x0: -HX - T, x1: -1.4 - GAP, z0: -HZ - T, z1: -HZ + T },
-  { x0: -1.4 + GAP, x1: HX + T, z0: -HZ - T, z1: -HZ + T },
-  { x0: -HX - T, x1: 1.4 - GAP, z0: HZ - T, z1: HZ + T },
-  { x0: 1.4 + GAP, x1: HX + T, z0: HZ - T, z1: HZ + T },
-  { x0: HX - T, x1: HX + T, z0: -HZ + T, z1: HZ - T },
-  { x0: -HX - T, x1: -HX + T, z0: -HZ + T, z1: -GAP },
-  { x0: -HX - T, x1: -HX + T, z0: GAP, z1: HZ - T },
-];
-// Entradas: onde a tábua pode ser pregada. "fora" e "dentro" são os pontos de passagem dos zumbis.
-export const ENTRADAS = [
-  { nome: 'porta norte', x: -1.4, z: -HZ, caixa: { x0: -1.4 - GAP - 0.05, x1: -1.4 + GAP + 0.05, z0: -HZ - 0.2, z1: -HZ + 0.2 }, fora: { x: -1.4, z: -HZ - 1.7 }, dentro: { x: -1.4, z: -HZ + 1.7 } },
-  { nome: 'porta sul', x: 1.4, z: HZ, caixa: { x0: 1.4 - GAP - 0.05, x1: 1.4 + GAP + 0.05, z0: HZ - 0.2, z1: HZ + 0.2 }, fora: { x: 1.4, z: HZ + 1.7 }, dentro: { x: 1.4, z: HZ - 1.7 } },
-  { nome: 'janela oeste', x: -HX, z: 0, caixa: { x0: -HX - 0.2, x1: -HX + 0.2, z0: -GAP - 0.05, z1: GAP + 0.05 }, fora: { x: -HX - 1.7, z: 0 }, dentro: { x: -HX + 1.7, z: 0 } },
-];
-// Caixas do quintal e o poste de luz (bloqueiam todo mundo).
-export const CAIXAS = [caixa(-7, -3.8, 0.75), caixa(7, -4.2, 0.75), caixa(-7.4, 3.4, 0.75), caixa(7.2, 3.8, 0.75), caixa(-1.8, -5.4, 0.75), caixa(2.2, 5.4, 0.75)];
-export const POSTE = { x: -5.6, z: 5.4 };
-const FIXOS = [...PAREDES, ...CAIXAS, caixa(POSTE.x, POSTE.z, 0.35)];
-const CANTOS = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => ({ x: a * (HX + 1.5), z: b * (HZ + 1.5) }));
+export const TEMPO = 40;
+export const R_LUZ = 4.2, R_JUNTOS = 7, LIGA = 7.5;       // alcance da luz sozinho, alcance da luz em dupla, e distancia para contar como "juntos"
+export const T_CARGA = 2, T_TONTO = 2.2, T_REVIVE = 1.2, R_REVIVE = 3.6, T_IMUNE = 3.5;
+export const MAX_ZUMBIS = 18, ONDAS = [3, 10, 17, 24, 31], TAMANHO = [2, 3, 3, 4, 4];
+const ZR = 0.55, CONTATO = ZR + RAIO - 0.3;     // raio do zumbi e distancia em que ele derruba
+const R_SUSTO = 4.5, T_SUSTO_QUEDA = 3;
+const V_ANDA = 7, T_NASCE = 1.6, T_MORRE = 0.45;
+export const COVAS = [[-6.5, -6.3], [6.5, -6.3], [-6.5, 6.3], [6.5, 6.3], [-10, -2.4], [-10, 2.4], [10, -2.4], [10, 2.4]].map(([x, z]) => ({ x, z }));
+export const MODELOS = ['graveyard-kit/fence', 'graveyard-kit/pine', 'graveyard-kit/pine-crooked', 'graveyard-kit/gravestone-cross',
+  'graveyard-kit/gravestone-round', 'graveyard-kit/gravestone-broken', 'graveyard-kit/pumpkin', 'graveyard-kit/crypt-small'];
 
 const limita = (v, a, b) => Math.max(a, Math.min(b, v));
-const SEP2 = (ZR * 1.6) * (ZR * 1.6), CONTATO2 = CONTATO * CONTATO;
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
-const dentroDeCasa = a => Math.abs(a.x) < HX - 0.3 && Math.abs(a.z) < HZ - 0.3;
 const vibra = (p, i) => { p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 }; };
+const noiteDe = p => limita(p.noites?.jogadas ?? 0, 0, 4);
 
-// Empurra o círculo (a, raio r) para fora da caixa b. Devolve true se empurrou (a normal fica em NX, NZ).
-let NX = 0, NZ = 0;
-function empurra(a, r, b) {
-  if (a.x < b.x0 - r || a.x > b.x1 + r || a.z < b.z0 - r || a.z > b.z1 + r) return false;     // longe: sem conta
-  const px = limita(a.x, b.x0, b.x1), pz = limita(a.z, b.z0, b.z1);
-  const dx = a.x - px, dz = a.z - pz, d = Math.sqrt(dx * dx + dz * dz);
-  if (d >= r) return false;
-  if (d > 1e-6) { a.x = px + dx / d * r; a.z = pz + dz / d * r; NX = dx / d; NZ = dz / d; return true; }
-  const ex = Math.min(a.x - b.x0, b.x1 - a.x), ez = Math.min(a.z - b.z0, b.z1 - a.z);
-  if (ex < ez) { const s = a.x - b.x0 < b.x1 - a.x ? -1 : 1; a.x = s < 0 ? b.x0 - r : b.x1 + r; NX = s; NZ = 0; return true; }
-  const s = a.z - b.z0 < b.z1 - a.z ? -1 : 1; a.z = s < 0 ? b.z0 - r : b.z1 + r; NX = 0; NZ = s; return true;
-}
+// Quanto a dificuldade cresce com o numero de jogadores e com a noite (0 a 4).
+export const escala = (n, noite) => (0.4 + 0.4 * (n - 2)) * (1 + 0.3 * noite);
+export const velocidade = (noite, onda) => 1.5 + 0.25 * noite + 0.06 * onda;
 
-// O segmento a-b atravessa a caixa (inflada de m)?
-function corta(ax, az, bx, bz, b, m) {
-  let t0 = 0, t1 = 1;
-  const vx = bx - ax, vz = bz - az;
-  if (Math.abs(vx) < 1e-9) { if (ax < b.x0 - m || ax > b.x1 + m) return false; }
-  else {
-    let s = (b.x0 - m - ax) / vx, e = (b.x1 + m - ax) / vx;
-    if (s > e) { const k = s; s = e; e = k; }
-    t0 = Math.max(t0, s); t1 = Math.min(t1, e);
-    if (t0 > t1) return false;
-  }
-  if (Math.abs(vz) < 1e-9) return !(az < b.z0 - m || az > b.z1 + m);
-  let s = (b.z0 - m - az) / vz, e = (b.z1 + m - az) / vz;
-  if (s > e) { const k = s; s = e; e = k; }
-  return Math.max(t0, s) <= Math.min(t1, e);
-}
-const paredeNoCaminho = (a, b) => PAREDES.some(w => corta(a.x, a.z, b.x, b.z, w, 0.35));
-
-// Para onde o zumbi deve ir agora: direto no alvo, contornando a casa ou entrando por uma porta ou janela.
-function contorna(z, pt) {
-  if (dentroDeCasa(z) || dentroDeCasa(pt) || !paredeNoCaminho(z, pt)) return pt;
-  let melhor = pt, custo = Infinity;
-  for (const c of CANTOS) {
-    if (paredeNoCaminho(z, c)) continue;
-    const v = dist(z, c) + dist(c, pt) + (paredeNoCaminho(c, pt) ? 15 : 0);
-    if (v < custo) { custo = v; melhor = c; }
-  }
-  return melhor;
-}
-export function rumo(d, z, alvo) {
-  const zDentro = dentroDeCasa(z), aDentro = dentroDeCasa(alvo);
-  if (zDentro === aDentro) return contorna(z, alvo);
-  let melhor = null, custo = Infinity;
-  ENTRADAS.forEach((e, k) => {
-    const perto = zDentro ? e.dentro : e.fora, longe = zDentro ? e.fora : e.dentro;
-    const c = dist(z, perto) + dist(longe, alvo) + (d.tabua[k] > 0 ? 9 : 0);
-    if (c < custo) { custo = c; melhor = { perto, longe, e }; }
-  });
-  // na boca da entrada (ou no ponto de passagem) segue em frente, sem voltar atras
-  return dist(z, melhor.perto) < 0.5 || dist(z, melhor.e) < 1.6 ? melhor.longe : contorna(z, melhor.perto);
-}
-
-function sorteiaPonto(p, folga) {
-  for (let n = 0; n < 25; n++) {
-    const a = { x: (p.rng() * 2 - 1) * (LX - 1.2), z: (p.rng() * 2 - 1) * (LZ - 1.2) };
-    if (!FIXOS.some(b => a.x > b.x0 - folga && a.x < b.x1 + folga && a.z > b.z0 - folga && a.z < b.z1 + folga)) return a;
-  }
-  return { x: 0, z: 0 };
-}
+function aviso(d, texto, cor = '#ffffff', t = 2) { d.aviso = texto; d.avisoCor = cor; d.avisoT = t; }
 
 function novoZumbi(p, d) {
-  let x = 0, z = 0, melhor = -1;
-  for (let n = 0; n < 8; n++) {                  // nasce numa borda, o mais longe possível de quem está em pé
-    let cx, cz;
-    if (p.rng() < LX / (LX + LZ)) { cx = (p.rng() < 0.5 ? -1 : 1) * (LX - ZR - 0.2); cz = (p.rng() * 2 - 1) * (LZ - 1); }
-    else { cz = (p.rng() < 0.5 ? -1 : 1) * (LZ - ZR - 0.2); cx = (p.rng() * 2 - 1) * (LX - 1); }
+  let melhor = -1, cova = 0;
+  for (let n = 0; n < 6; n++) {                  // sai da cova mais longe de quem esta em pe (entre seis sorteadas)
+    const k = Math.floor(p.rng() * COVAS.length);
     let perto = Infinity;
-    p.jogadores.forEach((j, i) => { if (!d.caido[i]) perto = Math.min(perto, Math.hypot(j.x - cx, j.z - cz)); });
-    if (perto > melhor) { melhor = perto; x = cx; z = cz; }
-    if (melhor > 7) break;
+    p.jogadores.forEach((j, i) => { if (!d.caido[i]) perto = Math.min(perto, dist(j, COVAS[k])); });
+    if (perto > melhor) { melhor = perto; cova = k; }
   }
-  const v = 1.3 + 0.18 * d.onda + p.rng() * 0.4;     // sempre bem mais devagar que o jogador
-  return { x, z, kx: 0, kz: 0, ang: Math.atan2(-z, -x), v, atord: 0, pausa: 1, re: p.rng() * 0.4, wp: null, fase: p.rng() * 6.28, alvo: 0 };
+  const c = COVAS[cova];
+  d.covaT[cova] = T_NASCE; d.fx.push({ tipo: 'nasceu', x: c.x, z: c.z });
+  return { x: c.x, z: c.z, kx: 0, kz: 0, ang: Math.atan2(-c.z, -c.x), v: velocidade(noiteDe(p), d.onda) + p.rng() * 0.4, atord: 0, pausa: 0, nasce: T_NASCE, morre: 0, re: 0, fase: p.rng() * 6.28, alvo: -1 };
 }
 
-function aviso(d, texto, cor = '#ffffff', t = 1.8) { d.aviso = texto; d.avisoCor = cor; d.avisoT = t; }
+// Quantos amigos em pe estao perto o bastante para a luz ser em dupla.
+const parceiroPerto = (p, d, i) => p.jogadores.some((q, k) => k !== i && !d.caido[k] && dist(q, p.jogadores[i]) <= LIGA);
+const emPe = d => d.caido.filter(c => !c).length;
 
-function atordoaPerto(d, x, z, raio, tempo, forca) {
-  for (const zb of d.zumbis) {
-    const dx = zb.x - x, dz = zb.z - z, m = Math.hypot(dx, dz);
-    if (m > raio) continue;
-    zb.atord = Math.max(zb.atord, tempo);
-    const n = m || 1; zb.kx = dx / n * forca; zb.kz = dz / n * forca;
+// Susto: os zumbis colados em j tropecam para longe e ficam tontos um instante (quando alguem cai ou levanta).
+function susto(d, j, tonto) {
+  for (const z of d.zumbis) {
+    const dx = z.x - j.x, dz = z.z - j.z, m = Math.hypot(dx, dz) || 1;
+    if (m > R_SUSTO) continue;
+    z.atord = Math.max(z.atord, tonto); z.kx = dx / m * 8; z.kz = dz / m * 8;
   }
 }
 
-// O parceiro caido mais perto que da para socorrer (ou -1).
-function caidoPerto(p, d, i) {
+function aterra(p, d, i) {                       // o zumbi pegou: o jogador cai
   const j = p.jogadores[i];
-  let achado = -1, melhor = R_REVIVE;
-  p.jogadores.forEach((q, k) => {
-    const m = Math.hypot(q.x - j.x, q.z - j.z);
-    if (k !== i && d.caido[k] && m < melhor) { melhor = m; achado = k; }
-  });
-  return achado;
-}
-
-function reviver(p, d, i) {
-  d.caido[i] = false; d.rev[i] = 0; d.imune[i] = T_IMUNE;
-  d.pontos += PTS.reviver;
-  atordoaPerto(d, p.jogadores[i].x, p.jogadores[i].z, 3.2, 1.6, 7);
-  d.fx.push({ tipo: 'reviveu', x: p.jogadores[i].x, z: p.jogadores[i].z, i });
-  p.eventos.push('troca');
-  aviso(d, 'DE VOLTA!', '#6bff9a', 1.4);
-}
-
-function cai(p, d, i) {
-  const j = p.jogadores[i];
-  d.caido[i] = true; d.rev[i] = 0; d.pos[i] = { x: j.x, z: j.z }; j.vx = j.vz = 0;
+  d.caido[i] = true; d.rev[i] = 0; d.pos[i] = { x: j.x, z: j.z }; j.vx = j.vz = 0; d.quedas++;
   vibra(p, i); p.eventos.push('queda');
-  d.fx.push({ tipo: 'caiu', x: j.x, z: j.z, i });
-  aviso(d, 'CAIU! SEGURE A PERTO DELE', '#ff4a4a', 2.2);
+  d.fx.push({ tipo: 'caiu', x: j.x, z: j.z });
+  susto(d, j, T_SUSTO_QUEDA);
+  const sobra = emPe(d);
+  if (sobra === 1) aviso(d, 'Só sobrou ' + quem(p, d.caido.indexOf(false)) + '! Salvem os amigos!', '#ff4a4a', 2.4);
+  else if (sobra > 1) aviso(d, quem(p, i) + ' caiu! Encoste nele.', '#ff4a4a', 2.4);
 }
 
-// Passo de um zumbi: segue o rumo, recebe empurrão, contorna caixas e nunca sai da arena.
-function andaZumbi(d, z, dt, alvo) {
-  z.re -= dt; z.atord -= dt; z.pausa -= dt;
+function levanta(p, d, i) {
+  const j = p.jogadores[i];
+  d.caido[i] = false; d.rev[i] = 0; d.imune[i] = T_IMUNE; d.carga[i] = 1; d.salvos++;
+  susto(d, j, 1.5);                              // o susto afasta os zumbis colados
+  d.fx.push({ tipo: 'reviveu', x: j.x, z: j.z });
+  p.eventos.push('troca');
+  aviso(d, quem(p, i) + ' levantou!', '#6bff9a', 1.6);
+}
+
+// O botao Luz de i: sozinho afasta e deixa tontos; com um amigo em pe perto, destroi os zumbis.
+function luz(p, d, i) {
+  const j = p.jogadores[i], juntos = parceiroPerto(p, d, i), raio = juntos ? R_JUNTOS : R_LUZ;
+  d.carga[i] = 0; d.pulsos.push({ x: j.x, z: j.z, idade: 0, juntos });
+  let pegou = 0;
+  for (const z of d.zumbis) {
+    if (z.nasce > 0 || z.morre > 0) continue;
+    const dx = z.x - j.x, dz = z.z - j.z, m = Math.hypot(dx, dz);
+    if (m > raio) continue;
+    pegou++;
+    if (juntos) { z.morre = T_MORRE; d.destruidos++; d.fx.push({ tipo: 'po', x: z.x, z: z.z }); }
+    else { z.atord = T_TONTO; const n = m || 1; z.kx = dx / n * 10; z.kz = dz / n * 10; }
+  }
+  p.eventos.push(juntos ? 'explosao' : 'batida');
+  d.fx.push({ tipo: juntos ? 'luzDupla' : 'luz', x: j.x, z: j.z });
+  if (juntos && pegou && d.t < d.semAvisoLuz) return;
+  if (juntos && pegou) { aviso(d, 'Luz em dupla! Zumbis destruídos!', '#ffd23f', 1.4); d.semAvisoLuz = d.t + 4; }
+}
+
+// Passo de um zumbi: persegue, balanca, recebe empurrao e nunca sai da arena.
+function andaZumbi(z, dt, alvo) {
   z.x += z.kx * dt; z.z += z.kz * dt;
   const f = Math.pow(0.02, dt); z.kx *= f; z.kz *= f;
-  let bateu = false;
   if (alvo && z.atord <= 0 && z.pausa <= 0) {
-    if (z.re <= 0 || !z.wp) { z.wp = rumo(d, z, alvo); z.re = 0.35 + (z.fase % 0.2); }
-    let dx = z.wp.x - z.x, dz = z.wp.z - z.z;
-    const m = Math.sqrt(dx * dx + dz * dz);
-    if (m < 0.35 && z.wp !== alvo) { z.re = 0; }
+    const dx = alvo.x - z.x, dz = alvo.z - z.z, m = Math.hypot(dx, dz);
     if (m > 1e-6) {
-      dx /= m; dz /= m;
-      const alvoAng = Math.atan2(dz, dx);
-      let da = alvoAng - z.ang;
+      let da = Math.atan2(dz, dx) - z.ang;
       while (da > Math.PI) da -= 2 * Math.PI;
       while (da < -Math.PI) da += 2 * Math.PI;
-      z.ang += limita(da, -5 * dt, 5 * dt);
-      const v = z.v * (0.7 + 0.3 * Math.max(0, Math.cos(da)));      // vira devagar e anda enquanto vira
+      z.ang += limita(da, -4 * dt, 4 * dt);
+      const v = z.v * (0.6 + 0.4 * Math.max(0, Math.cos(da)));      // vira devagar e anda enquanto vira
       z.x += Math.cos(z.ang) * v * dt; z.z += Math.sin(z.ang) * v * dt;
     }
-  }
-  let nx = 0, nz = 0;
-  for (const b of FIXOS) if (empurra(z, ZR, b)) { bateu = true; nx = NX; nz = NZ; }
-  for (let k = 0; k < 3; k++) if (d.tabua[k] > 0) if (empurra(z, ZR, ENTRADAS[k].caixa)) { bateu = true; nx = NX; nz = NZ; }
-  if (bateu && alvo && z.atord <= 0 && z.pausa <= 0) {          // escorrega na lateral em vez de ficar travado de frente
-    const s = z.fase > 3 ? 1 : -1;
-    z.x += -nz * s * z.v * dt * 0.8; z.z += nx * s * z.v * dt * 0.8;
-    for (const b of FIXOS) empurra(z, ZR, b);
   }
   z.x = limita(z.x, -LX + ZR, LX - ZR); z.z = limita(z.z, -LZ + ZR, LZ - ZR);
 }
 
-export default {
-  id: 'zumbis-coop', nome: 'Noite dos Zumbis',
-  dica: 'Fujam dos zumbis, peguem tábuas, lanternas e moedas e se abriguem na casa. Aguentem 45 segundos!',
-  festa: { min: 2, max: 4, modos: ['coop'] },
-  controle: { modo: 'padrao', a: 'USAR', b: 'CORRER' }, semMovimento: false, semDash: true, semPulo: true,
-  rotulo: 'pontos da equipe', duracao: TEMPO,
+// O texto de cada celular: o que fazer agora.
+function textoDe(p, d, i) {
+  const j = p.jogadores[i];
+  if (d.caido[i]) return 'Você caiu! Um amigo precisa encostar em você.';
+  let achado = -1, melhor = Infinity;
+  p.jogadores.forEach((q, k) => { if (d.caido[k] && dist(q, j) < melhor) { melhor = dist(q, j); achado = k; } });
+  if (achado >= 0) return 'Corra até ' + quem(p, achado) + ' e encoste para levantar.';
+  const zumbiPerto = d.zumbis.some(z => z.nasce <= 0 && z.morre <= 0 && z.atord <= 0 && dist(z, j) < R_LUZ + 1.5);
+  if (zumbiPerto) return d.carga[i] >= 1 ? 'Zumbi perto! Aperte Luz.' : 'Fuja! A luz está recarregando.';
+  if (p.jogadores.length > 1 && !parceiroPerto(p, d, i)) return 'Fiquem juntos: a luz de dois destrói os zumbis.';
+  return 'Juntos! Aguente até o sol nascer.';
+}
 
-  // camera mais alta e mais fechada: a casa e os quatro cantos cabem e nenhuma parede esconde ninguem
+export default {
+  id: 'zumbis-coop', genero: 'reflexo', nome: 'Noite dos Zumbis',
+  dica: 'Aguentem até o sol nascer: a luz afasta os zumbis, e juntos ela os destrói!',
+  semMod: ['espelho', 'foguete'],       // o raio da luz some com o espelho e o teto de velocidade anula o foguete
+  festa: { min: 2, max: 4, modos: ['coop'] },
+  controle: { modo: 'padrao', a: 'Luz', b: '' }, semMovimento: false, semDash: true, semPulo: true, semNome: true,   // os bonecos se juntam para a luz dupla e para levantar: o nome cobria os zumbis; o disco da cor de cada um ja diz quem e
+  rotulo: 'o sol nasce em', sufixo: 's', duracao: TEMPO, modelos: MODELOS,
+
+  // camera alta: a arena inteira, os quatro cantos e a faixa do sol cabem
   camera: () => ({ x: 0, y: 20, z: 10.5, ox: 0, oy: 0, oz: 0.3 }),
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: LX, lz: LZ, parede: true };
-    posicionaRoda(p, 5.2);
+    posicionaRoda(p, 4.2);
     const cada = f => p.jogadores.map((_, i) => f(i));       // um valor por jogador
     p.dados = {
-      placar: [0], pontos: 0, onda: 0, proxOnda: PRIMEIRA, proxItem: 0.6, aviso: '', avisoCor: '#ffffff', avisoT: 0,
-      zumbis: [], itens: [], tabua: [0, 0, 0], fx: [], pulsos: [],
-      caido: cada(() => false), pos: cada(() => ({ x: 0, z: 0 })), rev: cada(() => 0), imune: cada(() => 0), seg: cada(() => 0),
-      corre: cada(() => 0), cdCorre: cada(() => 0), ang: cada(i => i * Math.PI / 2), inv: cada(() => ({ tabua: 0, lanterna: 0, kit: 0 })),
-      rotA: cada(() => 'USAR'), texto: cada(() => ''), quebradas: 0,
+      placar: [TEMPO], t: 0, onda: 0, aviso: 'Aguentem até o sol nascer!', avisoCor: '#ffd23f', avisoT: 3, semAvisoLuz: 0, avisou10: false,
+      zumbis: [], fx: [], pulsos: [], covaT: COVAS.map(() => 0), fim: '', quedas: 0, salvos: 0, destruidos: 0,
+      caido: cada(() => false), pos: cada(() => ({ x: 0, z: 0 })), rev: cada(() => 0), imune: cada(() => 0), carga: cada(() => 1),
+      inventario: cada(() => ['Luz pronta']), texto: cada(() => ''), rotA: cada(() => ''),
     };
   },
 
   atualiza(p, dt) {
     const d = p.dados, js = p.jogadores;
+    d.t = p.t;
     if (d.avisoT > 0) { d.avisoT -= dt; if (d.avisoT <= 0) d.aviso = ''; }
-    const revendo = js.map(() => false);
+    d.covaT = d.covaT.map(v => Math.max(0, v - dt));
 
     // ----- jogadores -----
     js.forEach((j, i) => {
-      d.imune[i] = Math.max(0, d.imune[i] - dt); d.seg[i] = Math.max(0, d.seg[i] - dt);
-      d.cdCorre[i] -= dt; d.corre[i] = Math.max(0, d.corre[i] - dt);
-      if (d.caido[i]) { j.x = d.pos[i].x; j.z = d.pos[i].z; j.vx = j.vz = 0; j.turbo = 1; return; }
-      if (j.apertouB > 0 && d.cdCorre[i] <= 0) { d.corre[i] = CORRE_T; d.cdCorre[i] = CORRE_CD; p.eventos.push('dash'); }
-      j.turbo = d.corre[i] > 0 ? 1.6 : 1;
-      const vmax = d.corre[i] > 0 ? V_CORRE : V_ANDA, v = Math.hypot(j.vx, j.vz);
-      if (v > vmax) { j.vx *= vmax / v; j.vz *= vmax / v; }
-      if (j.apertouA > 0) d.seg[i] = 0.25;           // toque curto vale como um instante de "segurar"
-      if (Math.hypot(j.ent.x, j.ent.y) > 0.25) d.ang[i] = Math.atan2(j.ent.y, j.ent.x);
-      for (const b of FIXOS) empurra(j, RAIO * 0.9, b);
-      for (let k = 0; k < 3; k++) if (d.tabua[k] > 0) empurra(j, RAIO * 0.9, ENTRADAS[k].caixa);
+      d.imune[i] = Math.max(0, d.imune[i] - dt);
+      if (d.caido[i]) { j.x = d.pos[i].x; j.z = d.pos[i].z; j.vx = j.vz = 0; return; }
+      d.carga[i] = Math.min(1, d.carga[i] + dt / T_CARGA);
+      const v = Math.hypot(j.vx, j.vz);
+      if (v > V_ANDA) { j.vx *= V_ANDA / v; j.vz *= V_ANDA / v; }
       j.x = limita(j.x, -LX + RAIO, LX - RAIO); j.z = limita(j.z, -LZ + RAIO, LZ - RAIO);
     });
 
-    // ----- ondas -----
-    if (d.onda < ONDAS.length && p.t >= d.proxOnda) {
-      if (d.onda > 0) { d.pontos += PTS.onda; }
-      d.onda++; d.proxOnda += INTERVALO;
-      const n = Math.min(Math.ceil(ONDAS[d.onda - 1] * (0.5 + js.length / 4)), MAX_ZUMBIS - d.zumbis.length);
+    // ----- ondas de zumbis -----
+    if (d.onda < ONDAS.length && p.t >= ONDAS[d.onda]) {
+      const n = Math.min(Math.max(1, Math.round(TAMANHO[d.onda] * escala(js.length, noiteDe(p)))), MAX_ZUMBIS - d.zumbis.length);
       for (let k = 0; k < n; k++) d.zumbis.push(novoZumbi(p, d));
-      aviso(d, 'ONDA ' + d.onda, '#ffd23f', 1.6);
+      d.onda++;
+      if (d.onda === 1) aviso(d, 'Zumbis saindo das covas! Aperte Luz.', '#ffd23f', 2.4);
+      else aviso(d, d.onda === ONDAS.length ? 'Última leva de zumbis!' : 'Mais zumbis chegando!', '#ffb13b', 1.6);
       p.eventos.push('troca');
     }
+    if (!d.avisou10 && p.t >= TEMPO - 10) { d.avisou10 = true; aviso(d, 'Faltam 10 segundos para o sol nascer!', '#ffd23f', 2.2); }
 
-    // ----- itens -----
-    d.proxItem -= dt;
-    if (d.proxItem <= 0) {
-      d.proxItem = T_ITEM;
-      if (d.itens.length < MAX_ITENS) {
-        const algumCaido = d.caido.some(Boolean);
-        const temKit = d.itens.some(it => it.tipo === 'kit') || d.inv.some(v => v.kit > 0);
-        const r = p.rng();
-        const tipo = algumCaido && !temKit ? 'kit' : r < 0.36 ? 'tabua' : r < 0.72 ? 'moeda' : r < 0.87 ? 'lanterna' : 'kit';
-        const a = sorteiaPonto(p, 1.1);
-        d.itens.push({ tipo, x: a.x, z: a.z, vida: VIDA_ITEM });
-      }
-    }
-    for (const it of d.itens) it.vida -= dt;
-    d.itens = d.itens.filter(it => {
-      if (it.vida <= 0) return false;
-      for (const [i, j] of js.entries()) {
-        if (d.caido[i] || Math.hypot(j.x - it.x, j.z - it.z) > R_PEGA) continue;
-        if (it.tipo !== 'moeda') {
-          if (d.inv[i][it.tipo] >= MAX_INV[it.tipo]) continue;      // mochila cheia: o item fica para o parceiro
-          d.inv[i][it.tipo]++;
-        }
-        d.pontos += PTS[it.tipo];
-        d.fx.push({ tipo: 'pegou', x: it.x, z: it.z, item: it.tipo });
-        p.eventos.push('moeda');
-        return false;
-      }
-      return true;
-    });
-
-    // ----- ação do botão A -----
-    js.forEach((j, i) => {
-      if (d.caido[i]) return;
-      const inv = d.inv[i], o = caidoPerto(p, d, i);
-      if (o >= 0) {
-        if (inv.kit > 0 && j.apertouA > 0) { inv.kit--; reviver(p, d, o); }
-        else if (j.ent.d || d.seg[i] > 0) { revendo[o] = true; d.rev[o] += dt; if (d.rev[o] >= T_REVIVE) reviver(p, d, o); }      // dois socorristas revivem mais rápido
-        return;
-      }
-      if (j.apertouA <= 0) return;
-      let alvo = -1, melhor = R_TAPAR;
-      ENTRADAS.forEach((e, k) => { const m = Math.hypot(e.x - j.x, e.z - j.z); if (m < melhor && d.tabua[k] < HP_TABUA * 0.99) { melhor = m; alvo = k; } });
-      if (alvo >= 0 && inv.tabua > 0) {
-        inv.tabua--; d.tabua[alvo] = HP_TABUA;
-        d.fx.push({ tipo: 'tapou', x: ENTRADAS[alvo].x, z: ENTRADAS[alvo].z });
-        p.eventos.push('batida');
-      } else if (inv.lanterna > 0) {
-        inv.lanterna--;
-        atordoaPerto(d, j.x, j.z, R_LANTERNA, T_ATORDOA, 9);
-        d.pulsos.push({ x: j.x, z: j.z, idade: 0 });
-        d.fx.push({ tipo: 'luz', x: j.x, z: j.z });
-        p.eventos.push('explosao');
-      }
-    });
-    js.forEach((_, i) => { if (d.caido[i] && !revendo[i]) d.rev[i] = Math.max(0, d.rev[i] - dt * 1.5); });
+    // ----- a luz de cada um -----
+    js.forEach((j, i) => { if (!d.caido[i] && j.apertouA > 0 && d.carga[i] >= 1) luz(p, d, i); });
     for (const pu of d.pulsos) pu.idade += dt;
     d.pulsos = d.pulsos.filter(pu => pu.idade < 0.7);
+
+    // ----- reviver: amigo em pe encostado no caido; dois amigos levantam mais rapido -----
+    js.forEach((q, k) => {
+      if (!d.caido[k]) return;
+      const ajudantes = js.filter((a, i) => i !== k && !d.caido[i] && dist(a, q) < R_REVIVE).length;
+      d.rev[k] = ajudantes ? d.rev[k] + dt * ajudantes : Math.max(0, d.rev[k] - dt * 0.5);
+      if (d.rev[k] >= T_REVIVE) levanta(p, d, k);
+    });
 
     // ----- zumbis -----
     const zs = d.zumbis;
     for (const z of zs) {
-      if (z.re <= 0 || !z.wp) {                     // escolhe o jogador em pé mais perto
+      z.re -= dt; z.atord -= dt; z.pausa -= dt;
+      if (z.nasce > 0) { z.nasce -= dt; continue; }              // saindo da terra: nao faz nada
+      if (z.morre > 0) { z.morre -= dt; if (z.morre <= 0) z.morreu = true; continue; }
+      if (z.re <= 0 || z.alvo < 0 || d.caido[z.alvo]) {          // escolhe o jogador em pe mais perto
         let bi = -1, bm = Infinity;
-        js.forEach((j, i) => { if (d.caido[i]) return; const m = Math.hypot(j.x - z.x, j.z - z.z); if (m < bm) { bm = m; bi = i; } });
-        z.alvo = bi; z.wp = null;
+        js.forEach((j, i) => { const m = dist(j, z); if (!d.caido[i] && m < bm) { bm = m; bi = i; } });
+        z.alvo = bi; z.re = 0.4;
       }
-      const alvo = z.alvo >= 0 && !d.caido[z.alvo] ? js[z.alvo] : null;
-      andaZumbi(d, z, dt, alvo);
-      if (z.atord <= 0)                              // quebra a tábua que está bloqueando
-        for (let k = 0; k < 3; k++) {
-          if (d.tabua[k] <= 0) continue;
-          const b = ENTRADAS[k].caixa;
-          if (Math.hypot(z.x - limita(z.x, b.x0, b.x1), z.z - limita(z.z, b.z0, b.z1)) < ZR + 0.2) {
-            d.tabua[k] -= DANO_TABUA * dt;
-            if (d.tabua[k] <= 0) { d.tabua[k] = 0; d.quebradas++; d.fx.push({ tipo: 'quebrou', x: ENTRADAS[k].x, z: ENTRADAS[k].z }); p.eventos.push('batida'); }
-          }
-        }
+      andaZumbi(z, dt, z.alvo >= 0 ? js[z.alvo] : null);
     }
-    for (let a = 0; a < zs.length; a++)             // zumbis não se empilham
-      for (let b = a + 1; b < zs.length; b++) {
-        const dx = zs[b].x - zs[a].x, dz = zs[b].z - zs[a].z, q = dx * dx + dz * dz;
-        if (q >= SEP2) continue;
-        const m = Math.sqrt(q);
-        const n = m || 1, s = (ZR * 1.6 - m) / 2, ux = m ? dx / n : 1, uz = m ? dz / n : 0;
-        zs[a].x -= ux * s; zs[a].z -= uz * s; zs[b].x += ux * s; zs[b].z += uz * s;
+    d.zumbis = zs.filter(z => !z.morreu);
+    const vivos = d.zumbis;
+    for (let a = 0; a < vivos.length; a++)             // zumbis nao se empilham
+      for (let b = a + 1; b < vivos.length; b++) {
+        const dx = vivos[b].x - vivos[a].x, dz = vivos[b].z - vivos[a].z, q = dx * dx + dz * dz, lim = ZR * 1.6;
+        if (q >= lim * lim) continue;
+        const m = Math.sqrt(q), n = m || 1, s = (lim - m) / 2, ux = m ? dx / n : 1, uz = m ? dz / n : 0;
+        vivos[a].x -= ux * s; vivos[a].z -= uz * s; vivos[b].x += ux * s; vivos[b].z += uz * s;
       }
+    for (const z of vivos) { z.x = limita(z.x, -LX + ZR, LX - ZR); z.z = limita(z.z, -LZ + ZR, LZ - ZR); }      // o empurrao entre zumbis nao tira ninguem da arena
 
     // ----- zumbi encosta no jogador -----
-    for (const z of zs) {
-      if (z.atord > 0 || z.pausa > 0) continue;
+    for (const z of vivos) {
+      if (z.atord > 0 || z.pausa > 0 || z.nasce > 0 || z.morre > 0) continue;
       for (const [i, j] of js.entries()) {
-        if (d.caido[i] || (j.x - z.x) * (j.x - z.x) + (j.z - z.z) * (j.z - z.z) > CONTATO2) continue;
+        if (d.caido[i] || (j.x - z.x) ** 2 + (j.z - z.z) ** 2 > CONTATO * CONTATO) continue;
         if (d.imune[i] > 0) { z.kx = (z.x - j.x) * 6; z.kz = (z.z - j.z) * 6; continue; }
-        cai(p, d, i); z.pausa = 1.2;
+        aterra(p, d, i); z.pausa = 1.2;
       }
     }
 
-    // ----- celulares e placar -----
-    d.placar = [d.pontos];       // so os pontos da equipe: a onda aparece no aviso e nao e placar de disputa
+    // ----- placar e celulares: o que fazer agora -----
+    d.placar = [Math.max(0, Math.ceil(TEMPO - p.t))];
     js.forEach((j, i) => {
-      const inv = d.inv[i];
-      let a = 'USAR';
-      if (d.caido[i]) a = '';
-      else if (caidoPerto(p, d, i) >= 0) a = inv.kit > 0 ? 'KIT' : 'REVIVER';
-      else if (inv.tabua > 0 && ENTRADAS.some(e => Math.hypot(e.x - j.x, e.z - j.z) < R_TAPAR)) a = 'TAPAR';
-      else if (inv.lanterna > 0) a = 'LANTERNA';
-      const texto = d.caido[i] ? 'Você caiu! Um parceiro revive segurando A.'
-        : `Tábuas ${inv.tabua}  Lanterna ${inv.lanterna}  Kit ${inv.kit}`;
-      if (a !== d.rotA[i] || texto !== d.texto[i]) {
-        d.rotA[i] = a; d.texto[i] = texto;
-        p.celular[i] = { ...p.celular[i], a, texto };
-      }
+      const a = d.caido[i] ? '' : d.carga[i] >= 1 ? 'Luz' : 'Carregando', texto = textoDe(p, d, i);
+      d.inventario[i] = [d.caido[i] ? 'Caído' : d.carga[i] >= 1 ? 'Luz pronta' : 'Luz recarregando'];
+      if (a !== d.rotA[i] || texto !== d.texto[i]) { d.rotA[i] = a; d.texto[i] = texto; p.celular[i] = { ...p.celular[i], a, texto }; }
     });
 
     // ----- fim -----
-    if (d.caido.every(Boolean)) { aviso(d, 'TODOS CAÍRAM...', '#ff4a4a', 3); return -1; }
-    if (p.t >= TEMPO) { aviso(d, 'AMANHECEU! VOCÊS SOBREVIVERAM', '#6bff9a', 3); return 2; }
+    if (d.caido.every(Boolean)) {
+      d.fim = 'noite'; aviso(d, 'Todos caíram. Os zumbis venceram a noite.', '#ff4a4a', 3);
+      js.forEach((_, i) => { p.celular[i] = { ...p.celular[i], a: '', texto: 'Todos caíram. Os zumbis venceram. Na próxima, fiquem juntos.' }; });
+      return -1;
+    }
+    if (p.t >= TEMPO) {
+      d.fim = 'dia'; aviso(d, 'O sol nasceu! Vocês venceram a noite!', '#6bff9a', 3);
+      js.forEach((_, i) => { p.celular[i] = { ...p.celular[i], a: '', texto: 'O sol nasceu! Vocês aguentaram a noite juntos!' }; });
+      return 2;
+    }
   },
 
   monta(c) {
     const { THREE, malha, grupo, pecas } = c;
-    const caixaGeo = (w, h, l) => new THREE.BoxGeometry(w, h, l);
+    const caixa = (w, h, l) => new THREE.BoxGeometry(w, h, l);
+    const sem = m => { m.castShadow = false; return m; };
     pecas.visto = 0;
 
-    // gramado escuro e o piso de madeira dentro da casa
-    const grama = malha(caixaGeo(LX * 2, 0.04, LZ * 2), 0x1d3a2b, { roughness: 1 }); grama.position.y = 0.02; grama.castShadow = false; grupo.add(grama);
-    const piso = malha(caixaGeo(HX * 2 - 0.2, 0.05, HZ * 2 - 0.2), 0x6b4a2f, { roughness: 0.9 }); piso.position.y = 0.05; piso.castShadow = false; grupo.add(piso);
+    // gramado escuro e uma camada quente que aparece conforme o sol se aproxima
+    const grama = sem(malha(caixa(LX * 2, 0.04, LZ * 2), 0x1f4030, { roughness: 1 })); grama.position.y = 0.02; grupo.add(grama);
+    pecas.alvorada = sem(malha(caixa(LX * 2, 0.02, LZ * 2), 0xffb347, { emissive: 0xffa030, emissiveIntensity: 0.5, transparent: true, opacity: 0, depthWrite: false }));
+    pecas.alvorada.position.y = 0.06; grupo.add(pecas.alvorada);
 
-    // paredes (altas, sem telhado, para ver o que acontece dentro)
-    for (const w of PAREDES) {
-      const m = malha(caixaGeo(w.x1 - w.x0, ALTURA, w.z1 - w.z0), 0xb9a98c, { roughness: 0.8 });
-      m.position.set((w.x0 + w.x1) / 2, ALTURA / 2, (w.z0 + w.z1) / 2); grupo.add(m);
-      const topo = malha(caixaGeo(w.x1 - w.x0 + 0.06, 0.12, w.z1 - w.z0 + 0.06), 0x5a3a2a);
-      topo.position.set((w.x0 + w.x1) / 2, ALTURA + 0.05, (w.z0 + w.z1) / 2); topo.castShadow = false; grupo.add(topo);
-    }
-    // batentes brilhando: porta é laranja, janela é amarelo claro
-    pecas.tabuas = ENTRADAS.map((e, k) => {
-      const largo = e.caixa.x1 - e.caixa.x0, fundo = e.caixa.z1 - e.caixa.z0;
-      const cor = k === 2 ? 0xffe9a0 : 0xe0883a;
-      const bat = malha(caixaGeo(largo + 0.1, 0.1, fundo + 0.1), cor, { emissive: cor, emissiveIntensity: 0.7 });
-      bat.position.set(e.x, ALTURA + 0.05, e.z); bat.castShadow = false; grupo.add(bat);
-      const tab = new THREE.Group(); tab.position.set(e.x, 0, e.z);
-      const horiz = largo > fundo;
-      for (let n = 0; n < 3; n++) {                // três tábuas cruzando o vão
-        const m = malha(horiz ? caixaGeo(largo, 0.28, 0.2) : caixaGeo(0.2, 0.28, fundo), 0x9b6a3a, { roughness: 0.9 });
-        m.position.y = 0.2 + n * 0.3; tab.add(m);
-      }
-      tab.visible = false; grupo.add(tab); return tab;
+    // covas: de onde os zumbis saem; brilham de verde quando um esta saindo
+    pecas.covas = COVAS.map(cv => {
+      const monte = sem(malha(new THREE.SphereGeometry(0.95, 14, 8), 0x4a3524, { roughness: 1 })); monte.scale.set(1, 0.3, 1); monte.position.set(cv.x, 0.05, cv.z); grupo.add(monte);
+      const lapide = malha(caixa(0.7, 0.9, 0.18), 0x9a9aa8, { roughness: 0.9 }); lapide.position.set(cv.x, 0.5, cv.z + (cv.z > 0 ? 0.9 : -0.9)); grupo.add(lapide);
+      const brilho = sem(malha(new THREE.CylinderGeometry(1.3, 1.3, 0.03, 20), 0x7dff6a, { emissive: 0x7dff6a, emissiveIntensity: 1, transparent: true, opacity: 0.5 }));
+      brilho.position.set(cv.x, 0.09, cv.z); brilho.visible = false; grupo.add(brilho);
+      return brilho;
     });
 
-    // caixas do quintal
-    for (const b of CAIXAS) {
-      const m = malha(caixaGeo(b.x1 - b.x0, ALTURA, b.z1 - b.z0), 0x8a6238, { roughness: 0.9 });
-      m.position.set((b.x0 + b.x1) / 2, ALTURA / 2, (b.z0 + b.z1) / 2); m.rotation.y = (b.x0 * 7) % 0.4; grupo.add(m);
-      const cinta = malha(caixaGeo(b.x1 - b.x0 + 0.04, 0.12, b.z1 - b.z0 + 0.04), 0x55391f);
-      cinta.position.set((b.x0 + b.x1) / 2, ALTURA * 0.55, (b.z0 + b.z1) / 2); cinta.castShadow = false; grupo.add(cinta);
-    }
+    // faixa do sol, no alto da arena: a lua anda da esquerda ate o sol parado na direita
+    const x0 = -6.6, x1 = 6.6, zf = -LZ - 0.55;
+    const trilha = sem(malha(caixa(x1 - x0, 0.2, 0.34), 0x2a3350, { emissive: 0x1a2240, emissiveIntensity: 0.6 })); trilha.position.set(0, 1.7, zf); grupo.add(trilha);
+    pecas.preench = sem(malha(caixa(1, 0.24, 0.38), 0xffc531, { emissive: 0xffa800, emissiveIntensity: 0.8 })); pecas.preench.position.set(x0, 1.7, zf); grupo.add(pecas.preench);
+    const solFim = sem(malha(new THREE.SphereGeometry(0.55, 14, 10), 0xffc531, { emissive: 0xff9a00, emissiveIntensity: 0.9 })); solFim.position.set(x1 + 0.9, 1.7, zf); grupo.add(solFim);
+    pecas.astro = sem(malha(new THREE.SphereGeometry(0.8, 18, 12), 0xdfe6ff, { emissive: 0xb8c4ff, emissiveIntensity: 1 })); pecas.astro.position.set(x0, 1.7, zf); grupo.add(pecas.astro);
+    pecas.faixa = { x0, x1 };
 
-    // poste de luz com bolha de luz no chão (sem luz de verdade: fica leve)
-    const hasteP = malha(new THREE.CylinderGeometry(0.1, 0.14, 1.6, 8), 0x2a2d36); hasteP.position.set(POSTE.x, 0.8, POSTE.z); grupo.add(hasteP);
-    const bulbo = malha(new THREE.SphereGeometry(0.34, 12, 8), 0xfff7d6, { emissive: 0xfff0b0, emissiveIntensity: 1.4 });
-    bulbo.position.set(POSTE.x, 1.7, POSTE.z); bulbo.castShadow = false; grupo.add(bulbo);
-    const poca = malha(new THREE.CylinderGeometry(3.6, 3.6, 0.03, 32), 0xffe08a, { emissive: 0xffe08a, emissiveIntensity: 0.5, transparent: true, opacity: 0.16 });
-    poca.position.set(POSTE.x, 0.07, POSTE.z); poca.castShadow = false; grupo.add(poca);
+    // vila em volta (enfeite fora da arena), so com os modelos que chegaram
+    const poe = (nome, x, z, op, giro = 0) => { const m = c.modelo(nome, op); if (!m) return; m.position.set(x, 0, z); m.rotation.y = giro; grupo.add(m); };
+    for (let x = -LX + 1; x < LX; x += 2) poe('graveyard-kit/fence', x, LZ + 0.9, { escala: 2 });
+    for (let z = -LZ + 1; z < LZ; z += 2) for (const lado of [-1, 1]) poe('graveyard-kit/fence', lado * (LX + 0.9), z, { escala: 2 }, Math.PI / 2);
+    [[-10, -LZ - 3.4, 4, 0], [-4, -LZ - 3.8, 3.4, 1], [3, -LZ - 3.5, 4.2, 2], [9.5, -LZ - 3.4, 4.4, 3], [-LX - 2.2, -2, 3.8, 5], [LX + 2.2, -3, 3.6, 6], [LX + 2.4, 3.6, 4, 7], [-LX - 2.4, 4, 3.4, 8]]
+      .forEach(([x, z, altura, k]) => poe(k % 2 ? 'graveyard-kit/pine-crooked' : 'graveyard-kit/pine', x, z, { altura }, k * 1.3));
+    poe('graveyard-kit/crypt-small', 13.5, -LZ - 3, { altura: 3.6 }, -0.5);
+    poe('graveyard-kit/pumpkin', -LX - 1.5, LZ + 1.4, { altura: 0.9 });
 
-    // lua e estrelas ao fundo
-    const lua = malha(new THREE.SphereGeometry(2.2, 20, 14), 0xf4f1d8, { emissive: 0xe8e4b8, emissiveIntensity: 1 });
-    lua.position.set(-8, 15, -LZ - 11); lua.castShadow = false; grupo.add(lua);
-    const aura = malha(new THREE.SphereGeometry(3.4, 16, 10), 0xcfd8ff, { emissive: 0xcfd8ff, emissiveIntensity: 0.6, transparent: true, opacity: 0.12 });
-    aura.position.copy(lua.position); aura.castShadow = false; grupo.add(aura);
-    const estrelaGeo = new THREE.SphereGeometry(0.08, 6, 4);
-    for (let n = 0; n < 24; n++) {
-      const e = malha(estrelaGeo, 0xffffff, { emissive: 0xffffff, emissiveIntensity: 1 });
-      e.position.set(-18 + (n * 37 % 36), 5 + (n * 53 % 17), -LZ - 12 - (n % 3)); e.castShadow = false; grupo.add(e);
-    }
-
-    // lanterna de cada jogador: cone de luz translúcido, e marcadores de caído e de reviver
-    pecas.cones = []; pecas.discos = []; pecas.mochilas = [];
-    const coneGeo = new THREE.ConeGeometry(2.3, 6, 20, 1, true); coneGeo.translate(0, -3, 0);
-    for (const i of c.bonecos.keys()) {
-      const pivo = new THREE.Group();
-      const cone = malha(coneGeo, 0xfff2b0, { emissive: 0xfff2b0, emissiveIntensity: 1, transparent: true, opacity: 0.13, depthWrite: false, side: THREE.DoubleSide });
-      cone.rotation.z = Math.PI / 2; cone.castShadow = false; cone.position.y = 0.9; pivo.add(cone);
-      grupo.add(pivo); pecas.cones.push(pivo);
-      const anel = malha(new THREE.CylinderGeometry(1.3, 1.3, 0.05, 28), 0xff4a4a, { emissive: 0xff4a4a, emissiveIntensity: 0.9, transparent: true, opacity: 0.5 });
-      const prog = malha(new THREE.CylinderGeometry(1.2, 1.2, 0.07, 28), 0x6bff9a, { emissive: 0x6bff9a, emissiveIntensity: 0.9 });
-      anel.castShadow = false; prog.castShadow = false; anel.visible = prog.visible = false;
-      grupo.add(anel, prog); pecas.discos.push({ anel, prog });
-      const mochila = new THREE.Group();
-      const tab = malha(caixaGeo(0.7, 0.12, 0.22), 0x9b6a3a); tab.position.x = -0.6;
-      const lan = malha(new THREE.CylinderGeometry(0.12, 0.16, 0.4, 8), 0xfff7d6, { emissive: 0xfff0b0, emissiveIntensity: 1 });
-      const kit = malha(caixaGeo(0.4, 0.3, 0.3), 0xffffff, { emissive: 0xff3b3b, emissiveIntensity: 0.4 }); kit.position.x = 0.6;
-      for (const m of [tab, lan, kit]) m.castShadow = false;
-      mochila.add(tab, lan, kit); grupo.add(mochila); pecas.mochilas.push({ mochila, tab, lan, kit });
-    }
-    pecas.geo = {
-      tronco: caixaGeo(0.7, 0.9, 0.5), cabeca: caixaGeo(0.5, 0.5, 0.5), braco: caixaGeo(0.95, 0.18, 0.18), pernas: caixaGeo(0.3, 0.7, 0.55),
-    };
+    // por jogador: alcance da luz (circulo fino), carga (disco embaixo do boneco), setinha e aneis de quem caiu
+    pecas.jog = [...c.bonecos.keys()].map(i => {
+      const cor = c.cores[i];
+      const alcance = sem(malha(new THREE.RingGeometry(R_LUZ - 0.1, R_LUZ, 48), cor, { emissive: cor, emissiveIntensity: 0.8, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false })); alcance.rotation.x = -Math.PI / 2;
+      const carga = sem(malha(new THREE.CylinderGeometry(1.25, 1.25, 0.05, 28), cor, { emissive: cor, emissiveIntensity: 0.9, transparent: true, opacity: 0.8 }));
+      const anel = sem(malha(new THREE.CylinderGeometry(1.5, 1.5, 0.05, 28), 0xff4a4a, { emissive: 0xff4a4a, emissiveIntensity: 0.9, transparent: true, opacity: 0.55 }));
+      const prog = sem(malha(new THREE.CylinderGeometry(1.4, 1.4, 0.07, 28), 0x6bff9a, { emissive: 0x6bff9a, emissiveIntensity: 0.9 }));
+      const seta = sem(malha(new THREE.ConeGeometry(0.5, 1, 10), 0xff4a4a, { emissive: 0xff4a4a, emissiveIntensity: 1 })); seta.rotation.x = Math.PI;
+      for (const m of [alcance, carga, anel, prog, seta]) { m.visible = false; grupo.add(m); }
+      return { alcance, carga, anel, prog, seta };
+    });
+    pecas.geo = { braco: caixa(0.95, 0.2, 0.2), perna: caixa(0.28, 0.8, 0.3), tronco: caixa(0.55, 0.95, 0.85), cabeca: new THREE.SphereGeometry(0.34, 12, 10), olho: caixa(0.08, 0.1, 0.1), estrela: new THREE.TorusGeometry(0.4, 0.06, 6, 14) };
   },
 
   desenha(c, dt, t) {
     const p = c.p, d = p.dados, { pecas, THREE } = c, g = pecas.geo;
     if (!g) return;
+    const fimDia = d.fim === 'dia';
+    if (p.fase === 'jogando') pecas.f = limita(p.t / TEMPO, 0, 1);       // ao fechar a rodada p.t volta a zero: o relogio guarda onde parou
+    const f = fimDia ? 1 : pecas.f ?? 0;
+    if (fimDia) pecas.tDia ??= t;
 
-    // zumbis verdes cambaleando com os braços esticados
+    // relogio: bola e barra andam da lua ao sol, e o chao esquenta perto do fim
+    const { x0, x1 } = pecas.faixa, ax = x0 + (x1 - x0) * f;
+    pecas.astro.position.x = ax; pecas.preench.scale.x = Math.max(0.001, ax - x0); pecas.preench.position.x = x0 + (ax - x0) / 2;
+    const sol = limita((f - 0.55) / 0.4, 0, 1);
+    pecas.astro.material.color.setRGB(0.87 + 0.13 * sol, 0.9 - 0.2 * sol, 1 - 0.8 * sol);
+    pecas.astro.material.emissive.setRGB(0.72 + 0.28 * sol, 0.77 - 0.23 * sol, 1 - 0.9 * sol);
+    pecas.astro.scale.setScalar(1 + 0.4 * sol + (fimDia ? 0.3 * Math.sin(t * 8) : 0));
+    pecas.alvorada.material.opacity = 0.32 * sol * sol;
+    d.covaT.forEach((v, k) => { pecas.covas[k].visible = v > 0; });
+
+    // zumbis: verdes, de braco esticado, bamboleando
     const grupos = c.pool('zumbis', d.zumbis.length, () => {
-      const o = new THREE.Group();
-      const tronco = c.malha(g.tronco, 0x8a4a5e, { roughness: 0.9 }); tronco.position.y = 1.15;
-      const cabeca = c.malha(g.cabeca, PELE, { roughness: 0.8 }); cabeca.position.set(0.06, 1.8, 0);
-      const olhos = c.malha(new THREE.BoxGeometry(0.06, 0.1, 0.34), 0xff3b3b, { emissive: 0xff3b3b, emissiveIntensity: 1 }); olhos.position.set(0.32, 1.84, 0); olhos.castShadow = false;
-      const bE = c.malha(g.braco, PELE); bE.position.set(0.55, 1.4, 0.3); bE.castShadow = false;
-      const bD = c.malha(g.braco, PELE); bD.position.set(0.55, 1.4, -0.3); bD.castShadow = false;
-      const pernas = c.malha(g.pernas, 0x3a3d52); pernas.position.y = 0.4; pernas.castShadow = false;
-      o.add(tronco, cabeca, olhos, bE, bD, pernas); o.scale.setScalar(1.45);
-      o.userData = { tronco, cabeca, bE, bD, pernas };
+      const o = new THREE.Group(), pele = 0x9be06a, camisa = 0x6b4f3a, calca = 0x3f4560;
+      const perna = (z) => { const h = new THREE.Group(); h.position.set(0, 0.8, z); const m = c.malha(g.perna, calca); m.position.y = -0.4; h.add(m); return h; };
+      const pE = perna(0.2), pD = perna(-0.2);
+      const corpo = new THREE.Group(); corpo.position.y = 0.8;
+      const tronco = c.malha(g.tronco, camisa, { roughness: 0.95 }); tronco.position.y = 0.48;
+      const rasgo = c.malha(new THREE.BoxGeometry(0.58, 0.18, 0.5), 0x8c3a3a); rasgo.position.set(0.02, 0.3, 0); rasgo.castShadow = false;
+      const cabeca = c.malha(g.cabeca, pele, { roughness: 0.8, emissive: 0x1d3a10, emissiveIntensity: 0.6 }); cabeca.position.set(0.12, 1.32, 0); cabeca.scale.set(1.05, 1.15, 1);
+      const olhos = [0.1, -0.1].map(z => { const m = c.malha(g.olho, 0xffe14a, { emissive: 0xffd000, emissiveIntensity: 1.2 }); m.position.set(0.42, 1.38, z); m.castShadow = false; return m; });
+      const boca = c.malha(new THREE.BoxGeometry(0.06, 0.07, 0.24), 0x2a1010); boca.position.set(0.44, 1.2, 0); boca.castShadow = false;
+      const braco = (z) => { const h = new THREE.Group(); h.position.set(0.08, 0.92, z); const m = c.malha(g.braco, pele, { emissive: 0x1d3a10, emissiveIntensity: 0.5 }); m.position.x = 0.48; m.castShadow = false; h.add(m); return h; };
+      const bE = braco(0.52), bD = braco(-0.52);
+      const estrelas = new THREE.Group(); estrelas.position.set(0.1, 2.05, 0);
+      const anel = c.malha(g.estrela, 0xffe14a, { emissive: 0xffd000, emissiveIntensity: 1.2 }); anel.rotation.x = Math.PI / 2; anel.castShadow = false; estrelas.add(anel); estrelas.visible = false;
+      corpo.add(tronco, rasgo, cabeca, ...olhos, boca, bE, bD);
+      o.add(pE, pD, corpo, estrelas); o.scale.setScalar(1.7);
+      o.userData = { pE, pD, corpo, bE, bD, cabeca, estrelas };
       return o;
     });
     d.zumbis.forEach((z, n) => {
-      const o = grupos[n], u = o.userData, ba = Math.sin(t * 4 + z.fase);
-      o.position.set(z.x, 0, z.z); o.rotation.y = -z.ang;
-      const tonto = z.atord > 0;
-      u.tronco.rotation.z = tonto ? 0.3 * Math.sin(t * 18 + z.fase) : 0.12 * ba;
-      u.cabeca.rotation.z = tonto ? -0.4 : 0.1 * Math.sin(t * 3 + z.fase);
-      u.bE.rotation.z = 0.08 * ba; u.bD.rotation.z = -0.08 * ba;
-      u.pernas.rotation.z = 0.2 * Math.sin(t * 5 + z.fase);
-      u.cabeca.material.color.set(tonto ? 0xf4f4f4 : PELE);
-      u.cabeca.material.emissive.set(tonto ? 0x666666 : 0x000000);
+      const o = grupos[n], u = o.userData, tonto = z.atord > 0, nasce = z.nasce > 0, morre = z.morre > 0 || fimDia;
+      const ba = Math.sin(t * 5 + z.fase), andando = !tonto && !nasce && !morre;
+      o.position.set(z.x, nasce ? -4.2 * (z.nasce / T_NASCE) : 0, z.z); o.rotation.y = -z.ang;
+      o.rotation.x = andando ? 0.07 * Math.sin(t * 2.5 + z.fase) : 0;           // balanca de um lado para o outro
+      u.pE.rotation.z = andando ? 0.55 * ba : 0; u.pD.rotation.z = andando ? -0.55 * ba : 0;
+      u.corpo.rotation.z = tonto ? 0.35 : -0.14 + 0.05 * ba;                       // inclinado para frente; tonto, para tras
+      u.cabeca.rotation.z = tonto ? -0.5 : 0.12 * Math.sin(t * 3 + z.fase);
+      u.bE.rotation.z = tonto ? -1.1 : 0.12 + 0.1 * ba; u.bD.rotation.z = tonto ? -1.1 : 0.12 - 0.1 * ba;       // bracos esticados na frente
+      u.estrelas.visible = tonto; u.estrelas.rotation.y = t * 6;
+      u.cabeca.material.color.set(tonto ? 0xd8f0c0 : 0x9be06a);
+      o.scale.setScalar(1.7 * (z.morre > 0 ? Math.max(0.02, z.morre / T_MORRE) : fimDia ? Math.max(0.02, 1 - 2 * (t - pecas.tDia)) : 1));
     });
 
-    // tábuas nas entradas: somem quando quebram e escurecem com o dano
-    pecas.tabuas.forEach((tab, k) => {
-      const hp = d.tabua[k];
-      tab.visible = hp > 0;
-      if (hp > 0) { tab.scale.y = 0.6 + 0.4 * hp / HP_TABUA; tab.position.x = ENTRADAS[k].x + (hp < HP_TABUA ? 0.03 * Math.sin(t * 40) : 0); }
-    });
-
-    // itens do quintal
-    const itens = c.pool('itens', d.itens.length, () => {
-      const o = new THREE.Group();
-      const tabua = c.malha(new THREE.BoxGeometry(1, 0.14, 0.32), 0x9b6a3a);
-      const moeda = c.malha(new THREE.CylinderGeometry(0.42, 0.42, 0.1, 18), 0xdfe3ee, { emissive: 0x8890a8, emissiveIntensity: 0.7, metalness: 0.5 }); moeda.rotation.x = Math.PI / 2;
-      const lan = c.malha(new THREE.CylinderGeometry(0.24, 0.3, 0.7, 10), 0xfff7d6, { emissive: 0xfff0b0, emissiveIntensity: 1 });
-      const kit = c.malha(new THREE.BoxGeometry(0.62, 0.42, 0.42), 0xffffff, { emissive: 0xff3b3b, emissiveIntensity: 0.35 });
-      const base = c.malha(new THREE.CylinderGeometry(0.7, 0.7, 0.04, 20), 0xffffff, { emissive: 0xffffff, emissiveIntensity: 0.6, transparent: true, opacity: 0.35 }); base.castShadow = false;
-      o.add(tabua, moeda, lan, kit, base); o.userData = { tabua, moeda, lanterna: lan, kit, base }; o.scale.setScalar(1.6);       // itens grandes: na TV precisam ser vistos de longe
-      return o;
-    });
-    d.itens.forEach((it, n) => {
-      const o = itens[n], u = o.userData;
-      for (const nome of ['tabua', 'moeda', 'lanterna', 'kit']) u[nome].visible = nome === it.tipo;
-      const m = u[it.tipo];
-      m.position.y = 0.7 + 0.15 * Math.sin(t * 3 + n); m.rotation.y = t * 2;
-      u.base.position.y = 0.06; u.base.material.color.set(it.tipo === 'kit' ? 0xff6b6b : 0xffffff);
-      o.position.set(it.x, 0, it.z);
-      o.visible = it.vida > 3 || Math.floor(t * 8) % 2 === 0;     // pisca antes de sumir
-    });
-
-    // jogadores: lanterna, caído deitado, anel de reviver, mochila
+    // jogadores: alcance da luz, carga, ligacao entre amigos, caido deitado com anel e seta
     p.jogadores.forEach((j, i) => {
-      const cone = pecas.cones[i], disco = pecas.discos[i], moch = pecas.mochilas[i], caido = d.caido[i];
+      const m = pecas.jog[i], caido = d.caido[i];
       c.bonecos[i].rotation.z = caido ? Math.PI / 2 : 0;
       if (!caido) c.bonecos[i].visible = d.imune[i] <= 0 || Math.floor(t * 14) % 2 === 0;
-      cone.visible = !caido; cone.position.set(j.x, 0, j.z); cone.rotation.y = -d.ang[i];
-      disco.anel.visible = caido; disco.prog.visible = caido && d.rev[i] > 0.02;
+      m.alcance.visible = !caido; m.alcance.position.set(j.x, 0.1, j.z); m.alcance.material.opacity = d.carga[i] >= 1 ? 0.55 : 0.15;
+      m.carga.visible = !caido; m.carga.position.set(j.x, 0.08, j.z); m.carga.scale.set(0.25 + 0.75 * d.carga[i], 1, 0.25 + 0.75 * d.carga[i]); m.carga.material.opacity = d.carga[i] >= 1 ? 0.85 : 0.35;
+      m.anel.visible = m.seta.visible = caido; m.prog.visible = caido && d.rev[i] > 0.02;
       if (caido) {
-        disco.anel.position.set(j.x, 0.08, j.z); disco.anel.scale.setScalar(1 + 0.12 * Math.sin(t * 8));
-        disco.prog.position.set(j.x, 0.1, j.z); disco.prog.scale.setScalar(Math.max(0.05, Math.min(1, d.rev[i] / T_REVIVE)));
+        m.anel.position.set(j.x, 0.08, j.z); m.anel.scale.setScalar(1 + 0.12 * Math.sin(t * 8));
+        m.prog.position.set(j.x, 0.1, j.z); m.prog.scale.setScalar(Math.max(0.05, Math.min(1, d.rev[i] / T_REVIVE)));
+        m.seta.position.set(j.x, 3.4 + 0.35 * Math.sin(t * 6), j.z);
       }
-      const inv = d.inv[i];
-      moch.mochila.visible = !caido && (inv.tabua + inv.lanterna + inv.kit) > 0;
-      moch.mochila.position.set(j.x, 2.9, j.z);
-      moch.tab.visible = inv.tabua > 0; moch.lan.visible = inv.lanterna > 0; moch.kit.visible = inv.kit > 0;
+    });
+    const pares = [];
+    p.jogadores.forEach((a, i) => p.jogadores.forEach((b, k) => { if (k > i && !d.caido[i] && !d.caido[k] && dist(a, b) <= LIGA) pares.push([a, b]); }));
+    const elos = c.pool('elos', pares.length, () => c.malha(new THREE.BoxGeometry(1, 0.14, 0.14), 0xffe27a, { emissive: 0xffc531, emissiveIntensity: 1.2 }));
+    pares.forEach(([a, b], n) => {
+      const e = elos[n], len = Math.max(0.01, dist(a, b));
+      e.position.set((a.x + b.x) / 2, 0.55, (a.z + b.z) / 2); e.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x);
+      e.scale.set(len, 1 + 0.4 * Math.sin(t * 9), 1 + 0.4 * Math.sin(t * 9)); e.castShadow = false;
     });
 
-    // pulso da lanterna
-    const pulsos = c.pool('pulsos', d.pulsos.length, () => c.malha(new THREE.CylinderGeometry(1, 1, 0.05, 32, 1, true), 0xfff2b0, { emissive: 0xfff2b0, emissiveIntensity: 1, transparent: true, opacity: 0.4, side: THREE.DoubleSide }));
+    // pulso da luz: branco e pequeno sozinho; dourado e grande em dupla
+    const pulsos = c.pool('pulsos', d.pulsos.length, () => c.malha(new THREE.CylinderGeometry(1, 1, 0.06, 40), 0xffffff, { emissive: 0xffffff, emissiveIntensity: 1, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
     d.pulsos.forEach((pu, n) => {
-      const f = Math.min(1, pu.idade / 0.5), m = pulsos[n];
-      m.position.set(pu.x, 0.2, pu.z); m.scale.set(R_LANTERNA * f + 0.1, 1, R_LANTERNA * f + 0.1); m.material.opacity = 0.45 * (1 - f); m.castShadow = false;
+      const k = Math.min(1, pu.idade / 0.45), m = pulsos[n], r = (pu.juntos ? R_JUNTOS : R_LUZ) * k + 0.1;
+      m.position.set(pu.x, 0.25, pu.z); m.scale.set(r, 1, r); m.castShadow = false;
+      m.material.color.set(pu.juntos ? 0xffd23f : 0xfff6d0); m.material.emissive.set(pu.juntos ? 0xffa800 : 0xfff0b0); m.material.opacity = (pu.juntos ? 0.5 : 0.35) * (1 - k);
     });
 
-    // faíscas
+    // faiscas
     for (; pecas.visto < d.fx.length; pecas.visto++) {
       const e = d.fx[pecas.visto];
-      if (e.tipo === 'pegou') c.particulas(e.x, 0.8, e.z, 0xffffff, 10, 5);
-      else if (e.tipo === 'caiu') c.particulas(e.x, 1, e.z, 0xff4a4a, 22, 8);
-      else if (e.tipo === 'reviveu') c.particulas(e.x, 1, e.z, 0x6bff9a, 24, 8);
-      else if (e.tipo === 'tapou') c.particulas(e.x, 1, e.z, 0x9b6a3a, 12, 5);
-      else if (e.tipo === 'quebrou') c.particulas(e.x, 1, e.z, 0x9b6a3a, 20, 9);
-      else if (e.tipo === 'luz') c.particulas(e.x, 1, e.z, 0xfff2b0, 24, 9);
+      if (e.tipo === 'caiu') c.particulas(e.x, 1, e.z, 0xff4a4a, 24, 8);
+      else if (e.tipo === 'reviveu') c.particulas(e.x, 1, e.z, 0x6bff9a, 26, 8);
+      else if (e.tipo === 'luz') c.particulas(e.x, 1, e.z, 0xfff2b0, 16, 7);
+      else if (e.tipo === 'luzDupla') c.particulas(e.x, 1, e.z, 0xffc531, 30, 11);
+      else if (e.tipo === 'po') c.particulas(e.x, 1.3, e.z, 0x9be06a, 18, 7);
+      else if (e.tipo === 'nasceu') c.particulas(e.x, 0.3, e.z, 0x5a4030, 14, 4);
     }
   },
 };

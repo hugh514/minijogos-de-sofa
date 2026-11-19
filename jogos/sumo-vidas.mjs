@@ -26,7 +26,7 @@ function renasce(p, d, i) {
 }
 
 export default {
-  id: 'sumo-vidas', nome: 'Sumô de três vidas', dica: 'Empurre os outros para fora! Cada um tem 3 vidas e a arena encolhe.',
+  id: 'sumo-vidas', genero: 'empurra', nome: 'Sumô de três vidas', dica: 'Empurre os outros para fora! Cada um tem 3 vidas e a arena encolhe.',
   festa: { min: 2, max: 4, modos: ['vs', 'times'] },
   rotulo: 'vidas', duracao: TEMPO,
 

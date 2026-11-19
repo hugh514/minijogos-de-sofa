@@ -16,8 +16,8 @@ function ateOChao(fase, sentido) {
 }
 
 export default {
-  id: 'pula-corda', nome: 'Pula-corda', dica: 'Pule a corda com B no tempo certo. 3 tropeços e você perde!',
-  controle: { modo: 'padrao', a: 'PULA', b: 'PULA', joystick: false }, semMovimento: true, rotulo: 'vidas', duracao: LIMITE,
+  id: 'pula-corda', genero: 'ritmo', nome: 'Pula-corda', dica: 'Aperte para pular a corda no tempo certo. 3 tropeços e você perde!',
+  controle: { modo: 'botao', a: 'PULA' }, semMovimento: true, rotulo: 'vidas', duracao: LIMITE,
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 11, lz: 6.5, parede: true };
@@ -54,7 +54,7 @@ export default {
     else if (d.proxFinta <= 0 && dist > 1 && dist < 1.5) { d.finta = FINTA_T; d.proxFinta = 4 + p.rng() * 3; }
     else if (d.proxInv <= 0 && dist > 2.2 && dist < 4) {
       d.sentido = -d.sentido; d.proxInv = 5 + p.rng() * 4;
-      d.aviso = 'INVERTEU!'; d.avisoCor = '#ffd23f'; d.avisoT = 1; p.eventos.push('troca');
+      d.aviso = 'Inverteu!'; d.avisoCor = '#ffd23f'; d.avisoT = 1; p.eventos.push('troca');
     }
 
     // a corda gira; cada passada pelo chao pega quem estiver abaixo de LIVRE (e não estiver caído)

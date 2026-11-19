@@ -132,9 +132,9 @@ test('futebol-times: gol aos 49 s, o tempo vale no quadro certo mesmo no meio do
 test('futebol-times: o celular repete o placar e o time de cada um', () => {
   const p = nova();
   passo(p, DT);
-  assert.equal(p.celular[0].texto, 'Time A 0 x 0 Time B');
+  assert.equal(p.celular[0].texto, 'Laranja 0 x 0 Roxo');
   golNaDireita(p);
-  assert.equal(p.celular[3].texto, 'Time A 1 x 0 Time B');
+  assert.equal(p.celular[3].texto, 'Laranja 1 x 0 Roxo');
 });
 
 test('futebol-times: ninguem mexendo nao decide a partida cedo', () => {

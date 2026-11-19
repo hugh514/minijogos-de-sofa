@@ -32,7 +32,7 @@ async function celular(browser, botao) {
   await tela.waitForFunction(() => window.__p.fase === 'intro', null, { timeout: 15000 });
   const prontos = async () => {
     for (const [i, f] of [um, dois].entries()) {                    // os dois apertam PRONTO
-      await f.waitForFunction(() => document.getElementById('btG').textContent === 'PRONTO!' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
+      await f.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
       for (let k = 0; k < 5; k++) {
         await f.locator('#btG').tap();
         try { await tela.waitForFunction(x => window.__p.jogadores[x].pronto || window.__p.fase !== 'intro', i, { timeout: 1500 }); break; } catch {}

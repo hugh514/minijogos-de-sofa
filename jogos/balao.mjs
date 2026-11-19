@@ -1,41 +1,58 @@
-// Balao no limite: cada aperto enche o balao compartilhado e vale 1. Quem der o aperto que estoura, perde.
+// Balao no limite: cada aperto enche o balao compartilhado e vale 1. Quem der o aperto que estoura perde todos os seus sopros
+// e vem um balao novo (limite novo). Em 30 s vence quem tem mais sopros.
 import { posiciona, maiorPlacar, elimina } from '../logica.mjs';
 
-const X = 5.8, DURACAO = 25, T_PARADO = 3, MURCHA = 3, MIN = 25, MAX = 45;
+const X = 5.8, DURACAO = 30, T_PARADO = 3, MURCHA = 3, MIN = 25, MAX = 45, T_NOVO = 1.2;
 const CORES = [0xffe14a, 0xff8a1f, 0xff2a2a];            // tensao 0, 1, 2
 const raioDe = ar => 1 + ar * 0.06;
 
+// Balao novo: limite e cores de tensao sorteados de novo, para nao decorar o numero.
+function novoBalao(p) {
+  const d = p.dados;
+  d.ar = 0; d.parado = 0; d.tensao = 0;
+  d.limite = MIN + Math.floor(p.rng() * (MAX - MIN + 1));
+  d.corte = [0.4 + p.rng() * 0.2, 0.7 + p.rng() * 0.2];
+}
+
 export default {
-  id: 'balao', nome: 'Balão no limite', dica: 'Cada aperto enche o balão e vale 1. Quem estourar, PERDE!',
+  id: 'balao', genero: 'blefe', nome: 'Balão no limite', dica: 'Cada aperto enche o balão e vale 1 sopro. Estourou? Perde todos os seus sopros! Mais sopros em 30 s vence.',
   semMovimento: true, controle: { modo: 'botao', a: 'ENCHE!' }, rotulo: 'sopros', duracao: DURACAO,
 
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: 8, parede: true };
     posiciona(p, X);
-    p.dados = {
-      ar: 0, limite: MIN + Math.floor(p.rng() * (MAX - MIN + 1)), placar: [0, 0], parado: 0, tensao: 0,
-      // os limiares de cor mudam a cada rodada, para a cor nao entregar o numero exato
-      corte: [0.4 + p.rng() * 0.2, 0.7 + p.rng() * 0.2],
-      estourou: -1, pulso: 0, bomba: [0, 0], murchou: 0, aviso: '', avisoCor: '#ffd21f',
-    };
+    p.dados = { placar: [0, 0], estourou: -1, estouros: 0, novo: 0, pulso: 0, bomba: [0, 0], murchou: 0, aviso: '', avisoCor: '#ffd21f' };
+    novoBalao(p);
   },
 
   atualiza(p, dt) {
     const d = p.dados;
     d.pulso = Math.max(0, d.pulso - dt * 5); d.murchou = Math.max(0, d.murchou - dt);
     for (const i of [0, 1]) d.bomba[i] = Math.max(0, d.bomba[i] - dt * 6);
+    if (p.t >= DURACAO) {
+      const v = maiorPlacar(p);
+      if (v >= 0) { const j = p.jogadores[1 - v]; j.vx = (v ? -1 : 1) * 9; elimina(p, j, 13); }
+      return v;
+    }
+    if (d.novo > 0) {                                              // balao novo chegando: aperto nao conta
+      d.novo -= dt;
+      if (d.novo <= 0) { novoBalao(p); d.aviso = ''; }
+      return;
+    }
     const [a, b] = p.jogadores.map(j => j.apertouA);
     const ordem = a && b && p.rng() < 0.5 ? [1, 0] : [0, 1];      // no mesmo quadro, sorteia quem sopra antes
     for (const i of ordem) {
       for (let k = p.jogadores[i].apertouA; k > 0; k--) {
         d.ar++; d.placar[i]++; d.parado = 0; d.pulso = 1; d.bomba[i] = 1;
         p.eventos.push('pulo');
-        if (d.ar >= d.limite) {
+        if (d.ar >= d.limite) {                                    // estourou: perde os sopros e o balao novo vem
           const j = p.jogadores[i];
-          d.estourou = i; d.aviso = '';
-          j.vx = (i ? 1 : -1) * 9; elimina(p, j, 13);
+          d.estourou = i; d.estouros++; d.placar[i] = 0; d.novo = T_NOVO;
+          d.aviso = `Jogador ${i + 1} estourou e perdeu os sopros!`; d.avisoCor = '#ff4a4a';
+          j.vx = (i ? 1 : -1) * 6; j.vy = 9;
+          p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 };
           p.eventos.push('explosao');
-          return 1 - i;
+          return;
         }
       }
     }
@@ -43,8 +60,7 @@ export default {
     if (d.parado >= T_PARADO && d.ar > 0) { d.ar = Math.max(0, d.ar - MURCHA); d.parado = 0; d.murchou = 1; p.eventos.push('troca'); }
     const f = d.ar / d.limite;
     d.tensao = f >= d.corte[1] ? 2 : f >= d.corte[0] ? 1 : 0;
-    d.aviso = d.murchou > 0 ? 'MURCHANDO...' : '';
-    if (p.t >= DURACAO) return maiorPlacar(p);
+    d.aviso = d.murchou > 0 ? 'Murchando...' : '';
   },
 
   monta(c) {
@@ -67,20 +83,19 @@ export default {
       grupo.add(corpo, pistao, cano);
       pecas.pistao[i] = pistao;
     }
-    pecas.estourado = false;
+    pecas.estourado = 0;
   },
 
   desenha(c, dt, t) {
     const d = c.p.dados, { pecas } = c, b = pecas.balao;
-    if (d.estourou >= 0) {
-      if (!pecas.estourado) {
-        pecas.estourado = true; b.visible = pecas.bico.visible = false;
-        const y = 0.7 + raioDe(d.ar);
-        c.particulas(0, y, 0, CORES[2], 60, 16); c.particulas(0, y, 0, 0xffffff, 30, 10);
-        c.particulas(0, y, 0, c.cores[d.estourou], 30, 12);
-      }
-      return;
+    if (pecas.estourado !== d.estouros) {           // cada estouro: faiscas uma vez
+      pecas.estourado = d.estouros;
+      const y = 0.7 + raioDe(d.ar);
+      c.particulas(0, y, 0, CORES[2], 60, 16); c.particulas(0, y, 0, 0xffffff, 30, 10);
+      c.particulas(0, y, 0, c.cores[d.estourou], 30, 12);
     }
+    b.visible = pecas.bico.visible = d.novo <= 0;     // some ate o balao novo chegar
+    if (d.novo > 0) return;
     const f = Math.min(1, d.ar / d.limite), cor = CORES[d.tensao];
     const r = raioDe(d.ar) * (1 + d.pulso * 0.08), treme = 0.01 + 0.3 * f * f * f;
     b.scale.set(r * (1 + Math.sin(t * 31) * treme * 0.3), r * (1 + Math.cos(t * 27) * treme * 0.3), r);

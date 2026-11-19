@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <link rel="icon" href="data:,">
-<title>Minijogos 3D</title>
+<title>Almofadada</title>
 <style>
-  html,body{margin:0;height:100%;background:#0b0e1a;color:#fff;font-family:'Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;overflow:hidden;user-select:none}
+  /* Baloo 2 (SIL OFL, licenca em fontes/OFL.txt), servida pelo proprio servidor: funciona sem internet */
+  @font-face{font-family:'Baloo 2';src:url(/fontes/baloo2.woff2) format('woff2');font-weight:400 800;font-display:swap}
+  html,body{margin:0;height:100%;background:#0b0e1a;color:#fff;font-family:'Baloo 2','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif;overflow:hidden;user-select:none}
   #c{display:block;position:fixed;inset:0}
-  .tit{font-family:'Segoe UI Black','Arial Black',Impact,'Segoe UI',system-ui,sans-serif;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:.01em;
+  .tit{font-family:'Baloo 2','Segoe UI Black','Arial Black',system-ui,sans-serif;font-weight:800;font-style:italic;letter-spacing:.01em;line-height:1.05;
     -webkit-text-stroke:.16em #0b0e1a;paint-order:stroke fill;text-shadow:0 .1em 0 #0b0e1a,0 .22em .5em #000a}
   .nm{font-weight:900;white-space:nowrap;-webkit-text-stroke:.2em #070a14;paint-order:stroke fill}
   .nm.escuro{-webkit-text-stroke-color:#dfe6ff}
@@ -51,11 +53,12 @@
   .cartao.mini .extras{max-width:12em;font-size:.85em}
 
   #centro{position:absolute;top:.8em;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:.45em}
-  #selo{font-family:'Segoe UI Black','Arial Black',Impact,sans-serif;font-weight:900;font-style:italic;text-transform:uppercase;font-size:1.2em;white-space:nowrap;
+  #selo{font-family:'Baloo 2','Segoe UI Black','Arial Black',sans-serif;font-weight:800;font-style:italic;font-size:1.3em;line-height:1.1;white-space:nowrap;
     padding:.28em 1.3em .32em;border-radius:.55em;color:#141a36;background:linear-gradient(180deg,#fff,#d8e0ff);transform:skewX(-8deg);box-shadow:0 .22em 0 #0009,0 0 0 .13em #141a36}
+  #selo:empty{display:none}
   #linha{display:flex;gap:.6em;align-items:center}
   .pl{display:flex;align-items:center;gap:.4em;padding:.12em .9em .16em;border-radius:2em;background:#0c1022e6;border:.1em solid #ffffff2e;font-weight:900}
-  .pl em{font-style:normal;font-size:.72em;letter-spacing:.14em;text-transform:uppercase;opacity:.75;margin-right:.3em}
+  .pl em{font-style:normal;font-size:.85em;opacity:.8;margin-right:.3em}
   .pl b{font-size:1.7em;line-height:1;-webkit-text-stroke:.14em #000;paint-order:stroke fill}
   .pl i{font-style:normal;opacity:.6}
   #relogio{--f:1;width:3em;height:3em;border-radius:50%;display:none;place-items:center;background:conic-gradient(#5fe08a calc(var(--f)*1turn),#ffffff26 0);box-shadow:0 .2em 0 #0008}
@@ -74,8 +77,11 @@
     padding:.9em 1.6em 1.1em;box-shadow:0 .45em 0 #0008,0 1em 3em #0009;animation:surge .4s cubic-bezier(.2,1.4,.4,1)}
   #msg .cx.mini{width:auto;max-width:92vw;padding:.5em 1.6em .7em}
   @keyframes surge{from{transform:scale(.85);opacity:0}}
-  .cx .rot{font-size:.8em;letter-spacing:.34em;text-transform:uppercase;font-weight:800;opacity:.65}
-  .cx h2{font-size:3.6em;margin:.05em 0 .12em;line-height:1.02;color:#ffe14a}
+  .cx{position:relative}
+  .cx .rot{font-size:1.1em;font-weight:800;opacity:.7}
+  .cx h2{font-size:3.6em;margin:.05em 0 .12em;line-height:1.02;color:#ffe14a;animation:deLado .5s cubic-bezier(.2,1.5,.4,1) both}
+  @keyframes deLado{0%{transform:translateX(-1.5em) rotate(-4deg);opacity:0}60%{transform:translateX(.15em) rotate(1.5deg);opacity:1}80%{transform:translateX(-.06em) rotate(-.6deg)}}
+  .cx .pe{font-size:1.05em;font-weight:700;opacity:.8;margin:-.2em 0 .7em}
   .cx.mini h2{font-size:2.4em}
   .cx p{font-size:1.6em;margin:0 0 .6em;font-weight:700;line-height:1.2}
   .cx.mini p{font-size:1.2em;margin:0}
@@ -102,9 +108,15 @@
   .fone .txt{font-size:1em;opacity:.8}
   @keyframes mexe{0%,100%{transform:translate(-1.2em,0)}25%{transform:translate(0,-1em)}50%{transform:translate(1.2em,0)}75%{transform:translate(0,1em)}}
   @keyframes aperta{0%,60%,100%{transform:none;filter:none}75%{transform:scale(.86);filter:brightness(1.5)}}
-  .mod{display:inline-block;margin:0 0 .7em;padding:.3em 1.2em .4em;border-radius:.7em;background:linear-gradient(180deg,#ffe14a,#ffb020);color:#1a1400;font-size:1.5em;font-weight:900;
-    box-shadow:0 .16em 0 #7a5a00,0 0 1.2em #ffd84d88;transform:rotate(-1.5deg);animation:pulsa .7s ease-in-out infinite alternate}
-  .mod small{display:block;font-size:.62em;font-weight:800}
+  /* modificador: carimbo torto no canto do cartao */
+  .mod{position:absolute;top:-.9em;right:-1.1em;z-index:2;padding:.25em 1em .35em;border-radius:.5em;border:.18em solid #1a1400;background:linear-gradient(180deg,#ffe14a,#ffb020);color:#1a1400;font-size:1.6em;line-height:1.05;
+    box-shadow:0 .16em 0 #7a5a00,0 0 1.2em #ffd84d88;transform:rotate(8deg);animation:carimbo2 .5s cubic-bezier(.2,1.6,.4,1) both}
+  .mod small{display:block;font-size:.55em;font-weight:800;font-style:normal}
+  @keyframes carimbo2{0%{transform:rotate(8deg) scale(2.6);opacity:0}60%{opacity:1}100%{transform:rotate(8deg)}}
+  .cx.varios .mod{top:.7em;right:.8em;font-size:1.2em}
+  #msg:has(.cx.varios){bottom:4%}
+  .cx.varios{padding-top:.6em;padding-bottom:.6em} .cx.varios h2{font-size:3em} .cx.varios p{font-size:1.4em;margin-bottom:.45em} .cx.varios .mp{margin-bottom:.3em}      /* 3 ou 4: o cartao cresce para cima e nao pode cobrir o placar */
+  .cx.mini .mod{position:static;display:inline-block;margin:.3em 0 0;font-size:1.3em}
   #modChip:not(:empty){padding:.2em .9em .25em;border-radius:2em;background:linear-gradient(180deg,#ffe14a,#ffb020);color:#1a1400;font-weight:900;font-size:.9em;box-shadow:0 .2em 0 #0008;white-space:nowrap}
   .obs{font-size:1em;font-weight:700;opacity:.8;margin-bottom:.8em}
   .prontos{display:flex;align-items:center;justify-content:space-between;gap:1em}
@@ -134,7 +146,13 @@
   #fim{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:7.5em 0 3.4em;box-sizing:border-box;text-align:center;
     background:radial-gradient(ellipse at 50% 50%,#0000 35%,#05071299 100%)}
   #fim.on{display:flex}
-  #fim .t1{font-size:1.5em;letter-spacing:.4em}
+  #fim .t1{font-size:1.8em;letter-spacing:.04em}
+  #fim .acima{font-size:1.6em;color:#ffe14a}
+  #fim .medalhas{display:flex;gap:.8em;justify-content:center;margin-top:.7em}
+  #fim .medalha{display:flex;align-items:center;gap:.5em;padding:.25em 1em .3em .35em;border-radius:2em;background:#0c1022ec;border:.12em solid #ffd84d88;font-weight:800;font-size:1.1em;animation:surge .4s cubic-bezier(.2,1.6,.4,1) both}
+  #fim .medalha i{width:1.6em;height:1.6em;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff3b0,#ffc531 50%,#c98a00);box-shadow:inset 0 -.15em 0 #0004}
+  #fim .medalha small{display:block;font-size:.8em;opacity:.75;font-weight:700}
+  #fim .revanche{display:inline-block;margin-top:.6em;padding:.2em 1.2em .3em;border-radius:2em;background:#5fe08a;color:#06210f;font-weight:800;font-size:1.3em;box-shadow:0 .2em 0 #0b5a33}
   #fim .t2{font-size:5em;line-height:1.05;animation:entra2 .7s cubic-bezier(.2,1.5,.4,1) both}
   @keyframes entra2{from{transform:scale(.2);opacity:0}}
   #fim .final{display:inline-flex;align-items:center;gap:.6em;padding:.25em 1.4em .35em;border-radius:1em;background:#0c1022ec;border:.13em solid #ffffff38;font-size:1.7em;box-shadow:0 .25em 0 #0008}
@@ -150,9 +168,6 @@
   #clima.espelho{opacity:1;box-shadow:inset 0 0 12em 2em #b44cff8c;animation:ondula 2.4s ease-in-out infinite alternate}
   #clima.lua{opacity:1;box-shadow:inset 0 0 12em 2em #2a2f8a99}
   @keyframes ondula{to{box-shadow:inset 0 0 16em 4em #ff4cd270}}
-  .mod b{display:block;font-size:.5em;letter-spacing:.3em;text-transform:uppercase;opacity:.75}
-  #rodape{position:absolute;bottom:.5em;left:0;width:100%;text-align:center;font-size:.8em;font-weight:700;opacity:.6;text-shadow:0 .1em .3em #000}
-  #erros{position:absolute;left:.6em;bottom:.5em;font-size:11px;color:#ffb0b0;opacity:.55;max-width:32%;text-align:left}
   #cortina{position:absolute;inset:0;background:linear-gradient(100deg,#0000 0,#fff 12%,#fff 88%,#0000 100%);transform:translateX(-120%);opacity:.9}
   #cortina.vai{animation:cortina .55s ease-out}
   @keyframes cortina{from{transform:translateX(-10%)}to{transform:translateX(120%)}}
@@ -165,32 +180,40 @@
   @keyframes ganho{0%{transform:translate(-50%,-.4em) scale(.3);opacity:0}15%{transform:translate(-50%,.1em) scale(1.3);opacity:1}30%{transform:translate(-50%,.1em)}80%{opacity:1}100%{transform:translate(-50%,.5em);opacity:0}}
 
   /* ---------- tela de espera ---------- */
-  #espera{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;text-align:center;padding:2vh 2vw 1.6vh;box-sizing:border-box;
-    font-size:min(1.2vw,2.15vh);background:radial-gradient(ellipse at 50% 55%,#0000 30%,#060818b0 100%)}
-  #espera h1{font-size:5.2em;margin:0;line-height:1;color:#ffe14a}
-  #espera h1 span{color:#fff}
-  #espera .lema{font-size:1.15em;font-weight:800;letter-spacing:.3em;text-transform:uppercase;opacity:.9;margin:.5em 0 .6em;text-shadow:0 .1em .4em #000}
-  #modoEsp{margin:0 0 .8em;padding:.35em 1.4em .45em;border-radius:2em;background:#0c1022e6;border:.12em solid #ffffff38;box-shadow:0 .2em 0 #0008;font-size:1.3em;font-weight:800}
-  #modoEsp b{color:#ffe14a}
-  #modoEsp small{display:block;font-size:.72em;font-weight:700;opacity:.8}
+  /* espera: a sala 3D com o sofa ocupa a esquerda (60%); a direita tem logo, QR e o cartao do modo */
+  #espera{position:fixed;inset:0;font-size:min(1.2vw,2.15vh);background:radial-gradient(ellipse at 30% 55%,#0000 35%,#060818a0 100%)}
+  #ladoEsp{position:absolute;top:0;right:0;bottom:0;width:40%;box-sizing:border-box;padding:3vh 2.4vw 9vh 0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center}
+  #logo{position:relative;padding:.9em 2.2em 1.1em;transform:rotate(-3deg)}
+  #logo::before{content:'';position:absolute;inset:0;border-radius:42% 46% 44% 48% / 55% 50% 58% 52%;background:radial-gradient(circle at 35% 30%,#ffb3d1,#f0458f 55%,#b0236a);
+    box-shadow:inset 0 -.5em 1em #7a124577,0 .5em 0 #0007,0 1em 2em #0008;transition:transform .2s}
+  #logo.afunda::before{animation:afunda .55s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes afunda{30%{transform:scale(1.08,.82)}}
+  #logo h1{position:relative;margin:0;font-size:5.4em;line-height:.95;color:#fff}
+  #logo .sub{position:relative;font-size:1.5em;font-weight:800;color:#ffe9f3;margin-top:.1em;text-shadow:0 .1em 0 #7a1245}
+  #espera .lema{font-size:1.5em;font-weight:800;text-shadow:0 .1em .4em #000}
+  #faixaUrl{display:flex;flex-direction:column;align-items:center;gap:.45em;padding:.9em 1.4em 1em;border-radius:1.3em;background:linear-gradient(180deg,#161c3cf2,#0a0d1ef2);border:.15em solid #ffffff38;box-shadow:0 .4em 0 #0008,0 1em 3em #0008}
+  #faixaUrl .como{font-size:1.25em;font-weight:700}
+  #espera .url{display:inline-block;font-family:Consolas,'Cascadia Mono','Courier New',monospace;font-size:1.7em;font-weight:700;letter-spacing:.02em;line-height:1.2;
+    background:#fff;color:#0c1022;padding:.05em .5em .1em;border-radius:.3em}
+  #qrCx{padding:.6em;border-radius:1em;background:#fff;box-shadow:0 .3em 0 #0008;display:none}
+  #qr{display:block;width:26vh;height:26vh;image-rendering:pixelated}
+  #modoEsp{position:relative;width:100%;box-sizing:border-box;padding:.7em 1.3em .8em;border-radius:1.2em;background:#0c1022ec;border:.15em solid #ffffff38;box-shadow:0 .3em 0 #0008;text-align:left;animation:surge .3s cubic-bezier(.2,1.5,.4,1)}
+  #modoEsp b{display:block;font-size:2.4em;line-height:1.05;color:#ffe14a}
+  #modoEsp small{display:block;font-size:1.2em;font-weight:700;opacity:.9}
   #modoEsp.falta small{color:#ffb0a8;opacity:1}
-  #faixaUrl{padding:.7em 1.6em .9em;border-radius:1.3em;background:linear-gradient(180deg,#161c3cf2,#0a0d1ef2);border:.15em solid #ffffff38;box-shadow:0 .4em 0 #0008,0 1em 3em #0008}
-  #faixaUrl .como{font-size:1.25em;font-weight:700;margin-bottom:.45em}
-  #espera .url{display:inline-block;font-family:Consolas,'Cascadia Mono','Courier New',monospace;font-size:3.5em;font-weight:900;letter-spacing:.02em;line-height:1.15;
-    background:#fff;color:#0c1022;padding:.05em .5em .1em;border-radius:.3em;box-shadow:0 .1em 0 #ffc531}
-  #qrCx{margin-top:1.3em;padding:.7em .7em .4em;border-radius:1em;background:#fff;color:#0c1022;font-weight:800;font-size:.95em;box-shadow:0 .4em 0 #0008;display:none}
-  #qr{display:block;width:21vh;height:21vh;image-rendering:pixelated;margin-bottom:.3em}
-  .chip{position:fixed;transform:translateX(-50%);padding:.4em 1.1em .5em;border-radius:1em;background:#0c1022ec;border:.13em solid #ffffff38;box-shadow:0 .25em 0 #0008;white-space:nowrap}
-  .chip .nm{font-size:1.5em;display:block}
-  .chip b{display:block;margin-top:.15em;font-size:1em;color:#aab3d6}
-  .chip b.ok{color:#5fe08a}
-  .chip b::before{content:'';display:inline-block;width:.65em;height:.65em;border-radius:50%;background:currentColor;margin-right:.45em;animation:pulsa .6s ease-in-out infinite alternate}
-  #pe{margin-top:auto;max-width:96vw;font-size:.84em;font-weight:600;line-height:1.45;text-shadow:0 .1em .4em #000}
-  #pe kbd{font:inherit;font-weight:900;background:#ffffff26;border-radius:.3em;padding:0 .4em}
-  #pausa{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#070a18d9;backdrop-filter:blur(6px);font-size:clamp(10px,1.2vw,26px)}
-  #pausa div{font-size:8em;line-height:1;color:#ffe14a;animation:pulsa 1s ease-in-out infinite alternate}
-  #pausa small{font-size:1.5em;font-weight:700;margin-top:1.2em;opacity:.9}
-  #pausa kbd{font:inherit;font-weight:900;background:#ffffff26;border-radius:.3em;padding:0 .4em}
+  #modoEsp .anel{position:absolute;right:1em;top:50%;margin-top:-1.9em;width:3.8em;height:3.8em;border-radius:50%;display:grid;place-items:center;background:conic-gradient(#5fe08a calc(var(--f)*1turn),#ffffff26 0)}
+  #modoEsp .anel u{text-decoration:none;width:2.9em;height:2.9em;border-radius:50%;display:grid;place-items:center;background:#0c1022;font-size:1.5em;font-weight:800}
+  .chip{position:fixed;transform:translateX(-50%);padding:.3em 1em .4em;border-radius:1em;background:var(--cor,#0c1022);color:#fff;border:.13em solid #ffffff55;box-shadow:0 .25em 0 #0008;white-space:nowrap;text-align:center}
+  .chip.livre{background:#0c1022d9;opacity:.75}
+  .chip .nm{font-size:1.5em;display:block;-webkit-text-stroke:0;color:inherit !important}
+  .chip b{display:block;font-size:1em;font-weight:700}
+  #pe{position:absolute;left:0;right:0;bottom:1.4vh;text-align:center;font-size:1.15em;font-weight:700;text-shadow:0 .1em .4em #000}
+  #pe kbd,#pausa kbd{font:inherit;font-weight:800;background:#ffffff26;border-radius:.3em;padding:0 .4em}
+  #pausa{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:#070a18c0;backdrop-filter:blur(8px);font-size:clamp(10px,1.2vw,26px)}
+  #pausa .tit{font-size:8em;line-height:1;color:#ffe14a;animation:pulsa 1s ease-in-out infinite alternate}
+  #pausa small{font-size:1.7em;font-weight:700;margin-top:.6em;opacity:.95}
+  #pausaQr{display:flex;align-items:center;gap:1em;margin-top:2.4em;padding:.6em 1.2em .6em .6em;border-radius:1em;background:#0c1022e6;border:.12em solid #ffffff33;font-size:1.1em;font-weight:700}
+  #pausaQr canvas{width:12vh;height:12vh;image-rendering:pixelated;border-radius:.4em}
   #cantoSom{position:fixed;right:1em;bottom:1em;z-index:6;display:flex;flex-direction:column;align-items:flex-end;gap:.5em;font-size:clamp(11px,1.05vw,22px)}
   #semSom{display:block;cursor:pointer;max-width:13em;line-height:1.2;padding:.55em 1.1em .6em 3em;border-radius:.9em;background:#ffd84d;color:#1a1400;font-weight:900;box-shadow:0 .25em 0 #7a5a00,0 .6em 1.4em #0008;
     animation:chama .6s ease-in-out infinite alternate;position:relative}
@@ -205,7 +228,13 @@
   #engrenagem:hover{transform:rotate(60deg);opacity:1}
   #engrenagem svg{display:block;width:100%;height:100%}
   #ajustes{position:fixed;inset:0;z-index:8;display:none;align-items:center;justify-content:center;background:#070a18c9;backdrop-filter:blur(6px);font-size:clamp(11px,1.15vw,24px)}
-  #ajustes .cx{width:min(30em,92vw);padding:1.1em 1.5em 1.3em;border-radius:1.3em;background:linear-gradient(180deg,#1a2146,#0b0e20);border:.15em solid #ffffff38;box-shadow:0 .45em 0 #0008,0 1em 3em #000a;animation:surge .3s cubic-bezier(.2,1.4,.4,1)}
+  #ajustes h4{margin:.9em 0 .2em;font-size:1.05em;font-weight:800;color:#aab3d6}
+  #ajustes details{margin-top:.8em;border-radius:.7em;background:#ffffff0d;padding:.35em .8em}
+  #ajustes summary{cursor:pointer;font-weight:800;font-size:1em}
+  #ajustes details p{margin:.5em 0 .3em;font-size:.95em;line-height:1.5}
+  #ajErros{margin:.4em 0;font:12px/1.4 Consolas,monospace;color:#ffb0b0;white-space:pre-wrap;max-height:8em;overflow:auto}
+  #ajustes button.confirma{background:#ffd84d;color:#1a1400}
+  #ajustes .cx{width:min(32em,92vw);max-height:92vh;overflow:auto;box-sizing:border-box;padding:1.1em 1.5em 1.3em;border-radius:1.3em;background:linear-gradient(180deg,#1a2146,#0b0e20);border:.15em solid #ffffff38;box-shadow:0 .45em 0 #0008,0 1em 3em #000a;animation:surge .3s cubic-bezier(.2,1.4,.4,1)}
   #ajustes h3{margin:0 0 .6em;font-size:2em;color:#ffe14a;text-align:center}
   #ajustes label{display:flex;align-items:center;justify-content:space-between;gap:1em;margin:.7em 0;font-weight:800;font-size:1.1em}
   #ajustes input[type=range]{flex:1;max-width:14em;height:1.6em;accent-color:#ffd84d;cursor:pointer}
@@ -216,7 +245,7 @@
   #ajustes button.liga{background:#22a06b;min-width:8em}
   #ajustes button.desl{background:#5a6080;min-width:8em}
   #ajustes button.perigo{background:#a0323a}
-  #ajustes button.fecha{grid-column:1/-1;background:#ffd84d;color:#1a1400}
+  #ajustes button.fecha{grid-column:1/-1;width:100%;margin-top:1em;background:#5fe08a;color:#06210f}
   /* ---------- cartas de poder, itens, anuncios, torcida ---------- */
   .extras{position:absolute;top:calc(100% + .5em);left:.4em;display:flex;flex-wrap:wrap;gap:.4em;transform:skewX(5deg);max-width:24em}
   .dir .extras{left:auto;right:.4em;justify-content:flex-end;transform:skewX(-5deg)}
@@ -266,50 +295,58 @@
   <div class="tit" id="conta"></div>
   <div id="resultado"></div>
   <div id="fim"></div>
-  <div id="rodape"></div>
-  <div id="erros"></div>
+  <!-- lanchonete: bloco reservado para a Lanchonete (frente C), vazio por enquanto -->
+  <div id="hudLanchonete"></div>
   <div id="voo"></div>
   <div id="lampejo"></div>
   <div id="cortina"></div>
 </div>
-<div id="pausa"><div class="tit">Pausado</div><small>Aperte <kbd>P</kbd> no PC ou o botão Pausa no celular para continuar &nbsp; <kbd>O</kbd> abre os ajustes</small></div>
+<div id="pausa"><div class="tit">Tempo!</div><small id="pausaTx"></small><div id="pausaQr"><canvas id="qrPausa"></canvas><span>Celular novo? Aponte aqui</span></div></div>
 <div id="aviso"></div>
-<div id="cantoSom"><div id="semSom">Som desligado: clique aqui ou aperte qualquer tecla</div>
+<div id="cantoSom"><div id="semSom">Sem som. Clique aqui para ligar</div>
   <div id="barra"><div id="musica"></div><div id="engrenagem" title="Ajustes (O)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="5" stroke-dasharray="3.34 3.34"/><circle cx="12" cy="12" r="6.6" fill="currentColor"/><circle cx="12" cy="12" r="2.8" fill="#0c1022"/></svg></div></div></div>
 <div id="ajustes"><div class="cx">
   <h3 class="tit">Ajustes</h3>
+  <h4>Som</h4>
   <label>Música <button id="ajMusica"></button></label>
-  <label>Volume dos efeitos <input type="range" id="ajFx" min="0" max="100"></label>
+  <label>Efeitos <input type="range" id="ajFx" min="0" max="100"></label>
   <label>Volume da música <input type="range" id="ajMus" min="0" max="100"></label>
+  <h4>Partida</h4>
   <div class="bts">
-    <button id="ajCheia">Tela cheia<kbd>T</kbd></button><button id="ajPausa">Pausar<kbd>P</kbd></button>
-    <button id="ajPula">Pular minijogo<kbd>N</kbd></button><button id="ajReinicia" class="perigo">Reiniciar partida<kbd>R</kbd></button>
-    <button id="ajMenu" class="fecha" style="background:#2b3566;color:#fff">Voltar ao menu de modos<kbd>V</kbd></button>
-    <button id="ajFecha" class="fecha">Voltar ao jogo<kbd>O</kbd></button>
+    <button id="ajCheia">Tela cheia<kbd>T</kbd></button><button id="ajPausa">Dar um tempo<kbd>P</kbd></button>
+    <button id="ajPula">Pular este minijogo<kbd>N</kbd></button><button id="ajReinicia" class="perigo">Recomeçar do zero<kbd>R</kbd></button>
+    <button id="ajMenu" class="perigo" style="grid-column:1/-1">Trocar de brincadeira<kbd>V</kbd></button>
   </div>
+  <details id="ajAtalhos"><summary>Atalhos do teclado</summary>
+    <p><kbd>WASD</kbd> anda, <kbd>F</kbd> empurra, <kbd>G</kbd> pula (lugar 1). <kbd>Setas</kbd>, <kbd>L</kbd> e <kbd>K</kbd> (lugar 2).<br>
+    <kbd>P</kbd> dá um tempo, <kbd>N</kbd> pula, <kbd>M</kbd> música, <kbd>B</kbd> robô de treino, <kbd>O</kbd> ajustes, <kbd>T</kbd> tela cheia, <kbd>R</kbd> recomeça, <kbd>V</kbd> menu, <kbd>Enter</kbd> começa</p>
+  </details>
+  <details id="ajTec"><summary>Detalhes técnicos</summary><pre id="ajErros"></pre></details>
+  <button id="ajFecha" class="fecha">Voltar ao jogo<kbd>O</kbd></button>
 </div></div>
 <div id="espera">
-  <h1 class="tit">Minijogos <span>3D</span></h1>
-  <div class="lema">2 a 4 jogadores &nbsp; 1 celular cada &nbsp; 1 tela</div>
-  <div id="modoEsp"></div>
-  <div id="faixaUrl">
-    <div class="como">No navegador de cada celular (mesmo Wi-Fi do PC), abra:</div>
-    <div class="url" id="url">...</div>
+  <div id="ladoEsp">
+    <div id="logo"><h1 class="tit">Almofadada</h1><div class="sub">minijogos de sofá</div></div>
+    <div class="lema">Pegue o celular e sente no sofá</div>
+    <div id="faixaUrl">
+      <div id="qrCx"><canvas id="qr"></canvas></div>
+      <div class="como">Aponte a câmera do celular ou digite:</div>
+      <div class="url" id="url"></div>
+    </div>
+    <div id="modoEsp"></div>
   </div>
-  <div id="qrCx"><canvas id="qr"></canvas>ou aponte a câmera</div>
   <div class="chip" id="chip0"><span id="n0"></span><b id="st0"></b></div>
   <div class="chip" id="chip1"><span id="n1"></span><b id="st1"></b></div>
   <div class="chip" id="chip2"><span id="n2"></span><b id="st2"></b></div>
   <div class="chip" id="chip3"><span id="n3"></span><b id="st3"></b></div>
-  <div id="pe">
-    <button id="ligar">Clique aqui: tela cheia e som</button><br>
-    O Jogador 1 escolhe o modo no celular e toca COMEÇAR. <kbd>Enter</kbd> começa já. No celular dá para pôr nome e comprar skins.<br>
-    Teclado: <kbd>WASD</kbd> + <kbd>F</kbd> e <kbd>G</kbd> (jogador 1), <kbd>setas</kbd> + <kbd>L</kbd> e <kbd>K</kbd> (jogador 2). <kbd>P</kbd> pausa, <kbd>N</kbd> pula o minijogo, <kbd>M</kbd> liga e desliga a música, <kbd>O</kbd> ajustes, <kbd>T</kbd> tela cheia, <kbd>R</kbd> reinicia.
-  </div>
+  <div id="pe"><button id="ligar">Ligar som e tela cheia</button><br><span id="peTx"></span></div>
 </div>
+<script type="importmap">{ "imports": { "three": "/three/three.module.js", "three/addons/": "/three/addons/" } }</script>
 <script type="module">
 import * as THREE from '/three/three.module.js';
-import { criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, NOITES_COOP, CARTAS, JOGOS, RAIO, PONTOS_VITORIA } from '/logica.mjs';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { clone as clonaModelo } from 'three/addons/utils/SkeletonUtils.js';
+import { criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, comMinimo, NOITES_COOP, CARTAS, JOGOS, RAIO } from '/logica.mjs';
 
 const $ = id => document.getElementById(id);
 // Mesmo catalogo do controle.html (indices de cor e de chapeu).
@@ -318,7 +355,7 @@ const PALETA = [0x2f7df6, 0xf0458f, 0x35c26b, 0xffc531, 0x9b5cf6, 0xff7a2f, 0x22
 const SLOTS = 4;                              // o servidor tem 4 lugares; a partida usa os primeiros p.jogadores.length
 const perfis = [0, 1, 2, 3].map(i => ({ nome: '', cor: i, chapeu: 0 }));      // cor padrao: azul, rosa, verde, amarelo
 const idxCor = [0, 1, 2, 3];                  // indice de cor de cada jogador (depois de resolver cor repetida)
-const TIMES = [0xff7a1a, 0x9a4dff], NOME_TIME = ['Time A', 'Time B'];      // laranja (J1 + J3) e roxo (J2 + J4): fora das 4 cores padrao dos jogadores
+const TIMES = [0xff7a1a, 0x9a4dff], NOME_TIME = ['Time Laranja', 'Time Roxo'];      // laranja (J1 + J3) e roxo (J2 + J4): fora das 4 cores padrao dos jogadores
 // Acabamento do corpo por indice de cor: 10 dourado metalico, 11 arco-iris (matiz anda no quadro), 12 galaxia (textura), 13 neon.
 const ACABAMENTO = { 10: { metalness: 0.55, roughness: 0.28, emissive: 0x4a3500 }, 12: { roughness: 0.4 }, 13: { roughness: 0.3, emissive: 0x39ff14, emissiveIntensity: 0.55 } };
 // Mesma lista de emojis e na mesma ordem do controle.html (o celular so manda o indice).
@@ -331,6 +368,27 @@ const hex = n => '#' + n.toString(16).padStart(6, '0');
 const css = i => hex(cores[i]);
 const nome = i => perfis[i].nome || 'Jogador ' + (i + 1);
 const limpa = s => String(s).replace(/[<>&]/g, '');
+// @puras-texto (funcoes sem DOM: o tela.test.mjs le este trecho do html)
+// Todo texto que vem de minijogo ou da rede passa por aqui: so texto e numero finito, sem restos crus, com tamanho maximo.
+const CRU = /\[object \w+\]|\b(?:undefined|NaN|null)\b/g;
+function textoSeguro(s, max = 120) {
+  if (typeof s === 'number') return Number.isFinite(s) ? s.toLocaleString('pt-BR') : '';
+  if (typeof s !== 'string') return '';
+  return s.replace(CRU, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+// "Jogador 2" no texto de um minijogo vira o nome do perfil (sem artigo: "do Jogador 1" vira "de Ana"), so quando ha nome.
+function trocaNomes(texto, nomes) {
+  if (typeof texto !== 'string' || !Array.isArray(nomes)) return texto;
+  const de = n => (typeof nomes[n - 1] === 'string' && nomes[n - 1]) || '';
+  const PREP = { do: 'de', da: 'de', ao: 'a', pelo: 'por', pela: 'por', no: 'em', na: 'em' };      // artigo + Jogador N: sem o artigo diante do nome
+  return texto.replace(/\b(do|da|ao|pelo|pela|no|na) Jogador ([1-4])\b/g, (t, a, n) => de(n) ? PREP[a] + ' ' + de(n) : t).replace(/\bJogador ([1-4])\b/g, (t, n) => de(n) || t);
+}
+const milhar = n => (Number.isInteger(n) ? n : 0).toLocaleString('pt-BR');
+// rotulo de botao vindo do minijogo: tudo em caixa alta ("ENCHE!") vira caixa normal ("Enche!"); o resto passa como veio
+function rotulo(s, max = 20) { const t = textoSeguro(s, max); return t.length > 1 && t === t.toLocaleUpperCase('pt-BR') && t !== t.toLocaleLowerCase('pt-BR') ? t[0] + t.slice(1).toLocaleLowerCase('pt-BR') : t; }
+// @fim-puras-texto
+const nomesPerfis = () => perfis.map(pf => pf.nome);
+const doJogo = (s, max = 120) => textoSeguro(trocaNomes(s, nomesPerfis()), max);       // texto de minijogo pronto para a tela
 const corEscura = n => (n >> 16) * 0.3 + (n >> 8 & 255) * 0.59 + (n & 255) * 0.11 < 80;
 const nomeHtml = i => `<span class="nm${corEscura(cores[i]) ? ' escuro' : ''}" style="color:${css(i)}">${limpa(nome(i))}</span>`;
 
@@ -381,6 +439,7 @@ function malha(geo, cor, extra = {}) {
 function descarta(obj) {       // o que tem userData.fixo e compartilhado e fica
   obj.traverse(o => {
     if (o.isInstancedMesh) o.dispose();
+    if (o.isSkinnedMesh) o.skeleton?.dispose();      // cada clone animado tem esqueleto proprio, com textura de ossos na GPU
     if (o.geometry && !o.geometry.userData.fixo) o.geometry.dispose();
     for (const m of [].concat(o.material ?? [])) {
       if (m.userData.fixo) continue;
@@ -610,8 +669,8 @@ function escolheTema() {       // um lugar por minijogo (sorteado pelo id); nunc
   if (temaRodada === p.rodada) return;
   temaRodada = p.rodada;
   if (p.arena.tipo === 'pisos') { temaIndice = -1; return aplicaTema(VULCAO, p.jogo.id); }
-  let n = Math.floor(sorteioDe(p.jogo.id + ' lugar')() * TEMAS.length);
-  if (n === temaIndice) n = (n + 1) % TEMAS.length;
+  let n = Number.isInteger(p.jogo.tema) && TEMAS[p.jogo.tema] ? p.jogo.tema : Math.floor(sorteioDe(p.jogo.id + ' lugar')() * TEMAS.length);       // jogo.tema fixa o lugar (indice em TEMAS)
+  if (n === temaIndice && !Number.isInteger(p.jogo.tema)) n = (n + 1) % TEMAS.length;
   temaIndice = n;
   aplicaTema(TEMAS[n], p.jogo.id);
 }
@@ -686,7 +745,7 @@ function etiqueta(texto, cor, escura) {
   x.fillStyle = cor; x.fillText(texto, 128, 32);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, fog: false, toneMapped: false }));
-  s.scale.set(3.2, 0.8, 1); s.position.y = 1.9; s.renderOrder = 10;
+  s.scale.set(4.2, 1.05, 1); s.position.y = 1.95; s.renderOrder = 10;       // ~20 px em 720p (era ~15)
   return s;
 }
 
@@ -725,6 +784,7 @@ function montaBoneco(g, i) {
   auraAro.rotation.x = Math.PI / 2; auraAro.position.y = -RAIO + 0.1; auraAro.visible = false;
   const anelTime = new THREE.Mesh(new THREE.RingGeometry(RAIO + 0.12, RAIO + 0.62, 40), new THREE.MeshBasicMaterial({ color: TIMES[i % 2], toneMapped: false, side: THREE.DoubleSide }));
   anelTime.add(new THREE.Mesh(new THREE.RingGeometry(RAIO + 0.64, RAIO + 0.78, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, toneMapped: false, side: THREE.DoubleSide })));     // fio branco por fora: o anel aparece mesmo sobre ladrilho da mesma cor
+  anelTime.add(new THREE.Mesh(new THREE.RingGeometry(RAIO + 0.02, RAIO + 0.12, 40), new THREE.MeshBasicMaterial({ color: 0x1b1630, toneMapped: false, side: THREE.DoubleSide })));     // fio escuro por dentro: o anel tambem aparece sobre ladrilho branco
   anelTime.rotation.x = -Math.PI / 2; anelTime.position.y = -RAIO + 0.04; anelTime.visible = false;      // anel no chao com a cor do time (so na Festa em times)
   g.add(corpo, anel, placa, aura, auraAro, anelTime);
   // anel aceso = empurrao pronto. corpo fica em userData porque alguns minijogos viram o boneco por ali.
@@ -803,6 +863,7 @@ function mesmaCor(a, b) { return a === b || PARECIDAS.some(([x, y]) => (a === x 
 function aplicaPerfil(m) {
   const i = m.j - 1;
   if (!(i >= 0 && i < SLOTS)) return;
+  if (i < 2) celularReal[i] = performance.now();
   perfis[i] = { nome: String(m.nome ?? '').slice(0, 10), cor: PALETA[m.cor] === undefined ? i : m.cor, chapeu: m.chapeu | 0 };
   for (let k = 0; k < SLOTS; k++) {
     idxCor[k] = perfis[k].cor;
@@ -1018,9 +1079,9 @@ setInterval(trilha, 50);
 
 // Sem clique nem tecla o navegador nao deixa tocar: o aviso fica na tela ate o audio ligar.
 function mostraSom() {
-  $('semSom').style.display = audio?.state === 'running' ? 'none' : 'block';
+  $('semSom').style.display = audio?.state === 'running' || !iniciou ? 'none' : 'block';      // na espera quem chama e o botao grande "Ligar som e tela cheia"
   $('musica').className = musicaLigada ? '' : 'off';
-  const txt = `Música: <b>${musicaLigada ? 'ligada' : 'desligada'}</b> (M)`;
+  const txt = `Música <b>${musicaLigada ? 'ligada' : 'desligada'}</b>`;
   if ($('musica')._h !== txt) $('musica').innerHTML = $('musica')._h = txt;
 }
 setInterval(mostraSom, 400);
@@ -1028,7 +1089,7 @@ $('semSom').onclick = () => { ligaSom(); setTimeout(mostraSom, 150); };
 function trocaMusica() {
   musicaLigada = !musicaLigada; guarda('musica', musicaLigada ? '1' : '0');
   mostraSom(); mostraAjustes();
-  avisa(musicaLigada ? 'Música ligada (M desliga)' : 'Música desligada (M liga)');
+  avisa(musicaLigada ? 'Música ligada' : 'Música desligada');
 }
 $('musica').onclick = trocaMusica;
 
@@ -1036,7 +1097,18 @@ $('musica').onclick = trocaMusica;
 function mostraAjustes() {
   $('ajMusica').textContent = musicaLigada ? 'Ligada' : 'Desligada'; $('ajMusica').className = musicaLigada ? 'liga' : 'desl';
   $('ajFx').value = Math.round(volFx * 100); $('ajMus').value = Math.round(volMus * 100);
-  $('ajPausa').firstChild.textContent = pausado ? 'Continuar' : 'Pausar';
+  $('ajPausa').firstChild.textContent = pausado ? 'Continuar' : 'Dar um tempo';
+  $('ajErros').textContent = p.erros.length ? p.erros.slice(-10).join('\n') : 'Nenhum tropeço até agora.';
+}
+// Acoes perigosas dos ajustes pedem um segundo clique em ate 3 s.
+function confirma(bt, acao) {
+  const texto = bt.firstChild.textContent;
+  let ate = 0, timer = 0;
+  bt.onclick = () => {
+    if (performance.now() < ate) { clearTimeout(timer); ate = 0; bt.firstChild.textContent = texto; bt.classList.remove('confirma'); return acao(); }
+    ate = performance.now() + 3000; bt.firstChild.textContent = 'Clique de novo para confirmar'; bt.classList.add('confirma'); SONS.troca();
+    timer = setTimeout(() => { ate = 0; bt.firstChild.textContent = texto; bt.classList.remove('confirma'); }, 3000);
+  };
 }
 function ajustes(abre = !ajustesAberto) {
   ajustesAberto = abre;
@@ -1051,28 +1123,36 @@ $('ajFx').onchange = () => SONS.moeda();        // soltou o controle: toca um ef
 $('ajMus').oninput = e => { volMus = e.target.value / 100; guarda('volMus', volMus); };
 $('ajCheia').onclick = () => telaCheia();
 $('ajPausa').onclick = () => { ajustes(false); pausa(); };
-$('ajPula').onclick = () => { ajustes(false); pulaPara(p); };
-$('ajReinicia').onclick = () => { ajustes(false); reinicia(p); };
-$('ajMenu').onclick = () => { ajustes(false); voltaAoMenu(); };
+$('ajPula').onclick = () => { ajustes(false); pulaOuRecomeca(); };
+confirma($('ajReinicia'), () => { ajustes(false); recomeca(); });
+confirma($('ajMenu'), () => { ajustes(false); voltaAoMenu(); });
 $('ajFecha').onclick = () => ajustes(false);
 
-function pausa() {
+// quem: indice de quem pediu o tempo (-1 = PC). continua: so tira a pausa (nunca pausa de novo).
+let quemPausou = -1;
+function pausa(quem = -1, continua = false) {
+  if (continua && !pausado) return;
   pausado = !pausado;
+  quemPausou = pausado ? quem : -1;
+  $('pausaTx').textContent = quem >= 0 ? nome(quem) + ' pediu um tempo. Toque em Continuar no celular' : 'Toque em Continuar no celular ou aperte P';
   $('pausa').style.display = pausado ? 'flex' : 'none';
   if (pausado) for (const i of todos()) entrada(p, i, { x: 0, y: 0, d: false, b: false });
   voz(pausado ? 660 : 440, 0.1, 'sine', 0.1); voz(pausado ? 440 : 660, 0.16, 'sine', 0.1, audio?.currentTime + 0.1);
 }
 
 // ---------- partida, entradas e minijogos que chegam ----------
-const p = criaPartida();
+JOGOS.forEach(comMinimo);      // nenhuma rodada fecha antes de 5 s (os que chegam da pasta passam por comMinimo no registra)
+const leHistorico = () => { try { const h = JSON.parse(localStorage.getItem('historico-minijogos')); return Array.isArray(h) ? h : []; } catch { return []; } };       // ultimos 30 ids: a rotacao lembra entre noites
+const p = criaPartida(Math.random, { historico: leHistorico() });
 p.esperaPronto = true;      // cada minijogo so comeca quando todos apertam PRONTO no celular
-p.modificadores = true;     // de vez em quando uma rodada vem com tempero (gelo, vale 2, controles invertidos...); so no Classico
+p.esperaRevanche = true;    // o podio nao recomeca sozinho: o celular do Jogador 1 escolhe revanche ou outra brincadeira (sem toque, revanche)
+p.modificadores = true;     // de vez em quando uma rodada vem com tempero (gelo, vale 2, controles invertidos...)
 const todos = () => p.jogadores.map((_, i) => i);       // indices dos jogadores da partida (2 no Classico, 2 a 4 na Festa)
 window.__p = p;      // para depurar e para o teste automatico
 window.__perfis = perfis;
 window.__ids = () => JOGOS.map(j => j.id);
 window.__jogo = id => pulaPara(p, JOGOS.find(j => j.id === id));
-window.__registra = registra;
+window.__registra = j => registra(comMinimo(j));
 window.__bonecos = bonecos;
 window.__cores = idxCor;
 window.__mesmaCor = mesmaCor;
@@ -1080,62 +1160,105 @@ const visto = [0, 0, 0, 0], conectado = [false, false, false, false];
 let iniciou = false;
 
 // ---------- menu de modos: o Jogador 1 escolhe no celular, a espera mostra, e COMECAR (ou Enter) comeca ----------
+// Os ids (classico, vs, times, coop) sao os mesmos do servidor e do motor; so o texto mudou.
 const MODOS_TXT = {
-  classico: ['Clássico', '2 jogadores, todos os minijogos de sempre'],
-  vs: ['Festa: todos contra todos', 'de 2 a 4 jogadores, o ponto e de quem vencer'],
-  times: ['Festa: times 2x2', 'Time A (Jogadores 1 e 3) contra Time B (Jogadores 2 e 4)'],
-  coop: ['Festa: cooperativo', 'de 2 a 4 jogadores, todos juntos contra o jogo'],
+  classico: ['Duelo', 'Dois no sofá. Quem fizer 10 primeiro leva'],
+  vs: ['Cada um por si', 'De 2 a 4. Ponto só para quem vencer'],
+  times: ['Duplas', ''],
+  coop: ['Todos juntos', 'Vocês contra o jogo por 5 noites'],
 };
-let escolhaModo = 'classico', semAuto = false, autoDesde = 0;
-const AUTO_MS = 6000;       // com o Classico escolhido (nenhum modo Festa) e ninguem mexendo no menu, ele comeca sozinho depois disso, com contagem na TV e no celular; do 3o celular em diante so assiste
-const autoSeg = () => !semAuto && escolhaModo === 'classico' && autoDesde ? Math.max(0, Math.ceil((AUTO_MS - (performance.now() - autoDesde)) / 1000)) : 0;
-const textoAuto = () => autoSeg() ? 'Clássico começa em ' + autoSeg() + '...' : '';
+const dicaModo = m => m === 'times' ? `${nome(0)} e ${nome(2)} contra ${nome(1)} e ${nome(3)}` : MODOS_TXT[m][1];
+let escolhaModo = 'classico', semAuto = false, autoDesde = 0, modoPadrao = true;
+// Ninguem escolheu no menu: o padrao segue quem esta no sofa (2 = Duelo, 3 ou 4 = Cada um por si) e comeca sozinho depois de AUTO_MS, com contagem na TV e no celular
+const AUTO_MS = 6000;
+const MODOS_AUTO = ['classico', 'vs'];
+const autoSeg = () => !semAuto && MODOS_AUTO.includes(escolhaModo) && autoDesde ? Math.max(0, Math.ceil((AUTO_MS - (performance.now() - autoDesde)) / 1000)) : 0;
+const textoAuto = () => autoSeg() ? MODOS_TXT[escolhaModo][0] + ' começa em ' + autoSeg() : '';
 const seguidos = () => { let n = 0; while (n < SLOTS && conectado[n]) n++; return n; };      // conectados de 1 ate onde nao falta ninguem
 function faltaPara(modo) {       // texto do que impede de comecar este modo agora (ou '')
   const seg = seguidos();
-  if (modo === 'times') return seg < 4 ? 'Times 2x2 precisam dos 4 jogadores conectados' : quebrado(modo, 4);
-  if (seg < 2) return 'Faltam jogadores: o Jogador 2 ainda não entrou';
-  if (modo !== 'classico' && conectado.slice(seg + 1).some(Boolean)) return 'O Jogador ' + (seg + 1) + ' ainda não entrou (e o seguinte ficaria de fora)';
+  if (modo === 'times') return seg < 4 ? 'Duplas precisam de 4 no sofá' : quebrado(modo, 4);
+  if (seg < 2) return 'Falta alguém no lugar ' + (seg + 1);
+  if (modo !== 'classico' && conectado.slice(seg + 1).some(Boolean)) return `O lugar ${seg + 1} está vazio. Quem está no lugar ${seg + 2} ficaria de fora`;
   return quebrado(modo, modo === 'classico' ? 2 : seg);
 }
 function quebrado(modo, n) {       // o unico minijogo do modo quebrou: nao deixa comecar de novo (so avisa; "ainda carregando" e outro caso)
-  return elegiveis(modo, n).length && !jogavel(modo, n) ? 'Nenhum minijogo deste modo está funcionando' : '';
+  return elegiveis(modo, n).length && !jogavel(modo, n) ? 'Esta brincadeira está sem minijogo agora' : '';
 }
 function comecaPartida(teclado = false) {
   if (iniciou) return;
   const modo = escolhaModo, seg = seguidos(), n = modo === 'classico' ? 2 : seg;
   const falta = teclado && modo === 'classico' ? quebrado(modo, 2) : faltaPara(modo);
   if (falta) return avisa(falta);
-  if (modo !== 'classico' && !elegiveis(modo, n).length) return avisa('Os minijogos da Festa ainda estão carregando. Tente de novo');
+  if (modo !== 'classico' && !elegiveis(modo, n).length) return avisa('Ainda carregando os minijogos. Tente em 5 segundos');
   if (modo !== p.modo || n !== p.n) configura(p, { n, modo });
-  p.modificadores = modo === 'classico';
-  iniciou = true;
+  iniciou = true; zeraNoite();
   limpaEscolha();
+}
+// Revanche no podio: o Jogador 1 escolhe no celular; os outros pedem (acende o boneco); sem toque em T_REVANCHE s, vale revanche.
+const T_REVANCHE = 20, querRevanche = [false, false, false, false];
+// Medalhas da noite (o podio mostra): maior sequencia, viradas e quem mais torceu, contadas so nesta partida.
+let noite;
+function zeraNoite() { noite = { seq: [0, 0, 0, 0], viradas: [0, 0, 0, 0], torcidas: [0, 0, 0, 0] }; querRevanche.fill(false); }
+zeraNoite();
+function recomeca() { reinicia(p); zeraNoite(); premios.fill(null); }
+function medalhas() {       // ate 3 medalhas da noite no podio: so aparece quem fez alguma coisa
+  const melhor = (v, min) => { const m = Math.max(...todos().map(i => v[i])); return m >= min ? { i: todos().find(i => v[i] === m), n: m } : null; };
+  const s = melhor(noite.seq, 2), vi = melhor(noite.viradas, 1), t = melhor(noite.torcidas, 1);
+  const lista = [s && [s.i, 'Sequência da noite', s.n + ' seguidas'], vi && [vi.i, 'Rei da virada', vi.n > 1 ? vi.n + ' viradas' : 'virou o jogo'],
+    t && [t.i, 'Torcedor da noite', t.n + (t.n > 1 ? ' torcidas' : ' torcida')]].filter(Boolean);
+  if (!lista.length) return '';
+  return `<div class="medalhas">${lista.map(([i, rot, val], k) => `<div class="medalha" style="animation-delay:${0.3 + k * 0.25}s"><i></i><div>${nomeHtml(i)}<small>${rot}: ${val}</small></div></div>`).join('')}</div>`;
+}
+const naRevanche = () => iniciou && p.fase === 'fim' && p.t > T_PODIO;
+const faltaRevanche = () => Math.max(0, Math.ceil(T_PODIO + T_REVANCHE - p.t));
+function escolhaNoPodio(i, m) {       // toque numa opcao do celular durante o podio (mesmo op/nop das opcoes do minijogo)
+  const j = p.jogadores[i];
+  if (!naRevanche() || !Number.isInteger(m.op) || !Number.isInteger(m.nop) || !Number.isInteger(j.nop) || m.nop <= j.nop || m.s !== j.s) return;
+  if (i === 0) return m.op === 1 ? voltaAoMenu() : m.op === 0 ? recomeca() : undefined;
+  if (m.op === 0 && !querRevanche[i]) { querRevanche[i] = true; SONS.troca(); vibra(i, [40, 30, 80]); }
 }
 function limpaEscolha() { fetch('/modo-limpa', { method: 'POST' }).catch(() => {}); }       // o servidor esquece a escolha: tela aberta depois nao recebe um modo velho
 function voltaAoMenu() {       // de volta a espera: o anfitriao escolhe de novo, a partida recomeca do zero
   if (!iniciou) return;
   iniciou = false; semAuto = true; autoDesde = 0;
   limpaEscolha();
-  reinicia(p);
-  premios.fill(null);
+  recomeca();
 }
 function recebeEscolha(e) {
   if (iniciou || !MODOS_TXT[e.modo]) return;
+  if (!e.antiga && e.modo !== escolhaModo) novidade(nome(0) + ' escolheu ' + MODOS_TXT[e.modo][0]);
   escolhaModo = e.modo;
+  if (!e.antiga || !MODOS_AUTO.includes(e.modo)) modoPadrao = false;       // escolha antiga de Duelo ou Cada um por si (repetida a tela nova) nao desliga o padrao por quantos estao no sofa
   if (!e.antiga) semAuto = true;      // o anfitriao mexeu no menu agora: nada de comecar sozinho (a escolha antiga, repetida a tela nova, nao conta)
   if (e.comeca) comecaPartida();
 }
-window.__sala = () => ({ escolhaModo, seguidos: seguidos(), iniciou, semAuto });
+window.__sala = () => ({ escolhaModo, seguidos: seguidos(), iniciou, semAuto, lugarRobo: robo.lugar });
+// A frase da espera nos celulares muda com o que acontece na TV (troca de modo, alguem sentou) por alguns segundos.
+let novo = { txt: '', ate: 0 };
+function novidade(txt) { novo = { txt, ate: performance.now() + 4000 }; }
+// Comando do celular do Jogador 1 na pausa (servidor ja filtrou: so j 1 e a lista fechada).
+function comando(c) {
+  if (c === 'continua') return pausa(-1, true);
+  if (pausado) pausa(-1, true);
+  if (c === 'pula') pulaOuRecomeca();
+  if (c === 'reinicia') recomeca();
+  if (c === 'menu') voltaAoMenu();
+}
+function pulaOuRecomeca() {       // no podio a partida ja acabou: pular vira recomecar do zero (senao a rodada nova abriria com o campeao em 10)
+  if (p.fase === 'fim') recomeca(); else pulaPara(p);
+}
 
 
 new EventSource('/eventos').onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.perfil) return aplicaPerfil(m.perfil);
   if (m.escolha) return recebeEscolha(m.escolha);
-  if (m.pausa) return pausa();
+  if (m.pausa) return pausa(Number.isInteger(m.j) && m.j >= 1 && m.j <= SLOTS ? m.j - 1 : -1, m.continua === true);
+  if (m.comando) return comando(m.comando);
   const i = m.j - 1;
   if (!(i >= 0 && i < SLOTS)) return;
+  if (i < 2) celularReal[i] = performance.now();
   visto[i] = performance.now();
   if (iniciou && !p.jogadores[i]) {      // celular de um lugar que nao esta na partida: nao joga, mas pode torcer e reagir
     if (!pausado && !ajustesAberto) recebeReacao(i, m);
@@ -1149,8 +1272,67 @@ new EventSource('/eventos').onmessage = e => {
     return entrada(p, i, m, true);
   }
   recebeReacao(i, m);
+  escolhaNoPodio(i, m);
   entrada(p, i, m);
 };
+
+// ---------- robo de treino: senta no lugar vago (1 ou 2) e joga devagar, para quem esta aprendendo (tecla B ou ?bot no endereco) ----------
+// Facil de proposito: pensa a cada 0,45 s, anda meio sem rumo entre o rival e o meio da arena e aperta pouco.
+// ?bot=Ana no endereco da o nome "Ana robô"; o texto do endereco e entrada de fora, entao passa pelo textoSeguro.
+const PARAMETRO_ROBO = new URLSearchParams(location.search).get('bot');
+const NOME_ROBO = (textoSeguro(PARAMETRO_ROBO ?? '', 10) + ' robô').trim().replace(/^r/, 'R');
+let roboLigado = PARAMETRO_ROBO !== null;
+const robo = { n: 0, nb: 0, nop: 0, x: 0, y: 0, prox: 0, intro: 0, lugar: -1 };       // lugar -1: sem lugar (desligado ou os dois lugares tem gente)
+const celularReal = [0, 0];       // ultima vez que um celular de verdade falou dos lugares 1 e 2: o robo senta no que sobrar
+const temCelular = (i, agora) => !!celularReal[i] && agora - celularReal[i] < 2000;
+function roboLevanta(agora) {       // o robo larga o lugar; so solta o controle e o nome se nao ha celular de verdade ali
+  const l = robo.lugar;
+  if (l < 0) return;
+  robo.lugar = -1;
+  if (perfis[l].nome === NOME_ROBO) perfis[l].nome = '';
+  if (!temCelular(l, agora)) { visto[l] = 0; entrada(p, l, { x: 0, y: 0, d: false, b: false }); }
+}
+function trocaRobo() {
+  roboLigado = !roboLigado;
+  if (!roboLigado) roboLevanta(performance.now());
+  avisa(!roboLigado ? 'Robô de treino saiu' : iniciou ? 'Robô de treino ligado. Ele senta na próxima partida' : 'Robô de treino entrou no jogo');
+}
+function roboJoga(agora) {
+  if (!roboLigado) return;
+  const real = [temCelular(0, agora), temCelular(1, agora)];
+  if (!iniciou) {       // so no menu ele escolhe lugar: o vago, ou nenhum se os dois tem gente
+    const quer = real[0] && real[1] ? -1 : real[1] ? 0 : 1;
+    if (quer !== robo.lugar) { roboLevanta(agora); robo.lugar = quer; }
+  }
+  if (robo.lugar >= 0 && real[robo.lugar]) roboLevanta(agora);       // chegou um celular de verdade no lugar dele: o lugar e da pessoa ate o fim da partida, mesmo que o celular suma
+  const i = robo.lugar;
+  if (i < 0) return;
+  visto[i] = agora;
+  if (!perfis[i].nome) perfis[i].nome = NOME_ROBO;
+  const eu = p.jogadores[i], rival = p.jogadores[1 - i];
+  if (!iniciou || !eu || pausado || ajustesAberto || agora < robo.prox) return;
+  robo.prox = agora + 450;
+  const m = { x: 0, y: 0, d: false, b: false, n: robo.n, nb: robo.nb, op: 0, nop: robo.nop };
+  if (p.fase === 'intro') {       // le a explicacao por 2,5 s, pega a primeira carta se tiver e diz que entendeu
+    robo.intro ||= agora;
+    if (agora - robo.intro < 2500) return;
+    if (eu.oferta) m.nop = ++robo.nop; else if (!eu.pronto) m.n = ++robo.n;
+    return entrada(p, i, m);
+  }
+  robo.intro = 0;
+  if (p.fase !== 'jogando') return entrada(p, i, m);
+  const sorte = Math.random;
+  if (sorte() < 0.5) {       // muda de rumo: metade das vezes vai para o rival, senao volta para o meio ou passeia
+    const alvo = sorte() < 0.5 && Number.isFinite(rival?.x) ? rival : { x: (sorte() - 0.5) * 6, z: (sorte() - 0.5) * 6 };
+    const dx = alvo.x - (eu.x ?? 0), dz = alvo.z - (eu.z ?? 0), dist = Math.hypot(dx, dz) || 1;
+    robo.x = dx / dist * 0.7; robo.y = dz / dist * 0.7;
+  }
+  m.x = robo.x; m.y = robo.y;
+  if (sorte() < 0.3) { m.d = true; m.n = ++robo.n; }
+  if (sorte() < 0.08) { m.b = true; m.nb = ++robo.nb; }
+  if (sorte() < 0.25) { m.op = Math.floor(sorte() * 4); m.nop = ++robo.nop; }
+  entrada(p, i, m);
+}
 
 const TECLAS = [
   { KeyA: [-1, 0], KeyD: [1, 0], KeyW: [0, -1], KeyS: [0, 1], a: 'KeyF', b: 'KeyG' },
@@ -1162,9 +1344,11 @@ function teclado(e, baixo) {
   ligaSom();
   if (baixo && e.code === 'Enter') comecaPartida(true);
   if (baixo && e.code === 'KeyV') voltaAoMenu();
-  if (baixo && e.code === 'KeyR') reinicia(p);
-  if (baixo && e.code === 'KeyN') pulaPara(p);
+  if (baixo && e.code === 'KeyR') recomeca();
+  if (baixo && e.code === 'KeyH') { ajustes(true); $('ajAtalhos').open = true; }
+  if (baixo && e.code === 'KeyN') pulaOuRecomeca();
   if (baixo && e.code === 'KeyM') trocaMusica();
+  if (baixo && e.code === 'KeyB') trocaRobo();
   if (baixo && e.code === 'KeyO') ajustes();
   if (baixo && (e.code === 'KeyP' || e.code === 'Escape')) pausa();
   if (baixo && e.code === 'KeyT') telaCheia();
@@ -1251,6 +1435,68 @@ function desenhaQr(texto) {
 let enderecoCelular = '';
 fetch('/ip').then(r => r.text()).then(u => { $('url').textContent = u.replace('http://', ''); enderecoCelular = u; desenhaQr(u); });
 
+// ---------- modelos 3D prontos (CC0), em modelos/<pacote>/<arquivo>.glb ----------
+// c.modelo("pacote/arquivo", { altura | escala, proprio }) devolve um clone pronto para usar, ou null se o modelo ainda nao chegou ou falhou
+// (o minijogo entao desenha a forma simples de antes). Cada glb e carregado uma vez; a geometria e a textura sao compartilhadas.
+const NOME_MODELO = /^[a-z0-9_-]+\/[a-z0-9_-]+$/;
+const texturas = new Map();      // textura de cada pacote, compartilhada entre os glb
+const modelos = new Map();       // "pacote/arquivo" -> { estado: 'carregando' | 'pronto' | 'erro', cena, clipes, altura, base }
+const gltf = new GLTFLoader(new THREE.LoadingManager().setURLModifier(u => u.replace(/\/Textures\/([a-z0-9_-]+\.png)$/, '/$1')));      // os glb apontam para Textures/colormap.png; no servidor a textura fica ao lado do glb
+function carregaModelo(nome) {
+  let m = modelos.get(nome);
+  if (m) return m;
+  m = { estado: 'carregando' }; modelos.set(nome, m);
+  if (!NOME_MODELO.test(String(nome))) { m.estado = 'erro'; return m; }
+  gltf.loadAsync(`/modelos/${nome}.glb`).then(g => {
+    g.scene.traverse(o => {
+      if (o.geometry) o.geometry.userData.fixo = true;       // compartilhado: descarta() nao pode liberar
+      for (const mt of [].concat(o.material ?? [])) {
+        mt.userData.fixo = true;
+        if (!mt.map) continue;
+        const mp = mt.map, chave = [nome.split('/')[0], mp.offset.x, mp.offset.y, mp.repeat.x, mp.repeat.y, mp.rotation, mp.flipY, mp.wrapS, mp.wrapT].join();       // o colormap.png e o mesmo em todo glb do pacote: uma textura so na GPU
+        mt.map = texturas.get(chave) ?? mp; texturas.set(chave, mt.map); mt.map.userData.fixo = true;
+      }
+    });
+    const caixa = new THREE.Box3().setFromObject(g.scene);
+    if (caixa.isEmpty()) throw new Error('modelo sem malha');
+    Object.assign(m, { estado: 'pronto', cena: g.scene, clipes: g.animations, altura: caixa.max.y - caixa.min.y || 1, base: caixa.min.y, cx: (caixa.min.x + caixa.max.x) / 2, cz: (caixa.min.z + caixa.max.z) / 2 });
+  }).catch(() => { m.estado = 'erro'; });
+  return m;
+}
+const proprio_ = mt => { const n = mt.clone(); n.userData = {}; return n; };       // a copia nao herda o userData.fixo: descarta() libera
+function modelo(nome, { altura, escala = 1, proprio = false } = {}) {
+  const m = carregaModelo(nome);
+  if (m.estado !== 'pronto' || !c) return null;
+  try {
+    const dentro = clonaModelo(m.cena), g = new THREE.Group();
+    dentro.traverse(o => {
+      if (!o.isMesh) return;
+      o.castShadow = o.receiveShadow = true; o.frustumCulled = !o.isSkinnedMesh;
+      if (proprio) o.material = Array.isArray(o.material) ? o.material.map(proprio_) : proprio_(o.material);       // material so desta copia (para pintar ou piscar)
+    });
+    dentro.position.set(-m.cx, -m.base, -m.cz);       // pe no chao (y 0) e centrado em x e z
+    g.add(dentro);
+    g.scale.setScalar(altura ? altura / m.altura : escala);
+    if (m.clipes.length) {
+      const mx = new THREE.AnimationMixer(dentro), acoes = {};
+      let atual = null;
+      g.userData.toca = (anim, vel = 1) => {      // g.userData.toca('walk', 1.2): troca de animacao com uma mistura curta
+        const clipe = THREE.AnimationClip.findByName(m.clipes, anim);
+        if (!clipe) return;
+        const primeira = !acoes[anim], nova = acoes[anim] ??= mx.clipAction(clipe);
+        nova.timeScale = vel;
+        if (nova === atual) return;
+        nova.reset().play();
+        if (primeira) nova.time = Math.random() * clipe.duration;       // cada copia comeca num ponto diferente: os zumbis nao andam no mesmo passo
+        if (atual) nova.crossFadeFrom(atual, 0.15, false);
+        atual = nova;
+      };
+      c.mixers.push({ mx, g });
+    }
+    return g;
+  } catch { return null; }
+}
+
 // Minijogos novos: a pasta jogos/ e conferida de tempos em tempos e o que aparecer entra na rotacao sem recarregar.
 const carregados = new Map();      // arquivo -> versao
 window.__carregados = carregados;
@@ -1269,18 +1515,30 @@ async function buscaJogos() {
     carregados.set(arq, v);
     try {
       const jogo = (await import(`/jogos/${arq}?v=${v}`)).default;
-      registra(jogo);
-      if (novo && primeiraBusca === false && elegiveis(p.modo, p.n).includes(jogo)) { p.fila.unshift(jogo); avisa('Novo minijogo chegando: ' + jogo.nome); }
+      registra(comMinimo(jogo));
+      if (Array.isArray(jogo.modelos)) for (const nome of jogo.modelos) carregaModelo(nome);       // baixa os modelos do minijogo antes da rodada
+      nomesJogos.set(jogo.id, jogo.nome);
+      if (novo && primeiraBusca === false && elegiveis(p.modo, p.n).includes(jogo)) { p.prioridade.push(jogo); avisa('Minijogo novo na roda: ' + textoSeguro(jogo.nome, 40)); }
     } catch (e) { p.erros.push(`${arq}: ${e.message}`); }
   }
   primeiraBusca = false;
 }
 let primeiraBusca = true;
+// Erro de minijogo nunca aparece cru na tela: vira um aviso com o nome dele; o detalhe fica no console e em "Detalhes tecnicos" dos ajustes.
+const nomesJogos = new Map(JOGOS.map(j => [j.id, j.nome]));
+let errosVistos = 0;
+function avisaErros() {
+  if (p.erros.length <= errosVistos) return;
+  for (const e of p.erros.slice(errosVistos)) console.warn('minijogo com erro:', e);
+  const id = String(p.erros[p.erros.length - 1]).split(':')[0], nomeJogo = nomesJogos.get(id);
+  errosVistos = p.erros.length;
+  avisa(nomeJogo ? textoSeguro(nomeJogo, 40) + ' tropeçou e saiu da roda por hoje' : 'Um minijogo novo tropeçou e ficou de fora');
+}
 buscaJogos(); setInterval(buscaJogos, 8000);
 
 // ---------- desenho dos minijogos ----------
 // Todo minijogo recebe o chao e as paredes de p.arena de graca; o resto ele desenha em monta(c) / desenha(c, dt, t).
-// c = { THREE, grupo, pecas, base, p, malha, pool, particulas, bonecos, cores, som }
+// c = { THREE, grupo, pecas, base, p, malha, pool, modelo, particulas, bonecos, cores, som }
 let c = null, rodadaMontada = -1;
 
 function pool(nome, n, cria) {       // garante n pecas visiveis do tipo "nome" e esconde as que sobram
@@ -1474,9 +1732,9 @@ const DESENHO = {
       p.dados.grade.forEach((col, i) => col.forEach((tipo, k) => {
         if (!tipo) return;
         const [x, z] = cel(i, k);
-        const m = tipo === 1 ? malha(new THREE.BoxGeometry(2, 1.5, 2), 0x59627f, { roughness: 0.8 }) : malha(new THREE.BoxGeometry(1.8, 1.3, 1.8), 0xffffff, { map: TX.caixa, roughness: 0.8 });
-        m.position.set(x, tipo === 1 ? 0.75 : 0.65, z); c.grupo.add(m);
-        if (tipo === 1) { const tampa = malha(new THREE.BoxGeometry(2.06, 0.18, 2.06), 0x8792b8, { roughness: 0.6 }); tampa.position.y = 0.75; m.add(tampa); }
+        const m = tipo === 1 ? malha(new THREE.BoxGeometry(2, 0.8, 2), 0x59627f, { roughness: 0.8 }) : malha(new THREE.BoxGeometry(1.8, 0.8, 1.8), 0xffffff, { map: TX.caixa, roughness: 0.8 });
+        m.position.set(x, 0.4, z); c.grupo.add(m);       // ESTILO.md: parede de labirinto com no maximo 0,8 de altura
+        if (tipo === 1) { const tampa = malha(new THREE.BoxGeometry(2.06, 0.14, 2.06), 0x8792b8, { roughness: 0.6 }); tampa.position.y = 0.4; m.add(tampa); }
         if (tipo === 2) c.pecas.caixas.push({ m, i, k });
       }));
     },
@@ -1492,12 +1750,12 @@ const DESENHO = {
         bs[n].userData.faisca.scale.setScalar(1 + Math.random() * 0.8);
       });
       const fs = pool('fogo', d.fogo.length, () => {
-        const m = malha(new THREE.BoxGeometry(1.9, 1.2, 1.9), 0xffa531, { emissive: 0xff5a00, emissiveIntensity: 1.5, transparent: true, opacity: 0.8 });
+        const m = malha(new THREE.BoxGeometry(1.9, 0.8, 1.9), 0xffa531, { emissive: 0xff5a00, emissiveIntensity: 1.5, transparent: true, opacity: 0.8 });
         m.castShadow = false; m.add(brilho(0xff7a1a, 5, 0.5));
         return m;
       });
       d.fogo.forEach((f, n) => {
-        const [x, z] = cel(f.i, f.k); fs[n].position.set(x, 0.6, z); fs[n].scale.y = 0.5 + f.t * 2;
+        const [x, z] = cel(f.i, f.k); fs[n].scale.y = 0.4 + f.t * 1.2; fs[n].position.set(x, 0.4 * fs[n].scale.y, z);
         if (Math.random() < dt * 12) particulas(x, 0.8, z, 0xffd84d, 1, 5);
       });
       // itens no chao: cada tipo tem a sua peca, gira e flutua com brilho
@@ -1604,7 +1862,7 @@ function tira(jogo, erro) {       // desenho com erro: tira o minijogo e segue o
 
 function monta() {
   if (c) { mundo.remove(c.grupo); descarta(c.grupo); }
-  c = { THREE, grupo: new THREE.Group(), pecas: {}, base: {}, p, malha, pool, particulas, bonecos: bonecos.slice(0, p.jogadores.length), cores: cores.slice(0, p.jogadores.length), times: TIMES, modo: p.modo, som: nota };
+  c = { THREE, grupo: new THREE.Group(), pecas: {}, base: {}, p, malha, pool, modelo, mixers: [], particulas, bonecos: bonecos.slice(0, p.jogadores.length), cores: cores.slice(0, p.jogadores.length), times: TIMES, modo: p.modo, som: nota };
   mundo.add(c.grupo);
   for (const [i, b] of bonecos.entries()) {       // nada do que um minijogo fez no boneco (esconder, esticar, deitar) passa para a rodada seguinte
     b.visible = i < p.jogadores.length; b.scale.setScalar(1); b.rotation.set(0, 0, 0);       // so os jogadores da partida aparecem na arena
@@ -1633,25 +1891,64 @@ let palcoChave = '';
 function numero(n) {
   const cv = document.createElement('canvas'); cv.width = cv.height = 128;
   const x = cv.getContext('2d');
-  x.font = 'italic 900 110px "Segoe UI Black","Arial Black",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.font = 'italic 800 110px "Baloo 2","Segoe UI Black","Arial Black",sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.fillStyle = '#141a36'; x.fillText(n, 60, 70);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.5), new THREE.MeshBasicMaterial({ map: t, transparent: true }));
 }
+// Sala de estar da espera: sofa, almofadas, tapete, abajur e vaso do Furniture Kit da Kenney (CC0, modelos/furniture-kit).
+// Enquanto os modelos nao chegam (ou se falharem), um sofa simples de caixas faz o mesmo papel.
+const MOVEIS = ['furniture-kit/lounge-sofa', 'furniture-kit/rug-round', 'furniture-kit/lamp-round-floor', 'furniture-kit/potted-plant'];
+// almofada na cor do lugar: esfera achatada (cantos redondos), em pe e inclinada contra o encosto, centrada atras de quem senta
+function almofada(x, y, z, cor) {
+  const m = malha(new THREE.SphereGeometry(1, 28, 18), cor, { roughness: 0.85 });
+  m.scale.set(1.2, 0.85, 0.34); m.position.set(x, y, z); m.rotation.x = -0.28;
+  palcoPecas.add(m);
+}
+MOVEIS.forEach(carregaModelo);
+const SOFA_LARG = 15, ASSENTOS = [-5.1, -1.7, 1.7, 5.1];
+const moveisProntos = () => !!c && MOVEIS.every(n => modelos.get(n)?.estado === 'pronto');
+function moveis() {       // monta a sala e devolve a altura do assento e o z de quem senta
+  const com = moveisProntos(), sofa = com ? modelo(MOVEIS[0]) : null;
+  if (sofa) {
+    const caixa = new THREE.Box3().setFromObject(sofa), tam = caixa.getSize(new THREE.Vector3());
+    const k = SOFA_LARG / tam.x;
+    sofa.scale.multiplyScalar(k);
+    sofa.updateMatrixWorld(true);
+    const cx = new THREE.Box3().setFromObject(sofa);       // o modelo nao nasce centrado: frente do assento em z = 1, centro em x = 0
+    sofa.position.set(-cx.getCenter(new THREE.Vector3()).x, 0, 1 - cx.max.z);
+    const fundo = tam.z * k;       // profundidade do sofa: quem senta fica na metade da frente, a almofada encosta atras
+    const tapete = modelo(MOVEIS[1]); tapete.scale.multiplyScalar(18 / new THREE.Box3().setFromObject(tapete).getSize(new THREE.Vector3()).x); tapete.position.set(0, 0.02, 2.4);
+    const abajur = modelo(MOVEIS[2], { altura: 6.2 }); abajur.position.set(-9.4, 0, -1.6);
+    const vaso = modelo(MOVEIS[3], { altura: 3.2 }); vaso.position.set(9.3, 0, -1.2);
+    palcoPecas.add(sofa, tapete, abajur, vaso);
+    const zSenta = 1 - fundo * 0.35;
+    sofa.updateMatrixWorld(true);       // altura real do assento: um raio de cima para baixo no meio do sofa, onde a pessoa senta
+    const raio = new THREE.Raycaster(new THREE.Vector3(ASSENTOS[1], 50, zSenta), new THREE.Vector3(0, -1, 0));
+    const assento = raio.intersectObject(sofa, true)[0]?.point.y ?? tam.y * k * 0.43;
+    ASSENTOS.forEach((x, i) => almofada(x - 0.6, assento + 1.35, 1 - fundo * 0.62, cores[i]));       // -0,6 em x: a camera fica a direita, e sem isso a almofada parece sair do lado do boneco
+    return { y: assento, z: zSenta };
+  }
+  const tecido = 0x4c5fa8, base = malha(new THREE.BoxGeometry(SOFA_LARG, 1.3, 3.6), tecido, { roughness: 0.9 });
+  base.position.set(0, 0.65, -0.4);
+  const encosto = malha(new THREE.BoxGeometry(SOFA_LARG, 2.6, 1), tecido, { roughness: 0.9 }); encosto.position.set(0, 1.9, -1.9);
+  palcoPecas.add(base, encosto);
+  for (const sx of [-1, 1]) { const braco = malha(new THREE.BoxGeometry(1.1, 2, 3.6), 0x3d4d8c, { roughness: 0.9 }); braco.position.set(sx * (SOFA_LARG / 2 + 0.3), 1, -0.4); palcoPecas.add(braco); }
+  ASSENTOS.forEach((x, i) => almofada(x, 2.2, -1.2, cores[i]));
+  return { y: 1.3, z: 0.3 };
+}
 function arrumaPalco(podio) {
-  const chave = podio ? 'podio' + p.vencedor + p.modo + p.n : 'espera';
+  const chave = podio ? 'podio' + p.vencedor + p.modo + p.n : 'espera' + moveisProntos() + idxCor.join();
   if (chave === palcoChave) return;
   palcoChave = chave;
   descarta(palcoPecas); palcoPecas.clear();
-  for (const a of atores) a.userData.placa.visible = false;      // no palco o nome ja esta escrito na tela
-  if (!podio) {       // espera: os 4 lugares, J2 e J3 perto do meio e J1 e J4 nas pontas
-    const XS = [-7.4, -3.4, 3.4, 7.4];
+  for (const a of atores) { a.userData.placa.visible = false; a.userData.aura.visible = false; }      // no palco o nome ja esta escrito na tela
+  if (!podio) {       // espera: cada lugar e um assento do sofa, J1 na ponta esquerda
+    const assento = moveis();
     atores.forEach((ator, i) => {
-      const x = XS[i];
-      const ped = malha(new THREE.CylinderGeometry(1.2, 1.35, 0.6, 32), cores[i], { roughness: 0.4 }); ped.position.set(x, 0.3, 1);
-      const tampo = malha(new THREE.CylinderGeometry(1.05, 1.05, 0.08, 32), 0xffffff, { roughness: 0.3 }); tampo.position.set(x, 0.62, 1);
-      palcoPecas.add(ped, tampo);
-      ator.position.set(x, 0.66 + RAIO * 1.05, 1); ator.scale.setScalar(1.05); ator.userData.corpo.rotation.y = x < 0 ? 0.3 : -0.3;
+      const x = ASSENTOS[i];
+      ator.userData.baseY = assento.y + RAIO * 1.05;
+      ator.position.set(x, ator.userData.baseY, assento.z); ator.scale.setScalar(1.05); ator.userData.corpo.rotation.y = x < 0 ? 0.2 : -0.2;
     });
     return;
   }
@@ -1667,7 +1964,8 @@ function arrumaPalco(podio) {
     const tampo = malha(new THREE.BoxGeometry(3.4, 0.2, 3.3), cores[i], { roughness: 0.4 }); tampo.position.set(x, h + 0.1, 0);
     const num = numero(lugar + 1); num.position.set(x, h / 2, 1.61); num.scale.setScalar(lugar ? 0.6 : 1);
     palcoPecas.add(bloco, tampo, num);
-    atores[i].position.set(x, h + 0.2 + RAIO * 1.25, 0); atores[i].scale.setScalar(1.25); atores[i].userData.corpo.rotation.y = lugar ? -0.25 : 0.15;
+    atores[i].userData.baseY = h + 0.2 + RAIO * 1.25;
+    atores[i].position.set(x, atores[i].userData.baseY, 0); atores[i].scale.setScalar(1.25); atores[i].userData.corpo.rotation.y = lugar ? -0.25 : 0.15;
   });
   const x1 = -(n - 1) / 2 * 3.4;
   const facho = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.6, 16, 24, 1, true),
@@ -1681,16 +1979,25 @@ function desenhaPalco(dt, t, podio) {
   arrumaPalco(podio);
   atores.forEach((ator, i) => { ator.visible = !podio || i < p.jogadores.length; });
   for (let i = 0; i < SLOTS; i++) {
-    const humor = podio ? ((p.campeoes ?? []).includes(i) ? 'feliz' : 'triste') : conectado[i] ? 'aceno' : 'sono';
+    const u = atores[i].userData, quer = podio && querRevanche[i];
+    const humor = podio ? ((p.campeoes ?? []).includes(i) || quer ? 'feliz' : 'triste') : conectado[i] ? 'aceno' : 'sono';
     anima(atores[i], { vel: 0, y: 0, vy: 0, vivo: true, humor }, dt, t);
+    if (!podio && u.cai > 0) {       // acabou de conectar: cai do alto no lugar, com poeira e um plop
+      u.vcai = (u.vcai ?? 0) + dt * 45; u.cai = Math.max(0, u.cai - u.vcai * dt);
+      if (!u.cai) { u.vcai = 0; u.anim.sv = -7; fumaca(atores[i].position.x, u.baseY - RAIO, atores[i].position.z + 0.5, 0xffffff, 8, 2.6); voz(200, 0.14, 'sine', 0.22, 0, busFx, 80); chiado(0.08, 0.06, 0, 'lowpass', 900); }
+    }
+    if (u.baseY !== undefined) atores[i].position.y = u.baseY + (podio ? 0 : u.cai ?? 0);
+    u.aura.visible = quer;      // pediu revanche: brilha no podio
+    if (quer) { u.aura.material.color.set(0x5fe08a); u.aura.material.opacity = 0.5 + Math.sin(t * 5) * 0.2; }
   }
   if (podio) {
     if (Math.random() < dt * 45) solta((Math.random() - 0.5) * 16, 9 + Math.random() * 2, (Math.random() - 0.5) * 6, CONFETE[Math.floor(Math.random() * CONFETE.length)], true, 2);
     camera.position.set(Math.sin(t * 0.35) * 2.2, 4.4, 12.6 + (p.jogadores.length > 2 ? 2.5 : 0)); camera.lookAt(0, 3.1, 0);
   } else {
-    camera.position.set(Math.sin(t * 0.2) * 0.6, 3.4 + Math.sin(t * 0.33) * 0.15, 16.5); camera.lookAt(0, 3.1, 0);
+    // a sala fica na esquerda (60% da tela): a camera olha um pouco para a direita do sofa
+    camera.position.set(5.4 + Math.sin(t * 0.2) * 0.5, 4.6 + Math.sin(t * 0.33) * 0.15, 17.5); camera.lookAt(5.4, 2.2, 0);
     for (let i = 0; i < SLOTS; i++) {       // as plaquinhas de nome e estado ficam embaixo de cada boneco
-      v3.set(atores[i].position.x, 0, 1.6).project(camera);
+      v3.set(atores[i].position.x, 0, 2.2).project(camera);
       const s = $('chip' + i).style;
       s.left = ((v3.x * 0.5 + 0.5) * innerWidth).toFixed(0) + 'px'; s.top = ((-v3.y * 0.5 + 0.5) * innerHeight + innerHeight * 0.02).toFixed(0) + 'px';
     }
@@ -1757,11 +2064,12 @@ function torce(i) {       // confete saindo do cartao do jogador (lado dele) e d
     document.body.append(e);
   }
   const txt = document.createElement('div');
-  txt.className = 'vivaTxt tit'; txt.textContent = 'Torcida!'; txt.style.cssText = `left:${ox}px;top:${oy + 8}px;color:${css(i)}`;
+  txt.className = 'vivaTxt tit'; txt.textContent = nome(i) + ' na torcida!'; txt.style.cssText = `left:${ox}px;top:${oy + 8}px;color:${css(i)}`;
   txt.onanimationend = () => txt.remove(); document.body.append(txt);
   const alvo = (palco.visible ? atores[i] : bonecos[i]).position;
   confete(alvo.x, alvo.y + 1.6, alvo.z, 14, 7, cores[i]);
   somTorcida(i);
+  noite.torcidas[i]++;
   window.__torcidas[i]++;
 }
 // Som de cada reacao, na mesma ordem de REACOES. v: notas [freq, duracao, onda, volume, atraso, freq final]; c: ruido.
@@ -1905,6 +2213,7 @@ function desenha(dt, t) {
     anima(b, { vel, y: j.y, vy: j.vy, vivo: j.vivo, humor }, dt, t);
     u.anel.visible = j.vivo && j.cd <= 0 && !p.jogo.semDash && !p.jogo.semMovimento;
     u.anel.material.opacity = 0.65 + Math.sin(t * 6) * 0.3;
+    u.placa.visible = !p.jogo.semNome;       // o minijogo pode esconder o nome flutuante (kart: o nome do rival atras da camera atrapalha)
     u.anelTime.visible = p.modo === 'times' && j.vivo;       // anel no chao com a cor do time
     if (u.anelTime.visible) u.anelTime.material.color.setHex(TIMES[timeDe(p, i)]);
     const vis = VISUAL_CARTA[j.carta], pulsa = 0.5 + Math.sin(t * 5) * 0.2;      // carta de poder: brilho e aro na cor da carta
@@ -1925,6 +2234,7 @@ function desenha(dt, t) {
     desenhaBase(dt, t);
     const d = DESENHO[p.jogo.id] ?? p.jogo;
     try { d.desenha?.(c, dt, t); } catch (e) { tira(p.jogo, e); }
+    for (const { mx, g } of c.mixers) if (g.visible) mx.update(dt);       // animacao dos modelos (so dos que aparecem)
     // camera fixa, do alto e inclinada; afasta quando a arena e maior. So respira de leve e treme nas pancadas.
     const a = p.arena, escala = Math.max(1, (a.lx ?? 0) / 11.5, (a.lz ?? 0) / 7.2, (a.raio ?? 0) / 9.5);
     const chega = p.fase === 'intro' ? 1 + 0.1 * (tempoIntro(p) / 3.5) ** 2 : 1;
@@ -1992,6 +2302,8 @@ function premia() {
     particulas(b.x, b.y + 1, b.z, cores[i], 30, 10); confete(b.x, b.y + 1.5, b.z, p.fase === 'fim' ? 90 : 40, 11, cores[i]);
   }
   provocador = !ehCoop(p) && p.modo !== 'times' && v >= 0 ? v : -1;       // as reacoes rapidas vao so para um vencedor so
+  todos().forEach(i => { noite.seq[i] = Math.max(noite.seq[i], p.seq?.[i] ?? 0); });       // medalhas do podio
+  for (const a of p.anuncios ?? []) if (a.tipo === 'virada' && Number.isInteger(a.quem)) noite.viradas[a.quem]++;
   if (p.fase === 'fim') {
     for (const i of campeoes) vitoriasDoModo()[i]++;
     try { localStorage.setItem(chaveVitorias(), JSON.stringify(vitoriasDoModo())); } catch {}
@@ -2009,28 +2321,64 @@ function cartaCelular(i) {
 function ofertaCelular(i) {
   const lista = p.jogadores[i].oferta?.map(cartaDe).filter(Boolean) ?? [];
   if (!lista.length || p.fase !== 'intro') return null;
-  return { modo: 'opcoes', texto: 'Perdeu a rodada? Escolha 1 carta de poder para esta', opcoes: [...lista.map(k => k.nome), 'Sem carta'],
+  return { modo: 'opcoes', texto: 'Perdeu? Pegue uma carta para esta rodada', opcoes: [...lista.map(k => k.nome), 'Não quero carta'],
     cartas: lista.map(k => ({ nome: k.nome, dica: k.dica, cor: VISUAL_CARTA[k.id]?.[0] })) };
 }
 
 let mandado = '', ultimoEnvio = 0;
 // Espera: o Jogador 1 (anfitriao) recebe o menu de modos; os outros veem so que estao conectados.
 function celularDaEspera(i) {
-  if (i) return { jogo: '', modo: 'espera', texto: textoAuto() || 'Esperando o Jogador 1 escolher o modo e começar', modoSala: escolhaModo };
-  const auto = autoSeg() || null;
-  return { jogo: '', modo: 'espera', texto: textoAuto(), sala: { modo: escolhaModo, on: conectado.slice(), seg: seguidos(), auto, faltas: Object.fromEntries(Object.keys(MODOS_TXT).map(m => [m, faltaPara(m)])) } };
+  const agora = novo.ate > performance.now() ? novo.txt : '';
+  if (i) return { jogo: '', modo: 'espera', texto: textoAuto() || agora || nome(0) + ' está escolhendo a brincadeira', modoSala: escolhaModo, quem: nome(0) };
+  const auto = autoSeg() || null, seg = seguidos();
+  // qtd: quantos minijogos cada brincadeira tem com quem esta no sofa agora; nomes e cores: para as pilulas de quem esta conectado
+  const qtd = { classico: elegiveis('classico', 2).length, vs: elegiveis('vs', Math.max(2, seg)).length, times: elegiveis('times', 4).length, coop: elegiveis('coop', Math.max(2, seg)).length };
+  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, on: conectado.slice(), seg, auto, qtd, nomes: [0, 1, 2, 3].map(nome), cores: [0, 1, 2, 3].map(css),
+    faltas: Object.fromEntries(Object.keys(MODOS_TXT).map(m => [m, faltaPara(m)])) } };
+}
+// Gancho da Lanchonete (frente C): campos extras do estado de cada celular. Vazio por enquanto.
+function estadoExtra(i) { return {}; }
+// Na explicacao: quem ainda nao tocou em Entendi, em palavras ("Falta Bia e Caio")
+function faltaEntender() {
+  const f = todos().filter(i => !p.jogadores[i].pronto).map(nome);
+  return f.length ? 'Falta ' + (f.length > 1 ? f.slice(0, -1).join(', ') + ' e ' + f.at(-1) : f[0]) : '';
+}
+function ctlCelular(j) {       // o desenho do controle que o celular mostra na explicacao (o mesmo da TV)
+  const ctl = j.controle ?? {}, [a, b] = botoes(j);
+  return { modo: ctl.modo ?? 'padrao', a: rotulo(ctl.modo === 'botao' ? ctl.a ?? 'Aperta' : a, 16), b: rotulo(b, 16), joy: !(j.semMovimento || ctl.joystick === false),
+    opcoes: Array.isArray(ctl.opcoes) ? ctl.opcoes.slice(0, 4).map(o => rotulo(o, 16)) : undefined };
+}
+function fraseDoFim(i) {       // o que o celular de cada um diz quando a rodada acaba
+  if (venceu(p, i)) return p.modo === 'times' ? 'Ponto da sua dupla!' : ehCoop(p) ? 'Deu certo, equipe!' : 'Ponto seu!';
+  if (p.vencedor === undefined) return '';
+  if (ehCoop(p)) return 'Não foi dessa vez';
+  if (p.vencedor < 0) return 'Empatou!';
+  return p.modo === 'classico' && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';
+}
+function celularDoPodio(i) {
+  const falta = 'Revanche em ' + faltaRevanche();
+  if (i === 0) return { modo: 'opcoes', texto: falta, opcoes: ['Revanche', 'Trocar de brincadeira'] };
+  return { modo: 'opcoes', texto: querRevanche[i] ? 'Pedido feito. ' + falta : falta, opcoes: ['Quero revanche'] };
 }
 function mandaCelulares(agora) {
   const ctl = p.jogo.controle ?? {};
-  const explica = iniciou && aguardando(p);      // na explicacao o celular so tem o botao PRONTO
-  const outros = p.jogadores.length > 2 ? 'os outros jogadores' : 'o outro jogador';
+  const explica = iniciou && aguardando(p);      // na explicacao o celular mostra o minijogo e o botao Entendi
+  const nomeJogo = textoSeguro(p.jogo.nome, 40), dica = doJogo(p.jogo.dica, 200);
+  const doMinijogo = i => {      // texto e opcoes que o minijogo escreveu para o celular: sem texto cru e com o nome do perfil
+    const c = p.celular[i] ?? {}, e = { ...c };
+    if ('texto' in c) e.texto = doJogo(c.texto);
+    if (Array.isArray(c.opcoes)) e.opcoes = c.opcoes.slice(0, 4).map(o => rotulo(trocaNomes(o, nomesPerfis()), 30));
+    if ('a' in c) e.a = rotulo(c.a, 20);
+    if ('b' in c) e.b = rotulo(c.b, 20);
+    return e;
+  };
   const estado = !iniciou ? [0, 1, 2, 3].map(celularDaEspera)
     : explica ? todos().map(i => p.jogadores[i].pronto
-      ? { jogo: p.jogo.nome, modo: 'espera', texto: 'Pronto! Esperando ' + outros + '...', premio: premios[i] ?? undefined }
-      : { jogo: p.jogo.nome, modo: 'botao', a: 'PRONTO!', texto: p.jogo.dica, premio: premios[i] ?? undefined })
-    : todos().map(i => ({ jogo: p.jogo.nome, modo: ctl.modo ?? 'padrao', a: ctl.a, b: ctl.b, joy: ctl.joystick !== false, jg: p.fase === 'jogando', ...p.celular[i], premio: premios[i] ?? undefined }));
+      ? { jogo: nomeJogo, modo: 'espera', texto: faltaEntender(), pronto: true, premio: premios[i] ?? undefined }
+      : { jogo: nomeJogo, modo: 'botao', a: 'Entendi', texto: '', explica: { nome: nomeJogo, dica, ctl: ctlCelular(p.jogo) }, premio: premios[i] ?? undefined })
+    : todos().map(i => ({ jogo: nomeJogo, modo: ctl.modo ?? 'padrao', a: ctl.a === undefined ? undefined : rotulo(ctl.a), b: ctl.b === undefined ? undefined : rotulo(ctl.b), joy: ctl.joystick !== false, jg: p.fase === 'jogando', ...doMinijogo(i), premio: premios[i] ?? undefined }));
   if (iniciou) for (let i = p.jogadores.length; i < SLOTS; i++)      // celular de quem nao esta nesta partida (Classico so tem 2)
-    estado.push({ jogo: p.jogo.nome, modo: 'espera', texto: 'Esta partida é de ' + p.jogadores.length + ' jogadores. Torça!' });
+    estado.push({ jogo: nomeJogo, modo: 'espera', texto: 'Essa é de ' + p.jogadores.length + '. Daqui você torce' });
   const fimRodada = p.fase === 'resultado' || p.fase === 'fim';
   if (p.fase === 'jogando') provocador = -1;
   estado.forEach((e, i) => {
@@ -2038,9 +2386,14 @@ function mandaCelulares(agora) {
     if (!iniciou || !p.jogadores[i]) return;
     const oferta = ofertaCelular(i);
     if (oferta) Object.assign(e, oferta);
-    else if (fimRodada) Object.assign(e, { modo: 'espera', texto: venceu(p, i) ? (p.modo === 'times' ? 'Seu time venceu a rodada!' : ehCoop(p) ? 'Vitória em equipe!' : 'Você venceu a rodada!') : e.texto || '', opcoes: undefined });
+    else if (naRevanche()) Object.assign(e, celularDoPodio(i));
+    else if (fimRodada) Object.assign(e, { modo: 'espera', texto: fraseDoFim(i), opcoes: undefined });
     e.carta = cartaCelular(i);
     e.provoca = provocador === i && (fimRodada || p.fase === 'intro') || undefined;
+  });
+  estado.forEach((e, i) => {
+    if (pausado) e.pausa = { quem: quemPausou >= 0 ? nome(quemPausou) : '', manda: i === 0 };      // o celular mostra o menu da pausa (o J1 tem as acoes da partida)
+    Object.assign(e, estadoExtra(i));
   });
   const txt = JSON.stringify({ c: estado });
   if (txt === mandado || agora - ultimoEnvio < 80) return;
@@ -2056,45 +2409,47 @@ function poe(id, html) {       // so mexe na pagina quando o texto muda
 }
 function botoes(j) {       // textos dos botoes A e B no modo padrao ('' = nao tem)
   const ctl = j.controle ?? {};
-  return [ctl.a ?? (j.semDash ? '' : 'EMPURRA'), ctl.b ?? (j.semPulo ? '' : 'PULA')];
+  return [ctl.a ?? (j.semDash ? '' : 'Empurra'), ctl.b ?? (j.semPulo ? '' : 'Pula')];
 }
 function resumoControle(j) {       // o que cada um vai usar no celular, em palavras
   const ctl = j.controle ?? {}, modo = ctl.modo ?? 'padrao', item = (ic, letra, txt) => `<div><span class="ic ${ic}">${letra}</span>${limpa(txt)}</div>`;
-  if (modo === 'botao') return item('a', '', 'Um botão só: ' + (ctl.a ?? 'APERTE'));
-  if (modo === 'toque') return item('toque', '', 'Arraste o dedo na tela do celular');
-  if (modo === 'opcoes') return item('op', '', 'Escolha uma opção no celular');
-  if (modo === 'espera') return item('olho', '', 'Olhe para esta tela');
+  if (modo === 'botao') return item('a', '', 'Só um botão: ' + rotulo(ctl.a ?? 'Aperta', 20));
+  if (modo === 'toque') return item('toque', '', 'Arraste o dedo no celular');
+  if (modo === 'opcoes') return item('op', '', 'Escolha no celular');
+  if (modo === 'espera') return item('olho', '', 'Só olhar a TV');
   const [a, b] = botoes(j);
-  return (j.semMovimento || ctl.joystick === false ? '' : item('joy', '', 'Joystick: andar')) + (a ? item('a', 'A', 'Botão ' + a) : '') + (b ? item('b', 'B', 'Botão ' + b) : '');
+  return (j.semMovimento || ctl.joystick === false ? '' : item('joy', '', 'Joystick anda')) + (a ? item('a', 'A', rotulo(a, 20)) : '') + (b ? item('b', 'B', rotulo(b, 20)) : '');
 }
 function ilustra(j) {       // celular em miniatura com o controle que o minijogo usa
   const ctl = j.controle ?? {}, modo = ctl.modo ?? 'padrao', [a, b] = botoes(j);
-  const dentro = modo === 'botao' ? `<i class="bg">${limpa(ctl.a ?? 'APERTE')}</i>` : modo === 'toque' ? '<i class="dedo"></i>'
-    : modo === 'opcoes' ? (Array.isArray(ctl.opcoes) && ctl.opcoes.length ? ctl.opcoes : ['?', '?']).slice(0, 4).map(o => `<i class="opc">${limpa(o)}</i>`).join('')
-    : modo === 'espera' ? '<i class="txt">olhe a tela do PC</i>'
-    : `${ctl.joystick === false ? '' : `<i class="joy${j.semMovimento ? ' off' : ''}"></i>`}${b ? `<i class="bb">${limpa(b)}</i>` : ''}${a ? `<i class="ba">${limpa(a)}</i>` : ''}`;
+  const dentro = modo === 'botao' ? `<i class="bg">${limpa(rotulo(ctl.a ?? 'Aperta', 20))}</i>` : modo === 'toque' ? '<i class="dedo"></i>'
+    : modo === 'opcoes' ? (Array.isArray(ctl.opcoes) && ctl.opcoes.length ? ctl.opcoes : ['?', '?']).slice(0, 4).map(o => `<i class="opc">${limpa(rotulo(o, 16))}</i>`).join('')
+    : modo === 'espera' ? '<i class="txt">de olho na TV</i>'
+    : `${ctl.joystick === false ? '' : `<i class="joy${j.semMovimento ? ' off' : ''}"></i>`}${b ? `<i class="bb">${limpa(rotulo(b))}</i>` : ''}${a ? `<i class="ba">${limpa(rotulo(a))}</i>` : ''}`;
   return `<div class="fone">${dentro}</div>`;
 }
 function cartaoJogo(j, quase, completo) {       // apresentacao do minijogo; completo = esperando os dois apertarem PRONTO
-  const qs = quase.flatMap((q, i) => (q ? [i] : []));       // quem esta a 1 ponto de vencer a partida
-  const paraQuem = qs.length === quase.length ? '' : ' para ' + (p.modo === 'times' ? 'o ' + NOME_TIME[timeDe(p, qs[0])] : qs.map(i => limpa(nome(i))).join(' e '));
-  const mp = qs.length ? `<div class="mp tit">Ponto da partida${paraQuem}!</div><br>` : '';
-  const tempero = p.mod ? `<div class="mod"><b>Rodada especial</b>${limpa(p.mod.nome)}<small>${limpa(p.mod.dica)}</small></div><br>` : '';
-  const coop = ehCoop(p) ? '<div class="coop tit">Cooperativo: joguem juntos</div><br>' : '';
-  if (!completo) return `<div class="cx mini">${coop}<h2 class="tit">${limpa(j.nome)}</h2><p>${limpa(p.mod ? p.mod.nome + ': ' + p.mod.dica : j.dica)}</p></div>`;
+  const qs = quase.flatMap((q, i) => (q ? [i] : []));       // quem fecha a partida se vencer esta rodada
+  const falta = p.mod?.pontos > 1 ? 'a uma vitória do título' : 'a um ponto do título';
+  const mp = !qs.length ? '' : qs.length > 1 && qs.length === quase.length ? (qs.length === 2 ? `Os dois ${falta}!` : `Todo mundo ${falta}!`)
+    : (p.modo === 'times' ? NOME_TIME[timeDe(p, qs[0])] : qs.map(i => limpa(nome(i))).join(' e ')) + (qs.length > 1 && p.modo !== 'times' ? ' estão ' : ' está ') + falta + '!';
+  const faixaMp = mp ? `<div class="mp tit">${mp}</div><br>` : '';
+  const tempero = p.mod ? `<div class="mod tit">${limpa(textoSeguro(p.mod.nome, 20))}<small>${limpa(textoSeguro(p.mod.dica, 30))}</small></div>` : '';
+  const coop = ehCoop(p) ? '<div class="coop tit">Todo mundo do mesmo lado</div><br>' : '';
+  const nomeJ = limpa(textoSeguro(j.nome, 40)), dica = limpa(doJogo(j.dica, 200));
+  if (!completo) return `<div class="cx mini">${coop}<h2 class="tit">${nomeJ}</h2><p>${dica}</p>${tempero}</div>`;
   const st = i => {
     const jg = p.jogadores[i], ok = jg.pronto, escolhe = !!jg.oferta;
-    return `<div class="jg${ok ? ' ok' : ''}" style="--cor:${css(i)}"><div class="rosto"><b></b><b></b></div>${nomeHtml(i)}<em>${escolhe ? 'escolhendo carta...' : ok ? 'PRONTO!' : 'lendo...'}</em>${chipCarta(jg.carta)}</div>`;
+    return `<div class="jg${ok ? ' ok' : ''}" style="--cor:${css(i)}"><div class="rosto"><b></b><b></b></div>${nomeHtml(i)}<em>${escolhe ? 'escolhendo carta' : ok ? 'pronto' : 'lendo'}</em>${chipCarta(jg.carta)}</div>`;
   };
   const quemEscolhe = todos().filter(i => p.jogadores[i].oferta);
-  const oferta = quemEscolhe.length ? `<div class="oferta">Carta de poder: ${quemEscolhe.map(i => nomeHtml(i)).join(' e ')} escolhe 1 de 3 no celular</div>` : '';
-  const obs = (j.duracao > 0 ? `Dura ${Math.round(j.duracao)} segundos. ` : '') + (ehCoop(p)
-    ? `Se vencerem juntos, ${p.mod?.pontos > 1 ? p.mod.pontos + ' pontos' : '1 ponto'} para cada um. Se falharem, ninguém pontua.`
-    : p.modo === 'times' ? `Vale 1 ponto para o time: o primeiro time a fazer ${PONTOS_VITORIA} vence a partida.`
-    : `Vale ${p.mod?.pontos > 1 ? p.mod.pontos + ' pontos' : '1 ponto'}: quem fizer ${PONTOS_VITORIA} primeiro vence a partida.`);
-  const times = p.modo === 'times' ? `<div class="obs"><b style="color:${hex(TIMES[0])}">Time A (laranja)</b>: ${limpa(nome(0))} e ${limpa(nome(2))} &nbsp;contra&nbsp; <b style="color:${hex(TIMES[1])}">Time B (roxo)</b>: ${limpa(nome(1))} e ${limpa(nome(3))}</div>` : '';
-  const mini = p.jogadores.length > 2, chama = '<div class="chama">Aperte <b>PRONTO!</b> no celular<br>quando entender</div>';
-  return `<div class="cx">${mp}${coop}<div class="rot">Próximo minijogo</div><h2 class="tit">${limpa(j.nome)}</h2><p>${limpa(j.dica)}</p>${tempero}${oferta}` +
+  const oferta = quemEscolhe.length ? `<div class="oferta">${quemEscolhe.map(i => nomeHtml(i)).join(' e ')} ${quemEscolhe.length > 1 ? 'estão escolhendo' : 'está escolhendo'} uma carta</div>` : '';
+  const vale = p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos!' : 'Vale 1 ponto.';
+  const obs = (j.duracao > 0 ? `${Math.round(j.duracao)} segundos. ` : '') + (ehCoop(p) ? (p.mod?.pontos > 1 ? `Venceram juntos, ${p.mod.pontos} pontos para cada um. Falharam, ninguém leva` : 'Venceram juntos, ponto para todos. Falharam, ninguém leva')
+    : p.modo === 'times' ? `${p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos para o time.' : 'Ponto para o time.'} ${p.alvo} e a dupla leva` : p.mod?.pontos > 1 ? vale : `${vale} ${p.alvo} e acabou`);
+  const times = p.modo === 'times' ? `<div class="obs"><b style="color:${hex(TIMES[0])}">Laranja</b>: ${limpa(nome(0))} e ${limpa(nome(2))} &nbsp;contra&nbsp; <b style="color:${hex(TIMES[1])}">Roxo</b>: ${limpa(nome(1))} e ${limpa(nome(3))}</div>` : '';
+  const mini = p.jogadores.length > 2, chama = '<div class="chama">Leu? Toque em <b>Entendi</b><br>no celular</div>';
+  return `<div class="cx${p.jogadores.length > 2 ? ' varios' : ''}">${tempero}${faixaMp}${coop}<div class="rot">Agora é</div><h2 class="tit">${nomeJ}</h2><p>${dica}</p>${oferta}` +
     `<div class="como">${ilustra(j)}<div class="ctl">${resumoControle(j)}</div></div><div class="obs">${obs}</div>${times}` +
     (mini ? `${chama}<div class="prontos mini">${todos().map(st).join('')}</div></div>` : `<div class="prontos">${st(0)}${chama}${st(1)}</div></div>`);
 }
@@ -2119,9 +2474,12 @@ function voaMoedas() {       // as moedas ganhas saem do meio da tela e voam par
 
 const COR_INV = { Bombas: '#ff4a4a', Fogo: '#ff8a1a', Patins: '#4aa8ff', Atravessa: '#c084fc' };
 // Embaixo do cartao de cada jogador: a carta de poder ativa e os itens que o minijogo listar (p.dados.inventario, texto puro).
+// So durante a rodada e o resultado: na explicacao e no podio o inventario do minijogo anterior nao aparece (nem a carta, no podio).
+const naRodada = () => p.fase === 'jogando' || p.fase === 'resultado';
 function extras(i) {
-  const inv = p.dados.inventario?.[i];
-  const itens = Array.isArray(inv) ? inv.slice(0, 5).map(t => String(t).slice(0, 18)) : [];
+  if (p.fase === 'fim') return '';
+  const inv = naRodada() ? p.dados.inventario?.[i] : null;
+  const itens = Array.isArray(inv) ? inv.slice(0, 5).filter(t => typeof t === 'string').map(t => doJogo(t).slice(0, 18)).filter(Boolean) : [];
   const html = chipCarta(p.jogadores[i].carta) + itens.map(t => {
     const m = /^(.*?)(\d+)$/.exec(t);
     const cor = COR_INV[t.split(' ')[0]];      // itens conhecidos ganham um icone na cor do item da arena
@@ -2133,10 +2491,9 @@ function extras(i) {
 function anuncios() {
   const lista = (p.anuncios ?? []).map(a => {
     const quem = a.quem === 0 || a.quem === 1 ? limpa(nome(a.quem)) : '';
-    if (a.tipo === 'seq') return `<div class="anun tit${a.n >= 3 ? ' fogo' : ''}" style="--fundo:${css(a.quem)}">${quem}: ${a.n >= 3 ? `${a.n} seguidas, está on fire!` : '2 seguidas!'}</div>`;
-    if (a.tipo === 'virada') return `<div class="anun tit virada">Virada de ${quem}!</div>`;
-    if (a.tipo === 'escudo') return `<div class="anun tit escudo">Escudo de ${quem}! Ponto bloqueado</div>`;
-    if (a.tipo === 'match' && p.fase !== 'fim') return `<div class="anun tit match">Ponto da partida${a.quem === 2 ? ' para os dois' : ' para ' + quem}!</div>`;
+    if (a.tipo === 'seq') return `<div class="anun tit${a.n >= 3 ? ' fogo' : ''}" style="--fundo:${css(a.quem)}">${quem} fez ${a.n} seguidas${a.n >= 3 ? '. Alguém para essa pessoa!' : ''}</div>`;
+    if (a.tipo === 'virada') return `<div class="anun tit virada">Virou! ${quem} ${p.jogadores[0].pontos === p.jogadores[1].pontos ? 'buscou o empate' : 'passou na frente'}</div>`;
+    if (a.tipo === 'match' && p.fase !== 'fim') return `<div class="anun tit match">${a.quem === 2 ? 'Os dois a um ponto do título!' : quem + ' está a um ponto do título'}</div>`;
     return '';
   }).join('');
   return lista ? `<div class="anuns">${lista}</div>` : '';
@@ -2145,49 +2502,75 @@ const COR_CONTA = { 3: '#ff5a5a', 2: '#ffc531', 1: '#4aa8ff' };
 function lampejo() { const el = $('lampejo'); el.classList.remove('vai'); void el.offsetWidth; el.classList.add('vai'); }
 
 function modoEsperaHtml() {
-  const [nomeModo, dica] = MODOS_TXT[escolhaModo], falta = faltaPara(escolhaModo);
-  const auto = textoAuto();
-  return `Modo: <b>${limpa(nomeModo)}</b><small>${limpa(falta || (auto ? auto + ' O Jogador 1 pode escolher outro modo no celular' : dica + '. Jogador 1: toque em COMEÇAR'))}</small>`;
+  const nomeModo = MODOS_TXT[escolhaModo][0], falta = faltaPara(escolhaModo), seg = autoSeg();
+  const anel = seg ? `<span class="anel" style="--f:${(seg / (AUTO_MS / 1000)).toFixed(2)}"><u>${seg}</u></span>` : '';
+  const linha = falta || (seg ? `${textoAuto()}. ${nome(0)} ainda pode trocar no celular` : `${dicaModo(escolhaModo)}. ${nome(0)}, toque em Começar`);
+  return `<b class="tit">${limpa(nomeModo)}</b><small${seg ? ' style="padding-right:4.6em"' : ''}>${limpa(linha)}</small>${anel}`;
+}
+// Celular conectou agora: o boneco cai no lugar dele no sofa, a almofada do logo afunda e o celular vibra.
+function chegou(i) {
+  atores[i].userData.cai = 7; atores[i].userData.vcai = 0;
+  vibra(i, [40, 30, 80]);
+  novidade(nome(i) + ' sentou no sofá');
+  const logo = $('logo'); logo.classList.remove('afunda'); void logo.offsetWidth; logo.classList.add('afunda');
 }
 let faseVista = '', rodadaVista = -1, contaVista = '', segVisto = -1, iniciouVisto = null, pontosVistos = [0, 0];
 function hud(agora) {
   const on = visto.map(v => v && agora - v < 2000);
   visto.forEach((v, i) => {
     if (v && !on[i]) { entrada(p, i, { x: 0, y: 0, d: false, b: false }); visto[i] = 0; }   // celular sumiu: solta o controle
+    if (on[i] && !conectado[i] && !iniciou) chegou(i);
     conectado[i] = !!on[i];
   });
-  // Jogadores 1 e 2 conectados, Classico escolhido e o anfitriao sem mexer no menu: comeca sozinho depois de AUTO_MS (um 3o ou 4o celular so assiste)
-  if (!iniciou && !semAuto && escolhaModo === 'classico' && on[0] && on[1]) {
+  if (!iniciou && modoPadrao) {       // ninguem escolheu: 3 ou 4 no sofa jogam juntos; mudou o modo, a contagem recomeca
+    const padrao = seguidos() >= 3 ? 'vs' : 'classico';
+    if (padrao !== escolhaModo) { escolhaModo = padrao; autoDesde = 0; }
+  }
+  // Jogadores 1 e 2 conectados e o anfitriao sem mexer no menu: comeca sozinho depois de AUTO_MS, se o modo ja pode comecar
+  const podeAuto = !iniciou && !semAuto && MODOS_AUTO.includes(escolhaModo) && on[0] && on[1] && !faltaPara(escolhaModo)
+    && (escolhaModo === 'classico' || elegiveis(escolhaModo, seguidos()).length > 0);
+  if (podeAuto) {
     autoDesde ||= agora;
     if (agora - autoDesde > AUTO_MS) comecaPartida();
   } else autoDesde = 0;
-  poe('modoEsp', modoEsperaHtml());
+  if (poe('modoEsp', modoEsperaHtml()) && $('modoEsp')._modo !== escolhaModo) {       // trocou de modo: o cartao entra de novo
+    $('modoEsp')._modo = escolhaModo; const el = $('modoEsp'); el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  }
   $('modoEsp').className = !iniciou && faltaPara(escolhaModo) ? 'falta' : '';
+  poe('peTx', `${limpa(nome(0))} escolhe a brincadeira no celular. Teclado e atalhos: tecla <kbd>H</kbd>`);
   if (iniciou !== iniciouVisto) {
     iniciouVisto = iniciou;
     $('espera').style.display = iniciou ? 'none' : 'flex'; $('hud').style.display = iniciou ? 'block' : 'none';
     if (iniciou) cortina();
+    mostraSom();
   }
-  for (let i = 0; i < SLOTS; i++) { poe('n' + i, nomeHtml(i)); poe('st' + i, on[i] ? 'conectado' : 'esperando o celular'); $('st' + i).className = on[i] ? 'ok' : ''; }
+  for (let i = 0; i < SLOTS; i++) {       // plaquinha embaixo de cada lugar do sofa: na cor da pessoa quando ela esta conectada
+    poe('n' + i, `<span class="nm">${limpa(nome(i))}</span>`); poe('st' + i, on[i] ? 'no sofá' : 'lugar livre'); $('st' + i).className = on[i] ? 'ok' : '';
+    $('chip' + i).className = 'chip' + (on[i] ? '' : ' livre'); $('chip' + i).style.setProperty('--cor', on[i] ? css(i) : '');
+    $('chip' + i).style.color = on[i] && (cores[i] >> 16) * 0.3 + (cores[i] >> 8 & 255) * 0.59 + (cores[i] & 255) * 0.11 > 165 ? '#141a36' : '#fff';
+  }
 
   const j = p.jogo, pts = p.jogadores.map(x => x.pontos), v = p.vencedor;
   const podio = p.fase === 'fim' && p.t > T_PODIO, fimRodada = p.fase === 'resultado' || p.fase === 'fim';
-  const quase = pts.map(n => n === PONTOS_VITORIA - 1 && p.fase !== 'fim');
+  const alvo = p.modo === 'coop' ? NOITES_COOP : p.alvo;       // no coop a partida acaba em 5 noites, nao no alvo de pontos
+  const quase = pts.map(n => n < alvo && n >= alvo - (p.mod?.pontos ?? 1) && p.fase !== 'fim');       // numa rodada que vale mais, quem esta a 2 tambem fecha
 
   // placar: um cartao por jogador, com as estrelas da partida (o primeiro span e sempre o nome do jogador 1)
   const mini = p.jogadores.length > 2, times = p.modo === 'times';
   const cartao = i => `<div class="cartao ${i % 2 ? 'dir' : 'esq'}${mini ? ' mini' : ''}${times ? ' time' : ''}${quase[i] ? ' quase' : ''}" data-i="${i}" style="--cor:${css(i)}${times ? ';--time:' + hex(TIMES[timeDe(p, i)]) : ''}"><div class="rosto"><b></b><b></b></div>` +
-    `<div class="info">${nomeHtml(i)}<div class="pips">${Array.from({ length: PONTOS_VITORIA }, (_, k) => `<i class="${k < pts[i] ? 'on' : ''}${k === pts[i] - 1 && pts[i] > pontosVistos[i] ? ' novo' : ''}"></i>`).join('')}</div></div>` +
+    `<div class="info">${nomeHtml(i)}<div class="pips">${Array.from({ length: alvo }, (_, k) => `<i class="${k < pts[i] ? 'on' : ''}${k === pts[i] - 1 && pts[i] > pontosVistos[i] ? ' novo' : ''}"></i>`).join('')}</div></div>` +
     `<div class="num tit">${pts[i]}</div>${extras(i)}</div>`;
   poe('placar', mini ? `<div class="lado">${todos().filter(i => i % 2 === 0).map(cartao).join('')}</div><div class="lado">${todos().filter(i => i % 2).map(cartao).join('')}</div>` : cartao(0) + cartao(1));
   pontosVistos = pts;
 
-  poe('selo', limpa(j.nome));
-  poe('modChip', p.mod && !podio ? limpa(p.mod.nome) : '');
+  poe('selo', naRodada() ? limpa(textoSeguro(j.nome, 40)) : '');
+  poe('modChip', p.mod && !podio ? limpa(textoSeguro(p.mod.nome, 20)) : '');
   $('clima').className = p.mod && !podio ? String(p.mod.id).replace(/\W/g, '') : '';
   const pl = p.dados.placar;
   const corPl = k => (p.modo === 'times' ? hex(TIMES[k]) : p.modo === 'coop' ? '#ffffff' : css(k)), suf = limpa(j.sufixo ?? '');       // em times o placar da rodada tem as cores dos times, e em coop e branco (nao e de ninguem)
-  poe('rodadaPl', Array.isArray(pl) ? `<div class="pl"><em>${limpa(j.rotulo ?? 'pontos')}</em>${pl.map((v, k) => `<b style="color:${corPl(k)}">${Math.floor(v)}${suf}</b>`).join('<i>x</i>')}</div>` : '');
+  // placar da rodada so aparece com numeros de verdade (minijogo com placar torto nao mostra NaN nem undefined); "pontos" nao e escrito a toa
+  const plOk = Array.isArray(pl) && pl.length > 0 && pl.length <= 4 && pl.every(Number.isFinite), rot = limpa(textoSeguro(j.rotulo, 24));
+  poe('rodadaPl', plOk && naRodada() ? `<div class="pl">${rot ? `<em>${rot}</em>` : ''}${pl.map((v, k) => `<b style="color:${corPl(k)}">${Math.floor(v).toLocaleString('pt-BR')}${suf}</b>`).join('<i>x</i>')}</div>` : '');
   const comTempo = j.duracao > 0 && p.fase === 'jogando', resta = comTempo ? Math.max(0, Math.ceil(j.duracao - p.t)) : -1;
   $('relogio').className = comTempo ? (resta <= 5 ? 'on acaba' : 'on') : '';
   if (comTempo) {
@@ -2203,7 +2586,7 @@ function hud(agora) {
   let msg = '';
   if (explica) msg = cartaoJogo(j, quase, true);
   else if (naIntro && tempoIntro(p) > 0.5) msg = cartaoJogo(j, quase, false);
-  else if (p.fase === 'jogando' && p.dados.aviso) msg = `<span class="grande tit" style="color:${String(p.dados.avisoCor ?? '#fff').replace(/[^#\w(),.% ]/g, '')}">${limpa(p.dados.aviso)}</span>`;
+  else if (p.fase === 'jogando' && doJogo(p.dados.aviso)) msg = `<span class="grande tit" style="color:${String(p.dados.avisoCor ?? '#fff').replace(/[^#\w(),.% ]/g, '')}">${limpa(rotulo(doJogo(p.dados.aviso), 120))}</span>`;
   poe('msg', msg);
   if (naIntro && !explica) {
     const conta = String(Math.ceil(tempoIntro(p) - 0.5) || 'JÁ!');
@@ -2223,26 +2606,28 @@ function hud(agora) {
   const camp = p.campeoes ?? [], juntos = camp.length === p.jogadores.length, cc = camp.length ? (times ? hex(TIMES[timeDe(p, camp[0])]) : css(camp[0])) : css(0);
   const escudo = (p.anuncios ?? []).some(a => a.tipo === 'escudo');
   const gradEquipe = p.jogadores.length > 2 ? ` style="background:linear-gradient(90deg,${todos().map(css).join(',')})"` : ` style="--c0:${css(0)};--c1:${css(1)}"`;
-  if (p.fase === 'fim' && !podio) res = `<div class="faixa tit" style="--cor:${cc}">Fim de partida!</div>` + anuncios();
-  if (p.fase === 'resultado') res = (v >= 0 && ehCoop(p) ? `<div class="faixa tit equipe"${gradEquipe}>Vitória em equipe!</div><small>+1 ponto e +10 moedas para cada um</small>`
-    : v < 0 && ehCoop(p) ? '<div class="faixa tit">Não foi dessa vez!</div><small>Ninguém pontua. +3 moedas para cada um</small>'
-    : v < 0 ? '<div class="faixa tit">Empate!</div><small>+5 moedas para cada um</small>'
-    : times ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">Ponto do ${NOME_TIME[v]}!</div><small>+10 moedas para cada um do time, +3 de consolo</small>`
-    : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu!</div><small>Mas o escudo segurou o ponto. +10 moedas para quem venceu</small>`
-    : `<div class="faixa tit" style="--cor:${css(v)}">Ponto de ${limpa(nome(v))}!</div><small>+10 moedas para quem venceu, +3 de consolo</small>`) + anuncios();
+  if (p.fase === 'fim' && !podio) res = `<div class="faixa tit" style="--cor:${cc}">Acabou!</div>` + anuncios();
+  if (p.fase === 'resultado') res = (v >= 0 && ehCoop(p) ? `<div class="faixa tit equipe"${gradEquipe}>Deu certo!</div><small>Ponto e 10 moedas para todo mundo</small>`
+    : v < 0 && ehCoop(p) ? '<div class="faixa tit">Não foi dessa vez</div><small>3 moedas de consolo para cada um</small>'
+    : v < 0 ? '<div class="faixa tit">Empatou!</div><small>5 para cada um</small>'
+    : times ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">Ponto do ${NOME_TIME[v]}!</div><small>+10 para cada um da dupla</small>`
+    : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu, mas o escudo segurou!</div><small>Ponto bloqueado, 10 moedas para ${limpa(nome(v))}</small>`
+    : `<div class="faixa tit" style="--cor:${css(v)}">Ponto de ${limpa(nome(v))}!</div><small>+10 para ${limpa(nome(v))}, +3 de consolo</small>`) + anuncios();
   poe('resultado', res);
   $('fim').classList.toggle('on', podio);
-  const titulo = p.modo === 'coop' ? `Equipe venceu ${p.noites.vencidas} de ${NOITES_COOP} noites` : !camp.length ? '' : times ? `${NOME_TIME[timeDe(p, camp[0])]} venceu!` : juntos ? (camp.length === 2 ? 'Os dois venceram!' : 'Todos venceram!')
-    : camp.length === 1 ? `${limpa(nome(camp[0]))} venceu!` : camp.map(i => limpa(nome(i))).join(' e ') + ' venceram!';
+  const coopVenceu = p.noites.vencidas * 2 > NOITES_COOP;
+  const titulo = p.modo === 'coop' ? `Sobreviveram a ${p.noites.vencidas} de ${NOITES_COOP} noites` : !camp.length ? '' : times ? `${NOME_TIME[timeDe(p, camp[0])]}!` : juntos ? (camp.length === 2 ? 'Empate no topo!' : 'Todo mundo campeão!')
+    : camp.length === 1 ? `${limpa(nome(camp[0]))}!` : camp.slice(0, -1).map(i => limpa(nome(i))).join(', ') + ' e ' + limpa(nome(camp.at(-1))) + '!';
+  const t1 = p.modo === 'coop' ? (coopVenceu ? 'Vitória' : 'Fica para a próxima') : camp.length > 1 || times ? 'Campeões da noite' : 'Campeão da noite';
   const linha = (f, sep) => todos().map(f).join(sep), dois = p.jogadores.length === 2;
-  if (podio) poe('fim', `<div><div class="t1 tit">Fim de partida</div><div class="t2 tit" style="color:${cc}">${titulo}</div></div>` +
+  if (podio) poe('fim', `<div><div class="t1 tit">${t1}</div><div class="t2 tit" style="color:${cc}">${titulo}</div>${medalhas()}</div>` +
     `<div><div class="final">${dois ? `${nomeHtml(0)}<b class="tit">${pts[0]}</b><i>x</i><b class="tit">${pts[1]}</b>${nomeHtml(1)}` : linha(i => `${nomeHtml(i)}<b class="tit">${pts[i]}</b>`, '<i>x</i>')}</div>` +
-    `<div class="hist">Partidas ganhas: ${dois ? `${nomeHtml(0)} <em>${vitoriasDoModo()[0]}</em> x <em>${vitoriasDoModo()[1]}</em> ${nomeHtml(1)}` : linha(i => `${nomeHtml(i)} <em>${vitoriasDoModo()[i]}</em>`, ' x ')} ${camp.length ? ` &nbsp; +30 moedas de bônus para ${juntos || camp.length > 1 ? 'cada campeão' : 'quem venceu'}.` : ''} Nova partida já vai começar!</div></div>`);
-
-  poe('rodape', `Partidas ganhas: ${dois ? `${limpa(nome(0))} ${vitoriasDoModo()[0]} x ${vitoriasDoModo()[1]} ${limpa(nome(1))}` : linha(i => `${limpa(nome(i))} ${vitoriasDoModo()[i]}`, ' x ')} &nbsp;|&nbsp; Celular: ${limpa(enderecoCelular.replace('http://', ''))} &nbsp;|&nbsp; M: música`);
-  $('rodape').style.display = podio ? 'none' : 'block';
-  const erros = p.erros.slice(-3).join(' | ');
-  if ($('erros')._t !== erros) $('erros').textContent = $('erros')._t = erros;
+    `<div class="hist">No histórico da casa: ${linha(i => `${nomeHtml(i)} <em>${vitoriasDoModo()[i]}</em>`, ', ')}.${camp.length ? ' +30 moedas para quem levou' : ''}</div>` +
+    `<div class="revanche">Revanche em ${faltaRevanche()}</div></div>`);
+  if (pausado && $('qrPausa')._ok !== enderecoCelular && $('qr').width > 1) {       // pausa e quando alguem chega: o QR aparece pequeno
+    const q = $('qrPausa'); q.width = $('qr').width; q.height = $('qr').height; q.getContext('2d').drawImage($('qr'), 0, 0); q._ok = enderecoCelular;
+  }
+  avisaErros();
 
   // transicoes
   if (p.rodada !== rodadaVista) {
@@ -2252,6 +2637,7 @@ function hud(agora) {
   }
   if (p.fase !== faseVista) {
     faseVista = p.fase;
+    if (iniciou && p.fase === 'jogando') guarda('historico-minijogos', JSON.stringify(p.historico));       // so a rodada que de fato comecou
     if (iniciou && fimRodada) voaMoedas();
   }
 }
@@ -2264,9 +2650,12 @@ function quadro(agora) {
   if (!parado) lento = Math.max(0, lento - real);
   const dt = lento > 0 ? real * 0.3 : real;        // camera lenta curta no ponto que decide a partida
   $('hud').classList.toggle('lento', lento > 0);
+  p.nomes = nomesPerfis();       // o motor e os minijogos chamam pelo nome do perfil (quem(p, i))
   if (iniciou && !parado) passo(p, dt);
-  if (p.semJogo) { p.semJogo = false; if (iniciou) { voltaAoMenu(); p.semJogo = false; avisa('Nenhum minijogo deste modo está funcionando: de volta ao menu'); } }
+  if (iniciou && !parado && p.fase === 'fim' && p.t >= T_PODIO + T_REVANCHE) recomeca();      // ninguem escolheu no podio: vale revanche
+  if (p.semJogo) { p.semJogo = false; if (iniciou) { voltaAoMenu(); p.semJogo = false; avisa('Os minijogos desta brincadeira tropeçaram. Escolha outra'); } }
   premia();
+  roboJoga(agora);
   hud(agora);
   mandaCelulares(agora);
   desenha(parado ? 0 : dt, agora / 1000);

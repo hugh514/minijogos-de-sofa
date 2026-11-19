@@ -14,9 +14,9 @@ function nova(limite = 20) {
   return p;
 }
 
-test('balao: o limite sorteado fica entre 15 e 45', () => {
+test('balao: o limite sorteado fica entre 25 e 45', () => {
   const p = partidaCom(jogo);
-  assert.ok(Number.isInteger(p.dados.limite) && p.dados.limite >= 15 && p.dados.limite <= 45);
+  assert.ok(Number.isInteger(p.dados.limite) && p.dados.limite >= 25 && p.dados.limite <= 45);
 });
 
 test('balao: cada aperto enche e soma 1 para quem apertou', () => {
@@ -27,30 +27,51 @@ test('balao: cada aperto enche e soma 1 para quem apertou', () => {
   assert.equal(p.vencedor, undefined);
 });
 
-test('balao: quem dá o aperto que estoura perde, mesmo com mais sopros', () => {
+test('balao: quem estoura perde todos os sopros, o outro guarda os dele e vem um balão novo', () => {
   const p = nova(10);
-  aperta(p, 0, 9);
+  aperta(p, 1, 3);
+  aperta(p, 0, 6);
   assert.equal(p.vencedor, undefined);
   aperta(p, 0, 1);
-  assert.equal(p.vencedor, 1);
+  assert.equal(p.fase, 'jogando', 'a rodada segue');
   assert.equal(p.dados.estourou, 0);
-  assert.equal(p.jogadores[0].vivo, false, 'quem estourou sai voando');
+  assert.deepEqual(p.dados.placar, [0, 3]);
+  assert.equal(p.jogadores[0].vivo, true);
+  aperta(p, 1, 2);
+  assert.deepEqual(p.dados.placar, [0, 3], 'enquanto o balão novo chega, aperto não conta');
+  roda(p, 1.5);
+  const lim = p.dados.limite;
+  assert.ok(lim >= 25 && lim <= 45, 'limite novo ' + lim);
+  aperta(p, 1, 2);
+  assert.deepEqual(p.dados.placar, [0, 5]);
+  assert.equal(p.dados.ar, 2);
 });
 
-test('balao: sem estouro, em 25 s ganha quem encheu mais', () => {
+test('balao: apertar sem parar não acaba a rodada antes dos 30 s', () => {
+  const p = nova();
+  for (let k = 0; k < 29 * 60; k++) { entrada(p, 0, { n: k + 1 }); entrada(p, 1, { n: k + 1 }); passo(p, DT); }
+  assert.equal(p.fase, 'jogando');
+  roda(p, 1.5);
+  assert.notEqual(p.fase, 'jogando');
+});
+
+test('balao: em 30 s ganha quem tem mais sopros, e o outro sai voando', () => {
   const p = nova(40);
   aperta(p, 0, 2); aperta(p, 1, 5);
-  roda(p, 26);
+  roda(p, 28);
+  assert.equal(p.fase, 'jogando');
+  roda(p, 3);
   assert.equal(p.vencedor, 1);
+  assert.equal(p.jogadores[0].vivo, false);
 });
 
 test('balao: sopros iguais (ou ninguém apertou) dá empate', () => {
   const p = nova(40);
   aperta(p, 0, 4); aperta(p, 1, 4);
-  roda(p, 26);
+  roda(p, 31);
   assert.equal(p.vencedor, -1);
   const q = nova();
-  roda(q, 26);
+  roda(q, 31);
   assert.equal(q.vencedor, -1);
 });
 

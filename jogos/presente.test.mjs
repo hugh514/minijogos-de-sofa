@@ -35,7 +35,7 @@ test('presente: os quatro desfechos pontuam certo', () => {
   }
 });
 
-test('presente: entregador alterna e melhor de 3 termina com 2 pontos', () => {
+test('presente: entregador alterna e melhor de 5 termina com 3 pontos', () => {
   const p = partidaCom(jogo), d = p.dados, primeiro = d.entregador, r = 1 - primeiro;
   d.bomba = true; escolhe(p, r, 1);                 // receptor recusa a bomba: 1 x 0 para ele
   roda(p, 3.1);
@@ -44,6 +44,10 @@ test('presente: entregador alterna e melhor de 3 termina com 2 pontos', () => {
   assert.equal(p.vencedor, undefined);
   d.bomba = true; escolhe(p, primeiro, 0);          // agora "r" entrega e o outro aceita a bomba: 2 x 0
   assert.deepEqual(d.placar[r], 2);
+  roda(p, 3.1);
+  assert.equal(p.vencedor, undefined, 'com 2 pontos ainda nao acabou');
+  d.bomba = false; escolhe(p, r, 0);                // "r" recebe e aceita o presente: 3 x 0
+  assert.deepEqual(d.placar[r], 3);
   roda(p, 2);
   assert.equal(p.vencedor, r);
 });
@@ -52,8 +56,8 @@ test('presente: ninguem decide, o tempo decide e a rodada termina', () => {
   const p = partidaCom(jogo);
   roda(p, 8.1);
   assert.equal(p.dados.fase, 'revela');
-  for (let i = 0; i < 40 * 60 && p.fase === 'jogando'; i++) passo(p, DT);
-  assert.ok(p.t < 1 && p.fase !== 'jogando', 'terminou sozinha em menos de 40 s');
+  for (let i = 0; i < 58 * 60 && p.fase === 'jogando'; i++) passo(p, DT);
+  assert.ok(p.t < 1 && p.fase !== 'jogando', 'terminou sozinha em menos de 60 s');
   assert.ok(p.vencedor === 0 || p.vencedor === 1);
 });
 

@@ -1,7 +1,8 @@
-// A viga: os dois carregam uma viga por um caminho suspenso. Se um cai, caem os dois. So um cabe na meta.
-import { elimina, RAIO } from '../logica.mjs';
+// A viga: os dois carregam uma viga por um caminho suspenso. Quem pisa fora derruba a viga: os dois voltam
+// para a ultima curva e o outro vai na frente. So um cabe na meta; no fim do tempo vence quem esta na frente.
+import { RAIO } from '../logica.mjs';
 
-const VIGA = 4, H = 2.1, FOLGA = 0.15, LIMITE = 50, R_META = 0.9, TOQUE = RAIO + 0.5;
+const VIGA = 4, H = 2.1, FOLGA = 0.15, LIMITE = 50, R_META = 0.9, TOQUE = RAIO + 0.5, T_VOLTA = 1;
 const PTS = [[-7.6, -5.8], [8, -5.8], [8, 0], [-8, 0], [-8, 5.8], [8, 5.8]];      // caminho em zigue-zague
 const SAIDA = { x: PTS[0][0], z: PTS[0][1], r: 2.7 }, META = { x: PTS[5][0], z: PTS[5][1] };
 
@@ -11,6 +12,33 @@ function distTrecho(x, z, [ax, az], [bx, bz]) {
   return Math.hypot(x - ax - dx * k, z - az - dz * k);
 }
 
+// Quanto do caminho ja foi andado ate o ponto mais perto de (x, z).
+export function progresso(x, z) {
+  let melhor = Infinity, prog = 0, soma = 0;
+  for (let i = 0; i < PTS.length - 1; i++) {
+    const [ax, az] = PTS[i], [bx, bz] = PTS[i + 1], comp = Math.hypot(bx - ax, bz - az);
+    const k = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (comp * comp)));
+    const dist = distTrecho(x, z, PTS[i], PTS[i + 1]);
+    if (dist < melhor - 1e-9) { melhor = dist; prog = soma + k * comp; }
+    soma += comp;
+  }
+  return prog;
+}
+
+// Fim do tempo: vence quem esta mais adiante no caminho.
+function porProgresso(p) {
+  const [pa, pb] = p.jogadores.map(j => progresso(j.x, j.z));
+  return Math.abs(pa - pb) < 0.5 ? -1 : pa > pb ? 0 : 1;
+}
+
+// Os dois voltam para a curva cp, alinhados com o trecho seguinte; "frente" fica 4 passos adiante.
+function volta(p, frente) {
+  const d = p.dados, [ax, az] = PTS[d.cp], [bx, bz] = PTS[d.cp + 1], comp = Math.hypot(bx - ax, bz - az);
+  const pos = [{ x: ax, z: az }, { x: ax, z: az }];
+  pos[frente] = { x: ax + (bx - ax) / comp * VIGA, z: az + (bz - az) / comp * VIGA };
+  d.volta = pos; d.tVolta = T_VOLTA;
+}
+
 export function temChao(x, z) {
   if (Math.hypot(x - SAIDA.x, z - SAIDA.z) <= SAIDA.r + FOLGA) return true;
   for (let i = 0; i < PTS.length - 1; i++) if (distTrecho(x, z, PTS[i], PTS[i + 1]) <= H + FOLGA) return true;
@@ -18,7 +46,7 @@ export function temChao(x, z) {
 }
 
 export default {
-  id: 'viga', nome: 'A viga', dica: 'Levem a viga juntos sem cair. Na meta só cabe um: o primeiro a encostar vence!',
+  id: 'viga', genero: 'equilibrio', nome: 'A viga', dica: 'Levem a viga juntos pelo caminho. Quem pisar fora volta atrás. O primeiro a encostar na meta vence!',
   controle: { modo: 'padrao', a: '', b: '' }, semPulo: true, semDash: true, duracao: LIMITE,
 
   inicia(p) {
@@ -26,11 +54,18 @@ export default {
     const [a, b] = p.jogadores;
     a.x = b.x = SAIDA.x; a.z = SAIDA.z - VIGA / 2; b.z = SAIDA.z + VIGA / 2;
     for (const j of p.jogadores) j.turbo = 0.6;
-    p.dados = { aviso: '', avisoCor: '#ffd84d', tAviso: 1.8 };
+    p.dados = { aviso: '', avisoCor: '#ffd84d', tAviso: 1.8, cp: 0, quedas: 0, tVolta: 0, volta: null, fx: [] };
   },
 
   atualiza(p, dt) {
     const d = p.dados, [a, b] = p.jogadores;
+
+    if (d.tVolta > 0) {                           // viga caiu: os dois ficam parados no lugar da volta
+      d.tVolta -= dt;
+      p.jogadores.forEach((j, i) => Object.assign(j, d.volta[i], { vx: 0, vz: 0, vy: 0, y: 0 }));
+      if (d.tVolta <= 0) d.aviso = '';
+      return p.t > LIMITE ? porProgresso(p) : undefined;
+    }
 
     // a viga e rigida: os dois sao puxados igualmente para ficarem sempre a mesma distancia
     let dx = b.x - a.x, dz = b.z - a.z, dist = Math.hypot(dx, dz);
@@ -44,16 +79,22 @@ export default {
     for (const i of naMeta[0] <= naMeta[1] ? [0, 1] : [1, 0])
       if (naMeta[i] < TOQUE) { p.eventos.push('gol'); return i; }
 
+    const mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2;  // curva alcancada vira ponto de volta
+    for (let k = d.cp + 1; k < PTS.length - 1; k++) if (Math.hypot(mx - PTS[k][0], mz - PTS[k][1]) < H) d.cp = k;
+
     const caiu = p.jogadores.findIndex(j => !temChao(j.x, j.z));
-    if (caiu >= 0) {                              // um pisou fora: a viga leva o outro junto
-      elimina(p, p.jogadores[caiu], 3); elimina(p, p.jogadores[1 - caiu], 7);
+    if (caiu >= 0) {                              // um pisou fora: a viga cai, os dois voltam e o outro vai na frente
+      const j = p.jogadores[caiu];
+      d.quedas++; d.fx.push({ x: j.x, z: j.z });
+      volta(p, 1 - caiu);
+      d.aviso = `Caiu! Jogador ${2 - caiu} vai na frente`; d.avisoCor = '#ff8a3d';
       p.eventos.push('queda');
       for (const i of [0, 1]) p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 };
-      return -1;
+      return;
     }
 
-    if (Math.min(...naMeta) < 6 && d.tAviso > 0) { d.tAviso -= dt; d.aviso = d.tAviso > 0 ? 'SÓ CABE UM!' : ''; }
-    if (p.t > LIMITE) return -1;
+    if (Math.min(...naMeta) < 6 && d.tAviso > 0) { d.tAviso -= dt; d.aviso = d.tAviso > 0 ? 'Só cabe um!' : ''; }
+    if (p.t > LIMITE) return porProgresso(p);
   },
 
   monta(c) {
@@ -91,5 +132,6 @@ export default {
     v.position.set((a.x + b.x) / 2, (ya + yb) / 2, (a.z + b.z) / 2);
     v.scale.z = Math.max(0.05, Math.hypot(b.x - a.x, yb - ya, b.z - a.z) / VIGA);       // na queda os dois se afastam: a viga acompanha
     v.lookAt(b.x, yb, b.z);
+    for (const f of c.p.dados.fx.splice(0)) { c.particulas(f.x, 0.4, f.z, 0xc98a4b, 24, 8); c.particulas(f.x, 0.4, f.z, 0xffffff, 12, 5); }
   },
 };

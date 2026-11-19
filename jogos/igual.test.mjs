@@ -16,8 +16,8 @@ test('igual: cada celular mostra o proprio papel e 3 cores', () => {
   const p = partidaCom(jogo), d = p.dados;
   assert.equal(p.celular[0].opcoes, undefined, 'sem botoes antes de valer');
   passo(p, DT);
-  assert.match(p.celular[d.igual].texto, /IGUAL/);
-  assert.match(p.celular[1 - d.igual].texto, /DIFERENTE/);
+  assert.match(p.celular[d.igual].texto, /o Igual:/);
+  assert.match(p.celular[1 - d.igual].texto, /o Diferente:/);
   assert.equal(p.celular[0].opcoes.length, 3);
 });
 
@@ -56,7 +56,7 @@ test('igual: primeiro a 4 pontos vence', () => {
   assert.equal(p.jogadores[1 - a].vivo, false, 'quem perdeu sai voando');
 });
 
-test('igual: 6 rounds sem ninguem chegar a 4 da empate em 3 a 3', () => {
+test('igual: 6 rounds empatados em 3 a 3 levam a um round de desempate', () => {
   const p = partidaCom(jogo), d = p.dados;
   for (let r = 0; r < 6; r++) {                     // sempre diferentes: cada um marca 1 por round alternado
     assert.equal(p.vencedor, undefined);
@@ -64,15 +64,32 @@ test('igual: 6 rounds sem ninguem chegar a 4 da empate em 3 a 3', () => {
     if (r < 5) fimDoRound(p);
   }
   assert.deepEqual(d.placar, [3, 3]);
+  assert.equal(d.final, false);
+  fimDoRound(p);
+  assert.equal(d.round, 7);
+  passo(p, DT);
+  assert.match(d.aviso, /Desempate/);
+  escolhe(p, 0, 0); escolhe(p, 1, 1);
   roda(p, 1.7);
-  assert.equal(p.vencedor, -1);
+  assert.ok(p.vencedor === 0 || p.vencedor === 1, 'o desempate decide');
+});
+
+test('igual: as cores ja usadas aparecem na tela depois de cada round', () => {
+  const p = partidaCom(jogo), d = p.dados;
+  assert.deepEqual(d.inventario, [[], []]);
+  escolhe(p, 0, 0); escolhe(p, 1, 2);
+  assert.deepEqual(d.inventario, [['Vermelho 1'], ['Verde 1']]);
+  fimDoRound(p);
+  escolhe(p, 0, 0); escolhe(p, 1, 0);
+  assert.deepEqual(d.inventario[0], ['Vermelho 2']);
+  assert.match(jogo.dica, /rival já usou/);
 });
 
 test('igual: ninguem escolhe, o sorteio escolhe e a rodada termina em menos de 60 s', () => {
   const p = partidaCom(jogo);
-  roda(p, 5.6);
+  roda(p, 4.6);
   assert.equal(p.dados.fase, 'revela');
-  let s = 5.6;
+  let s = 4.6;
   for (; s < 60 && p.fase === 'jogando'; s += DT) passo(p, DT);
   assert.ok(s < 50, 'durou ' + s);
 });

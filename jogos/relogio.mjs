@@ -1,7 +1,7 @@
 // Relogio cego: o cronometro some aos 3 s. Cada um aperta uma vez tentando parar o mais perto de 10,00 s.
-import { posiciona, RAIO } from '../logica.mjs';
+import { posiciona, quem, RAIO } from '../logica.mjs';
 
-const ALVO = 10, VISIVEL = 3, LIMITE = 15, T_REVELA = 3.5, FOLGA = 0.02, X = 5.5, Z = 2;
+const ALVO = 10, VISIVEL = 3, LIMITE = 15, T_REVELA = 3.5, JANELA = 4, FOLGA = 0.02, X = 5.5, Z = 2;
 const fmt = (s, casas) => s.toFixed(casas).replace('.', ',');
 const erro = s => Math.abs(s - ALVO);
 
@@ -15,14 +15,14 @@ function decide(d) {
 }
 
 export default {
-  id: 'relogio', nome: 'Relógio cego', dica: 'O relógio some aos 3 segundos. Aperte UMA vez quando achar que deu 10!',
+  id: 'relogio', genero: 'ritmo', nome: 'Relógio cego', dica: 'O relógio some aos 3 segundos. Aperte uma vez só quando achar que deu 10. Quando o outro parar, você tem 4 s!',
   semMovimento: true, controle: { modo: 'botao', a: 'PARA!' },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 9, lz: 5, parede: true };
     posiciona(p, X, 0);
     for (const j of p.jogadores) j.z = Z;
-    p.dados = { parou: [null, null], revela: -1, aviso: '0,0', avisoCor: '#ffffff' };
+    p.dados = { parou: [null, null], revela: -1, prazo: -1, aviso: '0,0', avisoCor: '#ffffff' };
     for (const i of [0, 1]) fala(p, i, 'Pare o mais perto de 10 segundos. Só vale um aperto!');
   },
 
@@ -31,15 +31,24 @@ export default {
     p.jogadores.forEach((j, i) => {
       j.x = i ? X : -X; j.z = Z; j.vx = j.vz = 0;
       if (d.parou[i] !== null) return;
-      if (j.apertouA) {
+      if (j.apertouA && p.t >= VISIVEL) {         // com o relogio ainda na tela o aperto nao vale (toque sem querer)
         d.parou[i] = Math.min(p.t, LIMITE);
         j.vy = 9; p.eventos.push('pulo');           // o boneco pula quando para
         fala(p, i, 'Parou! Espere a revelação', 1);
-      } else if (p.t >= LIMITE) d.parou[i] = LIMITE;   // nao apertou: fica com 15,00
+      } else if (j.apertouA) fala(p, i, 'Ainda não vale: espere o relógio sumir');
+      else if (p.t >= LIMITE) d.parou[i] = LIMITE;     // nao apertou: fica com 15,00
+      else if (d.prazo >= 0 && p.t >= d.prazo) {      // o outro ja parou e o prazo acabou: o relogio para por voce
+        d.parou[i] = p.t; fala(p, i, 'O tempo acabou! Espere a revelação', 1);
+      }
     });
 
     if (d.revela < 0) {
       d.aviso = p.t < VISIVEL ? fmt(p.t, 1) : '?,?'; d.avisoCor = '#ffffff';
+      const quemParou = d.parou.findIndex(v => v !== null);
+      if (d.prazo < 0 && quemParou >= 0 && (d.parou[0] === null || d.parou[1] === null)) {
+        d.prazo = p.t + JANELA; fala(p, 1 - quemParou, `${quem(p, quemParou)} parou! Aperte já, você tem ${JANELA} s`, 1);
+      }
+      if (d.prazo >= 0 && p.t < d.prazo) { d.aviso = `${quem(p, quemParou)} parou! Falta ${Math.ceil(d.prazo - p.t)} s`; d.avisoCor = '#ffd84d'; }
       if (d.parou[0] === null || d.parou[1] === null) return;
       d.revela = p.t; p.eventos.push('troca');
       const v = decide(d);

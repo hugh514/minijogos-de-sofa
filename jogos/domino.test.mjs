@@ -4,7 +4,8 @@ import { entrada, passo } from '../logica.mjs';
 import { partidaCom, roda, fumaca, DT } from './_teste.mjs';
 import jogo from './domino.mjs';
 
-const OFF = 0.8, PER = 0.7;                     // primeira batida e intervalo entre batidas
+const OFF = 0.8, PER = 0.7, ACEL = 0.008;       // primeira batida, intervalo e quanto ele encurta a cada batida
+const batidaEm = k => OFF + k * PER - ACEL * k * (k - 1) / 2;
 const reta = () => ({ torta: false, t: 0 }), torta = () => ({ torta: true, t: 0 });
 const retas = n => Array.from({ length: n }, reta);
 
@@ -16,7 +17,7 @@ function toca(p, i, campo = 'n', vezes = 1) {
 
 // Vai ate o instante da batida k (mais "folga" segundos) e deixa os toques de quem esta em "quem" chegarem nele.
 function aperta(p, k, quem, folga = 0) {
-  p.t = OFF + k * PER + folga - DT;
+  p.t = batidaEm(k) + folga - DT;
   for (const i of quem) toca(p, i);
   passo(p, DT);
 }
@@ -188,4 +189,23 @@ test('domino: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   const vencedores = fumaca(jogo);
   assert.equal(vencedores.length, 15);
   assert.ok(vencedores.every(v => [-1, 0, 1].includes(v)));
+});
+
+test('domino: o ritmo acelera e a batida tardia continua valendo', () => {
+  const p = partidaCom(jogo);
+  assert.ok(batidaEm(21) - batidaEm(20) < batidaEm(2) - batidaEm(1) - 0.1, 'intervalos encurtam');
+  aperta(p, 10, [0]);
+  assert.equal(p.dados.fila[0].length, 1);
+  assert.equal(p.dados.fila[0][0].torta, false, 'no ritmo acelerado, nao no ritmo antigo');
+  const q = partidaCom(jogo);
+  q.t = OFF + 10 * PER - DT; toca(q, 0); passo(q, DT);
+  assert.equal(q.dados.fila[0][0].torta, true, 'o ritmo fixo de antes ja nao serve');
+  assert.match(jogo.dica, /acelerando/);
+});
+
+test('domino: as duas fileiras completas e iguais: quem fechou primeiro vence', () => {
+  const p = partidaCom(jogo), d = p.dados;
+  d.fila[0] = Array.from({ length: 26 }, (_, k) => ({ torta: false, t: k })); d.fila[1] = Array.from({ length: 26 }, (_, k) => ({ torta: false, t: k + 0.3 }));
+  for (let k = 0; k < 600 && p.fase === 'jogando'; k++) passo(p, DT);
+  assert.equal(p.vencedor, 0);
 });

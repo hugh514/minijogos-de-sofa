@@ -17,7 +17,7 @@ function saca(p) {      // bola no centro e cada um no seu canto
 }
 
 export default {
-  id: 'futebol-times', nome: 'Futebol de Duplas', dica: 'Dois contra dois! Chute a bola no gol de cor do outro time. Vence quem fizer 3 gols.',
+  id: 'futebol-times', genero: 'gol', nome: 'Futebol de Duplas', dica: 'Dois contra dois! Chute a bola no gol de cor do outro time. Vence quem fizer 3 gols.',
   festa: { min: 4, max: 4, modos: ['times'] },
   controle: { modo: 'padrao', a: 'CHUTA', b: '' }, semPulo: true,       // o empurrao do motor e o chute
   rotulo: 'gols', duracao: TEMPO,
@@ -31,7 +31,7 @@ export default {
 
   atualiza(p, dt) {
     const d = p.dados, b = d.bola, a = p.arena;
-    texto(p, `Time A ${d.placar[0]} x ${d.placar[1]} Time B`);
+    texto(p, `Laranja ${d.placar[0]} x ${d.placar[1]} Roxo`);
     if (p.t >= TEMPO) return d.placar[0] === d.placar[1] ? -1 : d.placar[0] > d.placar[1] ? 0 : 1;       // o tempo vale mesmo no meio do saque
     if (d.saque > 0) {
       d.saque -= dt;

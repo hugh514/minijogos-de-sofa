@@ -61,40 +61,35 @@ test('empilha: quase no centro conta como perfeito e mantém a largura', () => {
   assert.equal(topo(est(p, 0)).x, 0);
 });
 
-test('empilha: errar totalmente perde na hora, o outro vence e o boneco cai', () => {
+test('empilha: errar o bloco inteiro nao elimina: o bloco cai, a torre fica e a rodada segue', () => {
   const p = nova();
-  solta(p, 1, 0);                      // o jogador 2 até está na frente em andares
-  espera(p);
+  solta(p, 1, 0); espera(p);
   solta(p, 0, L0 + 0.1);               // o jogador 1 erra o bloco inteiro
-  assert.equal(p.vencedor, 1);
-  assert.equal(p.jogadores[0].vivo, false);
-  assert.equal(p.jogadores[1].vivo, true);
+  assert.equal(p.fase, 'jogando');
+  assert.equal(p.jogadores[0].vivo, true);
+  assert.equal(est(p, 0).blocos.length, 1, 'nao ganhou andar');
+  assert.deepEqual(p.dados.placar, [0, 1]);
+  assert.equal(p.dados.cortes.length, 1, 'o bloco inteiro cai');
+  roda(p, 1);
+  assert.equal(est(p, 0).l, L0, 'o proximo vem com a mesma largura');
+  solta(p, 0, 0);
+  assert.deepEqual(p.dados.placar, [1, 1], 'continua empilhando');
 });
 
-test('empilha: errar vence mesmo com a torre mais alta que a do outro', () => {
-  const p = nova();
-  for (let k = 0; k < 3; k++) { solta(p, 0, 0); espera(p); }
-  solta(p, 1, L0 + 1);
-  assert.equal(p.vencedor, 0);
-  const q = nova();
-  for (let k = 0; k < 3; k++) { solta(q, 1, 0); espera(q); }
-  solta(q, 0, -(L0 + 1));
-  assert.equal(q.vencedor, 1, 'e do outro lado');
-});
-
-test('empilha: os dois erram no mesmo quadro, vence a torre mais alta ou empata', () => {
-  const p = nova();
-  solta(p, 0, 0); espera(p);
-  est(p, 0).v = 0; est(p, 1).v = 0;
-  est(p, 0).bx = 99; est(p, 1).bx = -99;
-  entrada(p, 0, { n: p.jogadores[0].n + 1 }); entrada(p, 1, { n: 0 }); entrada(p, 1, { n: 1 }); passo(p, DT);
-  assert.equal(p.vencedor, 0, 'a torre do 1 era mais alta');
+test('empilha: os dois erram juntos e ninguem perde na hora', () => {
   const q = nova();
   est(q, 0).v = est(q, 1).v = 0;
-  est(q, 0).bx = 99; est(q, 1).bx = 99;
+  est(q, 0).bx = 99; est(q, 1).bx = -99;
   entrada(q, 0, { n: 0 }); entrada(q, 1, { n: 0 });
   entrada(q, 0, { n: 1 }); entrada(q, 1, { n: 1 }); passo(q, DT);
-  assert.equal(q.vencedor, -1);
+  assert.equal(q.fase, 'jogando');
+  assert.deepEqual(q.jogadores.map(j => j.vivo), [true, true]);
+});
+
+test('empilha: toque sem parar nao acaba a rodada antes dos 30 s', () => {
+  const p = nova();
+  for (let k = 0; k < 29 * 60; k++) { entrada(p, 0, { n: k }); entrada(p, 1, { n: k }); passo(p, DT); }
+  assert.equal(p.fase, 'jogando');
 });
 
 test('empilha: toque curto com contador não se perde, e vários toques no mesmo quadro soltam só um bloco', () => {

@@ -5,16 +5,19 @@ import { posiciona, maiorPlacar } from '../logica.mjs';
 const CORES = ['Vermelho', 'Azul', 'Verde', 'Amarelo'];
 const HEX = [0xe5383b, 0x2f7df6, 0x35c26b, 0xffd23f];
 const CSS = ['#ff4a4a', '#4a9bff', '#3ddc7a', '#ffd84d'];
-const META = 5, LIMITE = 45, GELO = 2, PRAZO = 6, LADO = 7.5, ZJOG = 1;
+const META = 5, LIMITE = 45, SUBITA = 12, GELO = 2, PRAZO = 6, PRAZO_MIN = 3.5, LADO = 7.5, ZJOG = 1;
 const XBLOCO = [-4.5, -1.5, 1.5, 4.5], ZBLOCO = 4.6;
-const COMANDO = ['Toque a PALAVRA', 'Toque a cor da TINTA'];
+const COMANDO = ['Toque a PALAVRA', 'Toque a cor da TINTA'], COMANDO_TV = ['TOQUE A PALAVRA', 'TOQUE A TINTA'];
+
+// O prazo encurta a cada ponto do lider: quem esta na frente joga sob mais pressa.
+export const prazoDe = placar => Math.max(PRAZO_MIN, PRAZO - 0.5 * Math.max(...placar));
 
 function novoDesafio(p) {
   const d = p.dados;
   d.modoTinta = !d.modoTinta;
   d.palavra = Math.floor(p.rng() * 4) % 4;
   d.tinta = (d.palavra + 1 + Math.floor(p.rng() * 3) % 3) % 4;      // sempre diferente da palavra
-  d.prazo = PRAZO;
+  d.prazo = prazoDe(d.placar); d.comando = COMANDO_TV[+d.modoTinta];
   d.aviso = CORES[d.palavra].toUpperCase(); d.avisoCor = CSS[d.tinta];
 }
 
@@ -22,13 +25,13 @@ function telas(p) {
   const d = p.dados;
   for (const i of [0, 1])
     p.celular[i] = d.gelo[i] > 0
-      ? { modo: 'espera', texto: 'Congelado! Você tocou a cor errada', vibra: d.vibra[i] }
-      : { modo: 'opcoes', texto: d.pausa > 0 ? 'Prepare-se...' : COMANDO[+d.modoTinta], opcoes: CORES, vibra: d.vibra[i] };
+      ? { modo: 'espera', texto: 'Congelado e menos 1 ponto: você tocou a cor errada', vibra: d.vibra[i] }
+      : { modo: 'opcoes', texto: d.pausa > 0 ? 'Prepare-se...' : COMANDO[+d.modoTinta], opcoes: CORES, coresOp: CSS, linha: true, vibra: d.vibra[i] };
 }
 
 export default {
-  id: 'cor-mentirosa', nome: 'Cor mentirosa',
-  dica: 'Veja o comando: toque a cor da TINTA ou a PALAVRA escrita. Errou, congela!',
+  id: 'cor-mentirosa', genero: 'reflexo', nome: 'Cor mentirosa',
+  dica: 'Toque a cor da TINTA ou a PALAVRA escrita, como o comando pedir. Errou, congela e perde 1 ponto!',
   semMovimento: true, controle: { modo: 'espera' }, rotulo: 'acertos', duracao: LIMITE,
 
   inicia(p) {
@@ -37,7 +40,7 @@ export default {
     for (const j of p.jogadores) j.z = ZJOG;
     p.dados = {
       placar: [0, 0], gelo: [0, 0], vibra: [0, 0], fx: [], aviso: '', avisoCor: '#fff',
-      modoTinta: p.rng() < 0.5, palavra: 0, tinta: 1, prazo: PRAZO, pausa: 0.6,
+      modoTinta: p.rng() < 0.5, palavra: 0, tinta: 1, prazo: PRAZO, pausa: 0.6, comando: '',
     };
     telas(p);
   },
@@ -45,7 +48,9 @@ export default {
   atualiza(p, dt) {
     const d = p.dados;
     for (const i of [0, 1]) d.gelo[i] = Math.max(0, d.gelo[i] - dt);
+    const empate = d.placar[0] === d.placar[1], subita = p.t > LIMITE && empate;
     if (d.pausa > 0) {
+      if (subita) { d.aviso = 'Desempate: o próximo ponto vence!'; d.avisoCor = '#ffffff'; }
       d.pausa -= dt;
       if (d.pausa <= 0) novoDesafio(p);
     } else {
@@ -54,7 +59,7 @@ export default {
         const e = j.escolha;
         if (e < 0 || e > 3 || d.gelo[i] > 0) return;
         if (e === certa) return acertou.push(i);
-        d.gelo[i] = GELO; d.vibra[i]++;
+        d.gelo[i] = GELO; d.vibra[i]++; d.placar[i] = Math.max(0, d.placar[i] - 1);
         if (j.y === 0) j.vy = 7;                         // susto
         d.fx.push({ ok: false, quem: i });
         p.eventos.push('batida');
@@ -65,7 +70,8 @@ export default {
       if (acertou.length || d.prazo <= 0) { d.pausa = acertou.length ? 0.9 : 0.5; d.aviso = ''; }
     }
     telas(p);
-    if (Math.max(...d.placar) >= META || p.t > LIMITE) return maiorPlacar(p);
+    const fim = p.t > LIMITE && (d.placar[0] !== d.placar[1] || p.t > LIMITE + SUBITA);   // empate no tempo: morte subita
+    if (Math.max(...d.placar) >= META || fim) return maiorPlacar(p);
   },
 
   monta(c) {
@@ -114,6 +120,15 @@ export default {
     pecas.tinta.position.z = pecas.palavra.position.z = 0.6;
     grupo.add(pecas.tinta, pecas.palavra);
 
+    // faixa com o comando por escrito (a regra nao pode viver so no celular); so no navegador, o node de teste nao tem canvas
+    if (typeof document !== 'undefined') {
+      const tela = document.createElement('canvas'); tela.width = 1024; tela.height = 256;
+      const tex = new THREE.CanvasTexture(tela); tex.colorSpace = THREE.SRGBColorSpace;
+      const faixa = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, fog: false, toneMapped: false }));
+      faixa.scale.set(13, 13 * 256 / 1024, 1); faixa.position.set(0, 0.9, -3.7); faixa.visible = false; faixa.renderOrder = 5;
+      grupo.add(faixa); pecas.faixa = { tela, tex, faixa, texto: '' };
+    }
+
     // bloco de gelo de cada jogador
     pecas.gelos = [0, 1].map(() => {
       const m = malha(new THREE.BoxGeometry(2.1, 2.3, 2.1), 0x9be7ff, { transparent: true, opacity: 0.55, emissive: 0x2a6f8f });
@@ -141,6 +156,20 @@ export default {
       m.position.y = 0.4 + pc.brilho[i] * 0.6;
     });
     const ativo = !(d.pausa > 0);
+    if (pc.faixa) {
+      const f = pc.faixa, txt = ativo ? d.comando : '';
+      if (f.texto !== txt) {
+        f.texto = txt; f.faixa.visible = !!txt;
+        const x = f.tela.getContext('2d'), tinta = txt.endsWith('TINTA');
+        x.clearRect(0, 0, 1024, 256);
+        x.fillStyle = '#0a0d1ee6'; x.beginPath(); x.rect(8, 40, 1008, 176); x.fill();
+        x.font = '900 100px "Segoe UI Black", "Arial Black", Impact, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+        const larg = x.measureText(txt).width;
+        if (larg > 940) x.font = x.font.replace('100px', Math.floor(100 * 940 / larg) + 'px');       // cabe na faixa mesmo sem a fonte pesada
+        x.fillStyle = tinta ? '#ffd84d' : '#ffffff'; x.fillText(txt, 512, 132);
+        f.tex.needsUpdate = true;
+      }
+    }
     pc.tinta.visible = ativo && d.modoTinta;
     pc.palavra.visible = ativo && !d.modoTinta;
     for (const m of pc.pintados) { m.material.color.set(HEX[d.tinta]); m.material.emissive.set(HEX[d.tinta]); }

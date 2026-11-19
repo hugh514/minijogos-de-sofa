@@ -27,10 +27,11 @@ function borrifa(d, x, z, raio, de) {
 }
 
 export default {
-  id: 'tinta-festa', nome: 'Tinta na Tela', dica: 'Pinte o chão passando por cima. Quem tiver mais área em 40 segundos vence!',
+  id: 'tinta-festa', genero: 'mira', nome: 'Tinta na Tela', dica: 'Pinte o chão passando por cima. Quem tiver mais área em 40 segundos vence!',
   festa: { min: 2, max: 4, modos: ['vs', 'times'] },
   controle: { modo: 'padrao', a: 'ARRANCA', b: '' }, semPulo: true,
   rotulo: 'do chão', sufixo: '%', duracao: TEMPO,
+  tema: 4,       // céu e mar verde-água: o laranja e o roxo dos times contrastam com o cenário e entre si (o sorteio antigo caía num cenário roxo)
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: LX, lz: LZ, parede: true };

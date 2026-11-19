@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrada } from '../logica.mjs';
 import { partidaCom, roda, fumaca } from '../jogos/_teste.mjs';
-import jogo from './onda.mjs';
+import jogo, { VIDAS } from './onda.mjs';
 
 // Partida sem pulsos automaticos e com uma onda ja a caminho dos dois (que estao a 4.5 do centro).
 function comOnda() {
@@ -15,7 +15,7 @@ function comOnda() {
 test('onda: quem esta no chao quando o anel passa perde uma vida, voa para tras e fica imune', () => {
   const p = comOnda();
   roda(p, 0.4);
-  assert.deepEqual(p.dados.placar, [1, 1]);
+  assert.deepEqual(p.dados.placar, [VIDAS - 1, VIDAS - 1]);
   assert.ok(p.dados.imune[0] > 0 && p.dados.imune[1] > 0);
   assert.ok(p.jogadores[0].x < -4.6 && p.jogadores[1].x > 4.6, 'foram jogados para fora');
   assert.equal(p.vencedor, undefined);
@@ -26,7 +26,7 @@ test('onda: quem pula na hora passa ileso', () => {
   entrada(p, 0, { x: 0, y: 0, nb: 0 });
   entrada(p, 0, { x: 0, y: 0, nb: 1 });
   roda(p, 1.2);
-  assert.deepEqual(p.dados.placar, [2, 1]);
+  assert.deepEqual(p.dados.placar, [VIDAS, VIDAS - 1]);
 });
 
 test('onda: imune nao apanha de novo; sem imunidade a segunda batida elimina', () => {
@@ -42,10 +42,12 @@ test('onda: imune nao apanha de novo; sem imunidade a segunda batida elimina', (
   assert.equal(p.jogadores[1].vivo, false);
 });
 
-test('onda: os dois parados caem juntos e da empate', () => {
+test('onda: comeco calmo: 3 vidas, nenhum anel antes de 3 s, e parados so caem (juntos, empate) depois de 9 s', () => {
+  assert.equal(VIDAS, 3);
   const p = partidaCom(jogo);
-  roda(p, 3.5); assert.deepEqual(p.dados.placar, [1, 1]);
-  roda(p, 3.5);
+  roda(p, 3); assert.deepEqual(p.dados.placar, [VIDAS, VIDAS]);
+  roda(p, 6); assert.equal(p.fase, 'jogando');
+  for (let q = 0; q < 10 * 60 && p.fase === 'jogando'; q++) roda(p, 1 / 60);
   assert.equal(p.vencedor, -1);
 });
 
@@ -63,7 +65,7 @@ test('onda: no limite de 55 s decide pelas vidas', () => {
 test('onda: os pulsos aceleram e o nucleo avisa antes de soltar', () => {
   const p = partidaCom(jogo);
   p.dados.imune = [99, 99];
-  roda(p, 2);
+  roda(p, 3);
   assert.ok(p.dados.carga > 0.3 && p.dados.ondas.length === 0, 'nucleo inchando antes do primeiro pulso');
   roda(p, 8);
   const cedo = p.dados.ondas.length;

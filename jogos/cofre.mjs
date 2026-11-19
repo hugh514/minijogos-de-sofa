@@ -1,38 +1,63 @@
 // Cofre ganancioso: a coluna de moedas sobe cada vez mais rapido e explode num ponto oculto.
-// Cada um aperta UMA vez para pegar o valor atual. Quem nao pegou antes da explosao fica com zero.
+// Cada um aperta UMA vez por cofre para pegar o valor atual. Quem nao pegou antes da explosao fica com zero naquele cofre.
+// Sao 3 cofres; as moedas somam e vence quem juntar mais.
 import { posiciona, maiorPlacar, elimina } from '../logica.mjs';
 
-const X = 5, X_FORA = 7.2, VEL = 2.5, ACEL = 0.8, MIN = 20, MAX = 100;
+export const COFRES = 3;
+const X = 5, X_FORA = 7.2, VEL = 2.5, ACEL = 0.8, MIN = 20, MAX = 100, T_ENTRE = 2;
 // Sem isto, pegar primeiro quase sempre perde (o outro pega um instante depois, um pouco mais).
 // Quem pega primeiro trava o botao do outro por TRAVA segundos e o cofre passa a subir FURIA vezes mais rapido.
 // Para a regra pura, ponha TRAVA = 0 e FURIA = 1.
 const TRAVA = 1.5, FURIA = 2;
-const ALTURA = 0.05, OURO = 0xffc93c;
+const ALTURA = 0.05, ALTURA_PILHA = 0.02, OURO = 0xffc93c;
+
+function novoCofre(p) {
+  const d = p.dados;
+  d.cofre++; d.entre = 0;
+  Object.assign(d, { valor: 0, vel: VEL, explode: MIN + p.rng() * (MAX - MIN), pego: [0, 0], saiu: [false, false], trava: [0, 0], furia: false, explodiu: false });
+  d.aviso = '0'; d.avisoCor = '#ffd84d';
+  p.jogadores.forEach((j, i) => { j.x = (i ? 1 : -1) * X; j.z = 0; p.celular[i] = { a: 'PEGA!', texto: `Cofre ${d.cofre} de ${COFRES}: aperte uma vez para pegar as moedas` }; });
+}
+
+// Fecha o cofre atual: guarda as moedas e mostra o resultado por um instante.
+function fecha(p, aviso) {
+  const d = p.dados;
+  d.total = d.total.map((t, i) => t + d.pego[i]);
+  d.placar = [...d.total]; d.entre = T_ENTRE; d.aviso = aviso; d.avisoCor = '#ffd84d';
+  for (const i of [0, 1]) p.celular[i] = { modo: 'espera', texto: `Neste cofre: ${d.pego[i]} moedas. Total: ${d.total[i]}` };
+}
 
 export default {
-  id: 'cofre', nome: 'Cofre ganancioso', dica: 'Aperte UMA vez para pegar as moedas. Explodiu antes? Zero! Quem pega primeiro trava o outro.',
+  id: 'cofre', genero: 'blefe', nome: 'Cofre ganancioso', dica: 'Aperte uma vez para pegar as moedas do cofre. Explodiu antes? Zero! São 3 cofres.',
   semMovimento: true, controle: { modo: 'botao', a: 'PEGA!' }, rotulo: 'moedas',
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 9, lz: 5, parede: true };
     posiciona(p, X);
-    p.dados = {
-      valor: 0, vel: VEL, explode: MIN + p.rng() * (MAX - MIN), placar: [0, 0],
-      saiu: [false, false], trava: [0, 0], furia: false, explodiu: false, aviso: '0', avisoCor: '#ffd84d',
-    };
+    p.dados = { cofre: 0, total: [0, 0], placar: [0, 0] };
+    novoCofre(p);
   },
 
   atualiza(p, dt) {
     const d = p.dados;
+    if (d.entre > 0) {                                           // intervalo entre um cofre e outro
+      d.entre -= dt;
+      if (d.entre > 0) return;
+      if (d.cofre < COFRES) { novoCofre(p); return; }
+      const v = maiorPlacar(p);
+      if (v >= 0) { const j = p.jogadores[1 - v]; j.vx = (v ? -1 : 1) * 9; elimina(p, j, 13); }   // o mais pobre sai voando
+      return v;
+    }
     const pegam = [0, 1].filter(i => p.jogadores[i].apertouA > 0 && !d.saiu[i] && d.trava[i] <= 0);
     for (const i of pegam) {
       const j = p.jogadores[i];
-      d.saiu[i] = true; d.placar[i] = Math.floor(d.valor);
+      d.saiu[i] = true; d.pego[i] = Math.floor(d.valor);
       j.x = (i ? 1 : -1) * X_FORA; j.vy = 7;                       // sai de perto do cofre com um pulinho
-      p.celular[i] = { modo: 'espera', texto: `Você garantiu ${d.placar[i]} moedas. Torça pela explosão!` };
+      p.celular[i] = { modo: 'espera', texto: `Você garantiu ${d.pego[i]} moedas. Torça pela explosão!` };
       p.eventos.push('moeda');
     }
-    if (d.saiu[0] && d.saiu[1]) return maiorPlacar(p);
+    d.placar = d.total.map((t, i) => t + d.pego[i]);
+    if (d.saiu[0] && d.saiu[1]) { fecha(p, 'Os dois pegaram!'); return; }     // nao tem explosao para torcer
     for (const i of [0, 1]) {
       if (d.saiu[i]) continue;
       if (pegam.length && TRAVA > 0) { d.trava[i] = TRAVA; p.celular[i] = { a: 'TRAVADO!', vibra: 1 }; p.eventos.push('troca'); }
@@ -43,14 +68,11 @@ export default {
     d.vel += ACEL * dt;
     d.valor += d.vel * (d.furia ? FURIA : 1) * dt;
     if (d.valor >= d.explode) {
-      d.valor = d.explode; d.explodiu = true; d.aviso = '';
-      for (const i of [0, 1]) {
-        if (d.saiu[i]) continue;
-        const j = p.jogadores[i];
-        j.vx = (i ? 1 : -1) * 9; elimina(p, j, 13);
-      }
+      d.valor = d.explode; d.explodiu = true;
+      for (const i of [0, 1]) if (!d.saiu[i]) { const j = p.jogadores[i]; j.vy = 10; j.vx = (i ? 1 : -1) * 3; }   // susto de quem ficou
       p.eventos.push('explosao');
-      return maiorPlacar(p);
+      fecha(p, 'Explodiu!');
+      return;
     }
     d.aviso = String(Math.floor(d.valor)); d.avisoCor = d.furia ? '#ff4a4a' : '#ffd84d';
   },
@@ -82,9 +104,14 @@ export default {
 
   desenha(c, dt, t) {
     const d = c.p.dados, { pecas, cores } = c;
+    if (pecas.cofreVisto !== d.cofre) {                          // cofre novo: fecha e limpa o que o anterior mostrou
+      pecas.cofreVisto = d.cofre;
+      pecas.viuSaida = [false, false]; pecas.viuExplosao = false;
+      pecas.cofre.rotation.z = 0; pecas.cofre.material.color.set(0x4a5568);
+    }
     for (const i of [0, 1]) {
-      const pilha = pecas.pilha[i], h = d.placar[i] * ALTURA;
-      pilha.visible = d.saiu[i] && h > 0;
+      const pilha = pecas.pilha[i], h = d.placar[i] * ALTURA_PILHA;
+      pilha.visible = h > 0;
       pilha.scale.y = Math.max(0.01, h); pilha.position.y = h / 2;
       pecas.fora[i].material.emissiveIntensity = d.saiu[i] ? 0.7 : 0;
       pecas.trava[i].visible = d.trava[i] > 0 && !d.saiu[i] && !d.explodiu;

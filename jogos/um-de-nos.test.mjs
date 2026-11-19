@@ -106,14 +106,43 @@ test('um-de-nos: pega a esfera mais proxima; o robo no meio salva o jogador', ()
   assert.equal(p.fase, 'jogando');
 });
 
-test('um-de-nos: os dois gastam o tiro em robo ou no vazio, empate', () => {
+test('um-de-nos: os dois gastam o tiro em robo: nao empata, os dois ficam revelados e o tiro volta em 6 s', () => {
   const p = cena([0, 0], [8, -5]), d = p.dados;
-  const robo = d.esf.find((_, k) => !d.dono.includes(k));
-  Object.assign(robo, { x: 1.8, z: 0 });
+  const [r1, r2] = d.esf.filter((_, k) => !d.dono.includes(k));
+  Object.assign(r1, { x: 1.8, z: 0 }); Object.assign(r2, { x: 8, z: -3.3 });
   atira(p, 0);
-  atira(p, 1);       // sem ninguem no alcance
-  assert.equal(p.vencedor, -1);
+  atira(p, 1);
+  assert.equal(p.vencedor, undefined);
   assert.deepEqual(d.revelado, [true, true]);
+  assert.deepEqual(d.tiro, [false, false]);
+  roda(p, 5.5);
+  assert.deepEqual(d.tiro, [false, false], 'ainda nao voltou');
+  roda(p, 0.7);
+  assert.deepEqual(d.tiro, [true, true]);
+  assert.match(p.celular[0].texto, /de volta/);
+});
+
+test('um-de-nos: com o tiro de volta, quem errou antes ainda pode acertar o outro (virada)', () => {
+  const p = cena([0, 0], [8, -5]), d = p.dados;
+  const r1 = d.esf.find((_, k) => !d.dono.includes(k));
+  Object.assign(r1, { x: 1.8, z: 0 });
+  atira(p, 0);                                  // errou no robo
+  roda(p, 6.2);
+  Object.assign(d.esf[d.dono[1]], { x: 1.5, z: 0, vx: 0, vz: 0 }); Object.assign(d.esf[d.dono[0]], { x: 0, z: 0, vx: 0, vz: 0 });
+  atira(p, 0);
+  assert.equal(p.vencedor, 0);
+});
+
+test('um-de-nos: tiro sem ninguem no alcance nao sai, nao gasta e nao revela', () => {
+  const p = cena([0, 0], [8, -5]), d = p.dados;
+  atira(p, 0);
+  assert.deepEqual(d.tiro, [true, true]);
+  assert.deepEqual(d.revelado, [false, false]);
+  assert.equal(p.fase, 'jogando');
+  assert.match(p.celular[0].texto, /perto/);
+  Object.assign(d.esf[d.dono[1]], { x: 1.5, z: 0 });
+  atira(p, 0);
+  assert.equal(p.vencedor, 0, 'o tiro guardado ainda vale');
 });
 
 test('um-de-nos: 35 s sem vencedor, empate', () => {
@@ -139,4 +168,20 @@ test('um-de-nos: esferas ficam dentro da arena e nao se atravessam', () => {
 test('um-de-nos: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   const vencedores = fumaca(jogo);
   assert.equal(vencedores.length, 15);
+});
+
+test('um-de-nos: sem vibracao tambem da para achar a propria esfera (a TV conta os pulos e o celular diz qual e o seu)', () => {
+  const p = partidaCom(jogo), d = p.dados;
+  const vez = i => d.ordem.indexOf(d.dono[i]) + 1;
+  for (const i of [0, 1]) assert.match(p.celular[i].texto, new RegExp(`${vez(i)}`), 'o celular diz em que pulo a sua esfera pula');
+  const vistos = [];
+  for (let q = 0; q < ABERTURA * 60; q++) {
+    passo(p, DT);
+    if (d.vez > 0 && !vistos.includes(d.vez)) {
+      vistos.push(d.vez);
+      assert.match(d.aviso, new RegExp(`Pulo ${d.vez} de 8`), 'a TV mostra o numero do pulo');
+      for (const i of [0, 1]) assert.equal(/É você!/.test(p.celular[i].texto), vez(i) === d.vez, 'so o dono recebe o aviso na hora do pulo');
+    }
+  }
+  assert.equal(vistos.length, 8);
 });

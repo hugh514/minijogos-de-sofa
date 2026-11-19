@@ -1,11 +1,18 @@
 // Caca ao tesouro: um tesouro invisivel enterrado na areia. O celular de cada um vibra mais rapido quanto mais
-// perto ELE esta, e a antena em cima do boneco pisca no mesmo ritmo (da para espionar o outro). A cava onde esta.
+// perto ELE esta, e a antena em cima do boneco pisca no mesmo ritmo (da para espionar o outro). Sem vibracao (iPhone): o anel
+// da cor do jogador pulsa no chao, maior e mais forte quanto mais perto, e o celular escreve QUENTE, MORNO ou FRIO. A cava onde esta.
 import { posiciona, maiorPlacar, pontoNoCirculo, RAIO } from '../logica.mjs';
 
-const R_ARENA = 9, R_TESOURO = 6.8, ACHOU = 1.3, T_CAVA = 0.8, META = 3, TEMPO = 50, LONGE = 4, MAX_BURACOS = 30;
+const TETO = 60, R_ARENA = 9, R_TESOURO = 6.8, ACHOU = 1.3, T_CAVA = 0.8, META = 3, TEMPO = 50, LONGE = 4, MAX_BURACOS = 30;
 
 // segundos entre duas vibracoes: em cima do tesouro, 7 por segundo; do outro lado da ilha, 1 a cada 2 s
 export function intervalo(dist) { return Math.min(2, 0.14 + dist * 0.17); }
+
+// 0 (longe) a 1 (em cima do tesouro): alimenta o brilho da TV e o texto QUENTE/MORNO/FRIO do celular
+// raio do buraco que acha o tesouro: cresce se ninguem acerta ha 12 s, para a rodada nao morrer em 0 x 0
+export const achou = d => ACHOU + Math.max(0, Math.min(1.7, (d.sem - 12) * 0.1));
+export const calor = dist => Math.max(0, Math.min(1, 1 - dist / 10));
+const faixa = k => k > 0.7 ? 'Quente! Aperte CAVAR' : k > 0.4 ? 'Morno. Chegue mais perto e aperte CAVAR' : 'Frio. Procure e aperte CAVAR';
 
 function vibra(p, i) { p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 }; }
 
@@ -20,25 +27,25 @@ function sorteia(p, antes) {
 }
 
 export default {
-  id: 'detector', nome: 'Caça ao tesouro',
-  dica: 'O celular vibra mais rápido perto do tesouro. Aperte CAVAR em cima dele! Primeiro a 3 vence.',
+  id: 'detector', genero: 'ritmo', nome: 'Caça ao tesouro',
+  dica: 'Perto do tesouro o anel no chão pisca e o celular vibra mais rápido. Aperte Cavar em cima dele. Primeiro a 3 vence. Empate no fim: vale o próximo!',
   controle: { modo: 'padrao', a: 'CAVAR', b: '' }, semDash: true, semPulo: true, rotulo: 'tesouros', duracao: TEMPO,
 
   inicia(p) {
     p.arena = { tipo: 'circulo', raio: R_ARENA, parede: true };
     posiciona(p, 5);
     p.dados = {
-      placar: [0, 0], tesouro: null, buracos: [], baus: [], fx: [],
-      pulso: [0.6, 0.6], desde: [9, 9], iv: [2, 2], cava: [0, 0], onde: [null, null], areia: [0, 0],
+      placar: [0, 0], sem: 0, tesouro: null, buracos: [], baus: [], fx: [],
+      calor: [0, 0], pulso: [0.6, 0.6], desde: [9, 9], iv: [2, 2], cava: [0, 0], onde: [null, null], areia: [0, 0],
       aviso: '', avisoCor: '#ffd84d', tAviso: 0,
     };
     p.dados.tesouro = sorteia(p, null);
-    for (const i of [0, 1]) p.celular[i] = { texto: 'Vibrou mais rápido? Está perto. Aperte CAVAR!', vibra: 0 };
+    for (const i of [0, 1]) p.celular[i] = { texto: faixa(0), vibra: 0 };
   },
 
   atualiza(p, dt) {
     const d = p.dados;
-    d.tAviso -= dt;
+    d.tAviso -= dt; d.sem += dt;
     if (d.tAviso <= 0) d.aviso = '';
     for (const b of d.baus) b.t += dt;
     d.baus = d.baus.filter(b => b.t < 2);
@@ -46,7 +53,8 @@ export default {
     for (const [i, j] of p.jogadores.entries()) {
       // detector: vibra e pisca no ritmo da distancia
       const dist = Math.hypot(j.x - d.tesouro.x, j.z - d.tesouro.z);
-      d.iv[i] = intervalo(dist);
+      d.iv[i] = intervalo(dist); d.calor[i] = calor(dist);
+      if (p.celular[i].texto !== faixa(d.calor[i])) p.celular[i] = { ...p.celular[i], texto: faixa(d.calor[i]) };
       d.pulso[i] = Math.min(d.pulso[i] - dt, d.iv[i]);
       d.desde[i] += dt;
       if (d.pulso[i] <= 0) { d.pulso[i] = d.iv[i]; d.desde[i] = 0; vibra(p, i); }
@@ -59,15 +67,15 @@ export default {
         if (d.cava[i] > 0) continue;
         d.buracos.push({ x: o.x, z: o.z, dono: i });
         if (d.buracos.length > MAX_BURACOS) d.buracos.shift();
-        if (Math.hypot(o.x - d.tesouro.x, o.z - d.tesouro.z) < ACHOU) {
+        if (Math.hypot(o.x - d.tesouro.x, o.z - d.tesouro.z) < achou(d)) {
           d.placar[i]++;
           d.baus.push({ x: d.tesouro.x, z: d.tesouro.z, t: 0, dono: i });
           d.fx.push({ x: d.tesouro.x, y: 1, z: d.tesouro.z, cor: -2, q: 30, forca: 8 }, { x: d.tesouro.x, y: 1.4, z: d.tesouro.z, cor: i, q: 14, forca: 5 });
           p.eventos.push('moeda', 'gol');
           j.vy = 8; vibra(p, i);
-          d.aviso = 'TESOURO!'; d.tAviso = 1.1;
-          if (d.placar[i] >= META) return i;
-          d.tesouro = sorteia(p, d.tesouro);
+          d.aviso = 'Tesouro!'; d.tAviso = 1.1;
+          if (d.placar[i] >= META || p.t >= TEMPO) return i;
+          d.tesouro = sorteia(p, d.tesouro); d.sem = 0;
           d.pulso = [0.5, 0.5];
         } else {
           p.eventos.push('batida');
@@ -79,7 +87,11 @@ export default {
         p.eventos.push('dash');
       }
     }
-    if (p.t >= TEMPO) return maiorPlacar(p);
+    if (p.t >= TEMPO) {
+      if (d.placar[0] !== d.placar[1]) return maiorPlacar(p);
+      if (p.t >= TETO) return -1;
+      d.aviso = 'Morte súbita!'; d.tAviso = 1;                  // empatado: o proximo tesouro decide
+    }
   },
 
   monta(c) {
@@ -139,7 +151,7 @@ export default {
       const haste = malha(new THREE.CylinderGeometry(0.05, 0.05, 0.8, 6), 0xdddddd); haste.position.y = 0.4;
       const luz = malha(new THREE.SphereGeometry(0.24, 14, 10), cores[i], { emissive: cores[i], emissiveIntensity: 0.2 }); luz.position.y = 0.9;
       antena.add(haste, luz);
-      const radar = plano(new THREE.RingGeometry(0.85, 1, 32), cores[i], 0.07, { transparent: true, opacity: 0, emissive: cores[i], emissiveIntensity: 1, side: THREE.DoubleSide, depthWrite: false });
+      const radar = plano(new THREE.RingGeometry(0.72, 1, 40), cores[i], 0.07, { transparent: true, opacity: 0, emissive: cores[i], emissiveIntensity: 1, side: THREE.DoubleSide, depthWrite: false });
       const pa = new THREE.Group();
       const cabo = malha(new THREE.CylinderGeometry(0.06, 0.06, 1.2, 6), 0x8a5a2b); cabo.position.y = 0.75;
       const lamina = malha(new THREE.BoxGeometry(0.42, 0.5, 0.06), 0xc8ccd4, { metalness: 0.6, roughness: 0.3 }); lamina.position.y = 0.2;
@@ -165,9 +177,10 @@ export default {
       antena.visible = j.vivo;
       antena.position.set(j.x, RAIO * 2 + j.y - 0.1, j.z);
       luz.material.emissiveIntensity = 0.15 + k * 2.2;
-      luz.scale.setScalar(1 + k * 0.7);
-      const s = 1 + (1 - k) * 1.6;
-      radar.position.set(j.x, 0.07, j.z); radar.scale.set(s, s, 1); radar.material.opacity = k * 0.8;
+      const q = d.calor[i];                      // perto do tesouro: antena e anel maiores e mais fortes (sinal visual, sem vibracao)
+      luz.scale.setScalar(1.3 + k * (0.7 + q * 1.1));
+      const s = 1.2 + (1 - k) * (1.6 + q * 3.2);
+      radar.position.set(j.x, 0.07, j.z); radar.scale.set(s, s, 1); radar.material.opacity = k * (0.55 + 0.45 * q);
       pa.visible = d.cava[i] > 0;
       if (pa.visible) {
         const fase = Math.sin(t * 22);

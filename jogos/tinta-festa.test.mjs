@@ -161,3 +161,7 @@ test('tinta-festa: rodada de dedos aleatorios termina no tempo e a contagem nunc
   assert.ok(segundos >= 39.9 && segundos <= 41, 'durou ' + segundos);
   confere(p);
 });
+
+test('tinta-festa: o cenario e fixo (tema 4, verde-agua) para o laranja e o roxo dos times contrastarem', () => {
+  assert.equal(jogo.tema, 4);
+});

@@ -1,11 +1,15 @@
 // Trilha de luz: o boneco anda sozinho e o joystick so vira. Cada um deixa uma parede de luz que fica na arena.
+// A luz some atras de quem anda (so os ultimos 44 m ficam): a arena nao entope e a rodada dura.
 // Bater em qualquer parede de luz ou na cerca da borda elimina. A: turbo (3 cargas). B: pulo por cima de uma parede (1 uso).
-import { elimina, quemSobrou } from '../logica.mjs';
+// Cada um tem 1 escudo: a primeira batida so gasta o escudo (atravessa a luz ou quica na cerca e fica 1,2 s fantasma).
+import { elimina, quemSobrou, quem } from '../logica.mjs';
 
-export const LX = 11, LZ = 8, BORDA = 0.5, LIMITE = 55, CARGAS = 3, PASSO = 0.4, FOLGA = 0.3;
-const V0 = 5, ACELERA = 0.08, GIRO = 4, TURBO = 1.7, T_TURBO = 1, PULO = 9, ALTURA_LIVRE = 0.35;
+export const LX = 11, LZ = 8, BORDA = 0.5, LIMITE = 55, CARGAS = 3, ESCUDOS = 1, PASSO = 0.4, FOLGA = 0.3;
+const V0 = 2.8, ACELERA = 0.1, GIRO = 4, TURBO = 1.7, T_TURBO = 1, PULO = 9, ALTURA_LIVRE = 0.35;
+const CABECAS = 0.9, T_FANTASMA = 1.2;         // distancia entre as duas cabecas que conta como batida de frente
 const IGNORA = 8;            // os ultimos pontos da propria trilha nao contam (senao bateria na parede que acabou de soltar)
-const MAX_PONTOS = 1400;     // sobra: o caminho inteiro de 55 s da uns 1050 pontos
+export const CAUDA = 110;           // a luz some atras de quem anda: ficam so os ultimos 110 pontos (uns 44 m). A arena nunca entope e a rodada dura
+const MAX_PONTOS = CAUDA + 12;
 
 // Distancia do ponto (x, z) ao segmento a-b.
 export function distSeg(x, z, a, b) {
@@ -23,22 +27,30 @@ function bateNaLuz(d, i, x, z) {
   return false;
 }
 
-const texto = c => `Turbo: ${c.cargas}   Pulo: ${c.pulos}`;
+const texto = c => `Turbo: ${c.cargas}   Pulo: ${c.pulos}   Escudo: ${c.escudo}`;
+
+// Quica na cerca: espelha a direcao e volta para dentro.
+function quica(c) {
+  const mx = LX - BORDA - 0.05, mz = LZ - BORDA - 0.05;
+  if (Math.abs(c.x) > mx) { c.ang = Math.PI - c.ang; c.x = Math.sign(c.x) * mx; }
+  if (Math.abs(c.z) > mz) { c.ang = -c.ang; c.z = Math.sign(c.z) * mz; }
+}
 
 export default {
-  id: 'cobras', nome: 'Trilha de luz', dica: 'Você anda sozinho: só vire! Bateu em parede de luz ou na cerca, perdeu. A dá turbo, B pula uma parede.',
+  id: 'cobras', genero: 'reflexo', nome: 'Trilha de luz', dica: 'Você anda sozinho: só vire! Não bata na luz nem na cerca: a 1ª batida gasta o escudo, a 2ª perde.',
   controle: { modo: 'padrao', a: 'TURBO', b: 'PULO' }, semMovimento: true, semDash: true, semPulo: true, duracao: LIMITE,
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: LX, lz: LZ, parede: true };
-    const cobras = [-1, 1].map(lado => ({ x: lado * 8, z: lado * 3, ang: lado < 0 ? 0 : Math.PI, turbo: 0, cargas: CARGAS, pulos: 1 }));
-    p.dados = { cobras, trilhas: cobras.map(c => [{ x: c.x, z: c.z }]), fx: [] };
+    const cobras = [-1, 1].map(lado => ({ x: lado * 9, z: lado * 3, ang: lado < 0 ? 0 : Math.PI, turbo: 0, cargas: CARGAS, pulos: 1, escudo: ESCUDOS, fantasma: 0 }));
+    p.dados = { cobras, trilhas: cobras.map(c => [{ x: c.x, z: c.z }]), fx: [], aviso: '', avisoCor: '#9ff3ff', avisoT: 0 };
     p.jogadores.forEach((j, i) => { j.x = cobras[i].x; j.z = cobras[i].z; p.celular[i] = { texto: texto(cobras[i]) }; });
   },
 
   atualiza(p, dt) {
     const d = p.dados;
     dt = Math.min(dt, 0.05);
+    if ((d.avisoT -= dt) <= 0) d.aviso = '';
     const base = V0 + ACELERA * p.t;
     const bateu = [false, false];
 
@@ -54,21 +66,39 @@ export default {
         c.ang += Math.max(-GIRO * dt, Math.min(GIRO * dt, dif));
       }
       const anda = base * (c.turbo > 0 ? TURBO : 1) * dt, partes = Math.ceil(anda / 0.2) || 1;
-      c.turbo = Math.max(0, c.turbo - dt);
+      c.turbo = Math.max(0, c.turbo - dt); c.fantasma = Math.max(0, c.fantasma - dt);
+      if (c.saindo && c.fantasma <= 0) { if (bateNaLuz(d, i, c.x, c.z)) c.fantasma = 0.05; else c.saindo = false; }   // o fantasma nunca acaba em cima de uma parede
       for (let n = 0; n < partes && !bateu[i]; n++) {          // em pedacos curtos, para nunca atravessar uma parede
         c.x += Math.cos(c.ang) * anda / partes; c.z += Math.sin(c.ang) * anda / partes;
         const cerca = Math.abs(c.x) > LX - BORDA || Math.abs(c.z) > LZ - BORDA;
-        bateu[i] = cerca || (j.y < ALTURA_LIVRE && bateNaLuz(d, i, c.x, c.z));
+        if (cerca && c.fantasma > 0) quica(c);                 // fantasma quica na cerca sem gastar nada
+        else bateu[i] = cerca || (c.fantasma <= 0 && j.y < ALTURA_LIVRE && bateNaLuz(d, i, c.x, c.z));
       }
       const ultimo = pts.at(-1);
-      if (pts.length < MAX_PONTOS && Math.hypot(c.x - ultimo.x, c.z - ultimo.z) >= PASSO) pts.push({ x: c.x, z: c.z });
+      if (Math.hypot(c.x - ultimo.x, c.z - ultimo.z) >= PASSO) { pts.push({ x: c.x, z: c.z }); if (pts.length > CAUDA) pts.shift(); }
       j.x = c.x; j.z = c.z;
       j.vx = Math.cos(c.ang) * 0.6; j.vz = Math.sin(c.ang) * 0.6;   // so para o boneco olhar para onde vai
     });
 
+    const [c0, c1] = d.cobras;                                 // de cabeca um no outro: os dois batem (sem depender de quem anda primeiro)
+    if (p.jogadores.every(j => j.vivo) && c0.fantasma <= 0 && c1.fantasma <= 0 && Math.hypot(c0.x - c1.x, c0.z - c1.z) < CABECAS) bateu[0] = bateu[1] = true;
+
     p.jogadores.forEach((j, i) => {
       if (!bateu[i]) return;
       const c = d.cobras[i];
+      if (c.escudo > 0) {                                      // primeira batida: gasta o escudo e segue
+        c.escudo--; c.fantasma = T_FANTASMA; c.saindo = true;
+        const naX = Math.abs(c.x) > LX - BORDA, naZ = Math.abs(c.z) > LZ - BORDA;
+        quica(c);
+        if (naX) c.ang = c.z > 0 ? -Math.PI / 2 : Math.PI / 2;      // na cerca: segue ao longo dela, para o lado com mais espaco (nao volta em cima da propria trilha)
+        else if (naZ) c.ang = c.x > 0 ? Math.PI : 0;
+        j.x = c.x; j.z = c.z;
+        j.vy = 5; p.eventos.push('batida');
+        d.aviso = `${quem(p, i)} gastou o escudo!`; d.avisoT = 1.3;     // a TV mostra: o celular nao e o lugar da regra
+        d.fx.push({ x: c.x, z: c.z, i, escudo: true });
+        p.celular[i] = { ...p.celular[i], texto: 'Escudo gasto! A próxima batida perde', vibra: (p.celular[i].vibra ?? 0) + 1 };
+        return;
+      }
       elimina(p, j, 12); j.vx = -Math.cos(c.ang) * 5; j.vz = -Math.sin(c.ang) * 5;
       d.fx.push({ x: c.x, z: c.z, i });
       p.eventos.push('explosao');
@@ -119,7 +149,6 @@ export default {
       m.count = 0; m.frustumCulled = false; grupo.add(m);
       return m;
     });
-    pecas.feitos = [0, 0];
     pecas.aux = { m: new THREE.Matrix4(), pos: new THREE.Vector3(), q: new THREE.Quaternion(), s: new THREE.Vector3(), eixo: new THREE.Vector3(0, 1, 0) };
 
     // cargas em cima da cabeca: 3 raios amarelos (turbo) e 1 seta branca (pulo)
@@ -147,13 +176,14 @@ export default {
     };
     d.trilhas.forEach((pts, i) => {
       const luz = pecas.luz[i], cobra = d.cobras[i];
-      for (let n = Math.max(0, pecas.feitos[i] - 1); n < pts.length - 1; n++) poe(luz, n, pts[n], pts[n + 1]);
+      for (let n = 0; n < pts.length - 1; n++) poe(luz, n, pts[n], pts[n + 1]);      // a cauda anda: redesenha tudo
       poe(luz, pts.length - 1, pts.at(-1), cobra);             // pedaco vivo, ate o boneco
-      pecas.feitos[i] = pts.length; luz.count = pts.length;
+      luz.count = pts.length;
       luz.instanceMatrix.needsUpdate = true;
       luz.material.emissiveIntensity = 0.95 + Math.sin(t * 6 + i * 2) * 0.25;
 
       const j = p.jogadores[i], g = pecas.cargas[i];
+      c.bonecos[i].visible = !(j.vivo && cobra.fantasma > 0 && Math.sin(t * 30) > 0);     // fantasma pisca
       g.visible = j.vivo;
       g.position.set(j.x, 2.5 + j.y + Math.sin(t * 5 + i) * 0.08, j.z);
       g.children.forEach((m, k) => { m.visible = k < CARGAS ? k < cobra.cargas : cobra.pulos > 0; m.rotation.y = t * 4; });
@@ -168,6 +198,7 @@ export default {
     pecas.lampadas.forEach((m, k) => { m.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(t * 3 + k * 1.3)) * 0.8; });
 
     for (const f of d.fx.splice(0)) {
+      if (f.escudo) { c.particulas(f.x, 0.8, f.z, 0x9ff3ff, 20, 7); c.som(520, 0.2, 'triangle', 0.2); continue; }
       c.particulas(f.x, 0.8, f.z, cores[f.i], 34, 12); c.particulas(f.x, 0.8, f.z, 0xffffff, 16, 9);
       c.som(90, 0.4, 'sawtooth', 0.25);
     }

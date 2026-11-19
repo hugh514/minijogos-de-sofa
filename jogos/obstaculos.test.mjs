@@ -33,7 +33,7 @@ test('pista maluca: toda fileira tem passagem e a regra de batida funciona', () 
   const p = partidaCom(jogo); prepara(p);
   const vistas = new Set();
   corre(p, 30, p => { joga(p, 0); joga(p, 1); for (const o of p.dados.pista) vistas.add(o); });
-  assert.ok(vistas.size > 20);
+  assert.ok(vistas.size > 12, 'fileiras vistas: ' + vistas.size);
   for (const o of vistas)
     assert.ok(o.barra || [-2.7, -2, 0, 2, 2.7].some(x => !bate({ ...o, z: Z_BONECO }, x, 0)), 'fileira sem passagem');
 });
@@ -69,6 +69,15 @@ test('pista maluca: o boneco fica na propria raia e parado em z', () => {
   assert.ok(Math.abs(p.jogadores[0].x - CENTRO[0]) <= MEIA - 0.8 + 1e-9);
   assert.ok(Math.abs(p.jogadores[1].x - CENTRO[1]) <= MEIA - 0.8 + 1e-9);
   assert.equal(p.jogadores[0].z, Z_BONECO); assert.equal(p.jogadores[1].z, Z_BONECO);
+});
+
+test('pista maluca: comeco calmo: parado nao apanha antes de 4 s nem sai antes de 8 s', () => {
+  const p = partidaCom(jogo);
+  corre(p, 4, () => {});
+  assert.deepEqual(p.dados.placar, [VIDAS, VIDAS]);
+  corre(p, 4, () => {});
+  assert.equal(p.fase, 'jogando');
+  assert.ok(p.jogadores.every(j => j.vivo));
 });
 
 test('pista maluca: parados perdem as vidas juntos e empatam', () => {

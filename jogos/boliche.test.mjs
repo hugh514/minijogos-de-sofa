@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { entrada, passo } from '../logica.mjs';
 import { partidaCom, roda, fumaca, DT } from '../jogos/_teste.mjs';
-import jogo, { forcaEm } from './boliche.mjs';
+import jogo, { forcaEm, LANCES } from './boliche.mjs';
 
 // Toque no botão com contador: um toque que já chega solto (n subiu e d false).
 function toca(p, i, x = 0) {
@@ -114,40 +114,41 @@ test('boliche: botão ainda apertado quando o lance acaba só conta depois de so
   assert.equal(jog(p, 0).fase, 'mira', 'não começou a segurar sozinho');
 });
 
-test('boliche: pinos voltam em pé a cada lance e o placar soma os três', () => {
+test('boliche: são 5 lances, os pinos voltam em pé a cada um e o placar soma todos', () => {
   const p = cena();
+  assert.equal(LANCES, 5);
   let soma = 0;
-  for (let k = 1; k <= 3; k++) {
+  for (let k = 1; k <= LANCES; k++) {
     joga(p, 0, BOA, 0);
     soma = p.dados.placar[0];
     assert.equal(jog(p, 0).lances, k);
-    if (k < 3) assert.equal(jog(p, 0).pinos.filter(x => x.caido).length, 0, 'pinos reerguidos');
+    if (k < LANCES) assert.equal(jog(p, 0).pinos.filter(x => x.caido).length, 0, 'pinos reerguidos');
   }
   assert.equal(jog(p, 0).fase, 'fim');
   assert.ok(soma > 10, 'mais de uma rodada de pinos somados: ' + soma);
-  toca(p, 0);                       // depois dos 3 lances nada acontece
+  toca(p, 0);                       // depois do último lance nada acontece
   roda(p, 1);
-  assert.equal(jog(p, 0).lances, 3);
+  assert.equal(jog(p, 0).lances, LANCES);
   assert.equal(p.dados.placar[0], soma);
 });
 
 test('boliche: vence o jogador 1 quando o outro só faz canaleta', () => {
   const p = cena();
-  for (let k = 0; k < 3; k++) joga(p, 0);
-  for (let k = 0; k < 3; k++) joga(p, 1, BOA, 1);
+  for (let k = 0; k < LANCES; k++) joga(p, 0);
+  for (let k = 0; k < LANCES; k++) joga(p, 1, BOA, 1);
   assert.equal(p.vencedor, 0);
 });
 
 test('boliche: vence o jogador 2 quando faz mais pinos', () => {
   const p = cena();
-  for (let k = 0; k < 3; k++) joga(p, 0, BOA, 1);
-  for (let k = 0; k < 3; k++) joga(p, 1);
+  for (let k = 0; k < LANCES; k++) joga(p, 0, BOA, 1);
+  for (let k = 0; k < LANCES; k++) joga(p, 1);
   assert.equal(p.vencedor, 1);
 });
 
 test('boliche: lances idênticos nas duas pistas empatam', () => {
   const p = cena();
-  for (let k = 0; k < 3; k++) { joga(p, 0, BOA, 0); joga(p, 1, BOA, 0); }
+  for (let k = 0; k < LANCES; k++) { joga(p, 0, BOA, 0); joga(p, 1, BOA, 0); }
   assert.equal(p.dados.placar[0], p.dados.placar[1]);
   assert.equal(p.vencedor, -1);
 });
@@ -155,15 +156,15 @@ test('boliche: lances idênticos nas duas pistas empatam', () => {
 test('boliche: só um joga e o tempo acaba, o placar decide', () => {
   const p = cena();
   joga(p, 1);
-  roda(p, 45);
-  assert.equal(p.fase, 'jogando', 'ainda dentro do limite de 50 s');
+  roda(p, 50);
+  assert.equal(p.fase, 'jogando', 'ainda dentro do limite de 55 s');
   roda(p, 3);
   assert.equal(p.vencedor, 1);
 });
 
 test('boliche: ninguém joga, empata no limite de tempo', () => {
   const p = cena();
-  roda(p, 49);
+  roda(p, 54);
   assert.equal(p.fase, 'jogando');
   roda(p, 2);
   assert.equal(p.vencedor, -1);

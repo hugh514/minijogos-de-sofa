@@ -1,4 +1,4 @@
-# Padrão visual e de jogo (anti AI slop)
+# Padrão visual e de jogo
 
 Todo minijogo novo ou alterado passa por esta lista antes de entrar na rotação. Cada regra veio de um problema real achado na auditoria de 2026-11-13. "Parece pronto nos testes" não basta: quem joga está no sofá, a 2 ou 3 metros da TV.
 
@@ -26,7 +26,7 @@ Todo minijogo novo ou alterado passa por esta lista antes de entrar na rotação
 
 ## 4. Ritmo e pontuação
 
-- Rodada de 20 a 50 s; jogos de gol podem ir a 55 s. Nenhuma rodada pode acabar em menos de 5 s por um toque sem querer (sumô de 0,8 s, empilha de 0,0 s e sequência de 1,8 s reprovaram).
+- Rodada de 20 a 50 s; jogos de gol podem ir a 55 s. Nenhuma rodada pode acabar em menos de 5 s por um toque sem querer (sumô de 0,8 s, empilha de 0,0 s e sequência de 1,8 s reprovaram). A tela garante isso sozinha: se o minijogo decide antes, o resultado fica guardado e a rodada fecha aos 5 s (`comMinimo`, em `logica.mjs`). Mesmo assim, desenhe o jogo para não decidir tão cedo: os segundos parados até fechar não são jogo.
 - Primeiro erro não elimina: dê uma vida extra, um escudo de 1 s ou uma espera inicial de 0,8 s.
 - Jogo de gol ou ponto vai a um placar que dá virada: 3 gols, 5 pontos ou 10 acertos, com limite de tempo que decide por quem está na frente. "Um gol vence" reprovou (cara ou coroa).
 - Sorte pesa no máximo um terço. Quem joga melhor ganha a maioria das vezes.

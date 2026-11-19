@@ -54,8 +54,8 @@ function atira(p, i, x, z) {
 }
 
 export default {
-  id: 'tiro-alvo', nome: 'Tiro ao alvo',
-  dica: 'Arraste a mira da sua cor e SOLTE o dedo para atirar. Dourado vale 3, bomba vermelha tira 2!',
+  id: 'tiro-alvo', genero: 'mira', nome: 'Tiro ao alvo',
+  dica: 'Arraste a mira da sua cor e solte o dedo para atirar. Dourado vale 3, bomba vermelha tira 2!',
   controle: { modo: 'toque' }, semMovimento: true, semDash: true, semPulo: true, rotulo: 'pontos', duracao: TEMPO,
 
   inicia(p) {
@@ -73,7 +73,7 @@ export default {
     const d = p.dados;
     d.tAviso -= dt;
     if (d.tAviso <= 0) d.aviso = '';
-    if (!d.dobro && p.t >= TEMPO - T_DOBRO) { d.dobro = true; d.aviso = 'ALVOS EM DOBRO!'; d.tAviso = 1.3; p.eventos.push('troca'); }
+    if (!d.dobro && p.t >= TEMPO - T_DOBRO) { d.dobro = true; d.aviso = 'Alvos em dobro!'; d.tAviso = 1.3; p.eventos.push('troca'); }
 
     // alvos: nascem, andam (os dourados) e somem sozinhos
     d.nasce -= dt;

@@ -26,11 +26,30 @@ test('lanterna: papeis sorteados e ditos no celular de cada um', () => {
   assert.equal(papeis.size, 2, 'o sorteio cai nos dois jogadores');
 });
 
-test('lanterna: Cacador encosta no Fugitivo e vence', () => {
+test('lanterna: o primeiro toque nao acaba: o Fugitivo pisca, fica imune um instante e o segundo toque vence', () => {
   const p = cena(3, 0), d = p.dados;
-  for (let k = 0; k < 120 && p.fase === 'jogando'; k++) { entrada(p, d.cac, { x: 1, y: 0 }); passo(p, DT); }
+  for (let k = 0; k < 120 && d.pegou === 0; k++) { entrada(p, d.cac, { x: 1, y: 0 }); passo(p, DT); }
+  assert.equal(d.pegou, 1, 'primeiro toque conta');
+  assert.equal(p.fase, 'jogando');
+  assert.ok(p.jogadores[d.fug].vivo);
+  assert.equal(d.visto, true, 'o toque denuncia o Fugitivo');
+  Object.assign(p.jogadores[d.fug], { x: p.jogadores[d.cac].x + 1.2, z: p.jogadores[d.cac].z, vx: 0, vz: 0 });
+  passo(p, DT);
+  assert.equal(d.pegou, 1, 'imune logo depois do toque');
+  roda(p, 1.6);
+  for (let k = 0; k < 240 && p.fase === 'jogando'; k++) {
+    const c = p.jogadores[d.cac], f = p.jogadores[d.fug];
+    entrada(p, d.cac, { x: Math.sign(f.x - c.x), y: Math.sign(f.z - c.z) }); passo(p, DT);
+  }
   assert.equal(p.vencedor, d.cac);
   assert.equal(p.jogadores[d.fug].vivo, false, 'o Fugitivo voa');
+});
+
+test('lanterna: os papeis aparecem na TV no comeco', () => {
+  const p = partidaCom(jogo), d = p.dados;
+  passo(p, DT);
+  assert.match(d.aviso, new RegExp(`Jogador ${d.cac + 1} caça`));
+  assert.match(jogo.dica, /2 vezes/);
 });
 
 test('lanterna: 30 s sem encostar, o Fugitivo vence', () => {
@@ -59,15 +78,16 @@ test('lanterna: a luz vira para onde o Cacador anda', () => {
   assert.equal(d.visto, true);
 });
 
-test('lanterna: empurrao e batida na parede denunciam por um instante', () => {
+test('lanterna: o Fugitivo nao tem botao A (so denunciava) e a batida na parede o denuncia por um instante', () => {
   let p = cena(-5, 0), d = p.dados;
+  assert.equal(p.celular[d.fug].a, '', 'celular do Fugitivo sem o botao A');
+  assert.equal(p.celular[d.cac].a, undefined, 'o Cacador continua com o dele');
   entrada(p, d.fug, { x: 0, y: 0, n: 0 });
-  entrada(p, d.fug, { x: 0, y: -1, n: 1 }); passo(p, DT); passo(p, DT);
-  assert.equal(d.visto, true, 'o empurrao solta faisca');
-  assert.ok(d.faiscas.length > 0);
-  entrada(p, d.fug, { x: 0, y: 0, n: 1 });
+  entrada(p, d.fug, { x: 0, y: -1, n: 1 }); roda(p, 0.3);
+  assert.equal(p.jogadores[d.fug].empurroes, 0, 'nem pelo teclado o Fugitivo empurra');
+  assert.equal(d.visto, false, 'e nao se denuncia');
   roda(p, 1.5);
-  assert.equal(d.visto, false, 'e some de novo');
+  assert.equal(d.visto, false);
 
   p = cena(-7, 0); d = p.dados;
   let visto = false;
@@ -110,10 +130,20 @@ test('lanterna: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   assert.equal(vencedores.length, 15);
 });
 
-test('lanterna: com a carta dash o empurrao tambem denuncia', () => {
+test('lanterna: mesmo com a carta dash o Fugitivo nao empurra', () => {
   const p = cena(-5, 0), d = p.dados;
   p.jogadores[d.fug].carta = 'dash';
   entrada(p, d.fug, { x: 0, y: 0, n: 0 });
-  entrada(p, d.fug, { x: 0, y: -1, n: 1 }); passo(p, DT); passo(p, DT);
-  assert.ok(d.faiscas.length > 0, 'o empurrao solta faisca');
+  entrada(p, d.fug, { x: 0, y: -1, n: 1 }); roda(p, 0.3);
+  assert.equal(p.jogadores[d.fug].empurroes, 0);
+  assert.equal(d.faiscas.length, 0);
+});
+
+test('lanterna: parado, o Fugitivo some de vez; andando, o contorno volta', () => {
+  const p = cena(-5, 0), d = p.dados;
+  roda(p, 1);
+  assert.ok(d.quieto >= 0.5, 'parado ha mais de meio segundo: sem contorno');
+  for (let k = 0; k < 5; k++) { entrada(p, d.fug, { x: 0, y: 1 }); passo(p, DT); }
+  assert.equal(d.quieto, 0, 'andou: o contorno volta');
+  assert.match(jogo.dica, /Parado/);
 });

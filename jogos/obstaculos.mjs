@@ -4,7 +4,7 @@ import { RAIO, elimina, quemSobrou, maiorPlacar } from '../logica.mjs';
 
 export const CENTRO = [-4.5, 4.5], MEIA = 3.5, Z_BONECO = 4.5, Z_NASCE = -7.4, Z_SOME = 6.2;
 export const VIDAS = 3, LIMITE = 45, T_IMUNE = 1;
-const V0 = 6, ACELERA = 0.17, FOLGA = 0.55, ALTURA_BARRA = 0.45;
+const V0 = 4.5, ACELERA = 0.15, FOLGA = 0.55, ALTURA_BARRA = 0.45;
 export const velocidade = t => V0 + ACELERA * t;
 
 // Fileiras possiveis: uma barra baixa de ponta a ponta ou blocos altos (intervalos de x dentro da raia).
@@ -20,14 +20,14 @@ export function bate(o, x, y) {
 }
 
 export default {
-  id: 'obstaculos', nome: 'Pista maluca', dica: 'Desvie dos blocos vermelhos e pule as barras amarelas. Quem perder as 3 vidas sai voando!',
+  id: 'obstaculos', genero: 'reflexo', nome: 'Pista maluca', dica: 'Joystick desvia dos blocos vermelhos, B pula as barras amarelas. Perdeu as 3 vidas, sai voando!',
   rotulo: 'vidas', duracao: LIMITE, semDash: true,
   controle: { modo: 'padrao', a: '· · ·', b: 'PULA' },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 8.5, lz: 8, parede: true };
     p.jogadores.forEach((j, i) => { j.x = CENTRO[i]; j.z = Z_BONECO; j.turbo = 1.5; });
-    p.dados = { pista: [], falta: 6, andou: 0, placar: [VIDAS, VIDAS], imune: [0, 0], fx: [] };
+    p.dados = { pista: [], falta: 10, andou: 0, placar: [VIDAS, VIDAS], imune: [0, 0], fx: [] };
   },
 
   atualiza(p, dt) {
@@ -36,7 +36,7 @@ export default {
     if (d.falta <= 0) {                                        // nova fileira, igual para os dois
       const o = p.rng() < 0.3 ? { barra: true } : PADROES[Math.floor(p.rng() * PADROES.length) % PADROES.length];
       d.pista.push({ ...o, z: Z_NASCE });
-      d.falta += 9 - Math.min(2, p.t * 0.04);
+      d.falta += 12 - Math.min(4, p.t * 0.08);
     }
     for (const o of d.pista) o.z += v * dt;
     d.pista = d.pista.filter(o => o.z < Z_SOME);

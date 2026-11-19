@@ -26,14 +26,15 @@ try {
   $fonte = Join-Path $tmp 'fonte'
   New-Item -ItemType Directory -Force $fonte | Out-Null
   git archive --format=zip -o (Join-Path $tmp 'fonte.zip') HEAD
+  if ($LASTEXITCODE -ne 0) { throw 'git archive falhou' }
   Expand-Archive (Join-Path $tmp 'fonte.zip') -DestinationPath $fonte
 
   foreach ($a in 'server.js', 'tela.html', 'controle.html', 'logica.mjs', 'JOGAR.bat', 'LICENSE', 'package.json') {
     Copy-Item (Join-Path $fonte $a) $pacote
   }
-  Copy-Item (Join-Path $fonte 'jogos') $pacote -Recurse
+  foreach ($pasta in 'jogos', 'fontes', 'modelos') { Copy-Item (Join-Path $fonte $pasta) $pacote -Recurse }
   Get-ChildItem (Join-Path $pacote 'jogos') -Filter '*.test.mjs' | Remove-Item
-  Get-ChildItem (Join-Path $pacote 'jogos') -Filter '_*' | Remove-Item
+  Get-ChildItem (Join-Path $pacote 'jogos') -Filter '_*' | Remove-Item -Recurse
   @"
 Minijogos de Sofa
 =================
@@ -45,7 +46,8 @@ Minijogos de Sofa
 4. Nos celulares, no mesmo Wi-Fi, leia o QR code da tela ou abra o endereco que aparece.
 
 Projeto, prints e codigo: https://github.com/hugh514/minijogos-de-sofa
-Licencas: LICENSE (o jogo), node\LICENSE (Node.js), node_modules\three\LICENSE (three.js).
+Licencas: LICENSE (o jogo), node\LICENSE (Node.js), node_modules\three\LICENSE (three.js),
+fontes\OFL.txt (fonte Baloo 2) e modelos\*\License.txt (modelos 3D da Kenney, CC0).
 "@ | Set-Content (Join-Path $pacote 'LEIA-ME.txt') -Encoding utf8
 
   # 2. three.js na versao do lockfile
@@ -56,6 +58,12 @@ Licencas: LICENSE (o jogo), node\LICENSE (Node.js), node_modules\three\LICENSE (
   New-Item -ItemType Directory -Force (Join-Path $destThree 'build') | Out-Null
   Copy-Item (Join-Path $three 'build\three.module.js'), (Join-Path $three 'build\three.core.js') (Join-Path $destThree 'build')
   Copy-Item (Join-Path $three 'LICENSE'), (Join-Path $three 'package.json') $destThree
+  # carregador de modelos glTF: os tres arquivos que o server.js serve em /three/addons/
+  foreach ($addon in 'loaders/GLTFLoader.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js') {
+    $destino = Join-Path $destThree "examples/jsm/$addon"
+    New-Item -ItemType Directory -Force (Split-Path -Parent $destino) | Out-Null
+    Copy-Item (Join-Path $three "examples/jsm/$addon") $destino
+  }
 
   # 3. Node oficial, conferido pelo hash fixado
   $nomeZip = "node-v$NODE_VERSAO-win-x64.zip"

@@ -31,14 +31,15 @@ test('esconderijo: so o Esconde escolhe; depois so ele sabe a caixa e o Procura 
   assert.doesNotMatch(d.aviso, /Vermelha|Amarela|Verde|Roxa/, 'a tela nao entrega a caixa');
 });
 
-test('esconderijo: achar de primeira ou no segundo palpite da ponto ao Procura', () => {
+test('esconderijo: achar de primeira vale 2 pontos e no segundo palpite vale 1', () => {
   for (const palpites of [[2], [0, 2]]) {
     const p = partidaCom(jogo), d = p.dados, e = d.esconde, r = 1 - e;
     escolhe(p, e, 2);
     for (const op of palpites) escolhe(p, r, op);
     assert.equal(d.fase, 'revela');
     assert.equal(d.achou, true);
-    assert.equal(d.placar[r], 1);
+    assert.equal(d.placar[r], palpites.length === 1 ? 2 : 1);
+    assert.match(d.aviso, palpites.length === 1 ? /De primeira: 2 pontos/ : /Ponto do Jogador/);
   }
 });
 
@@ -77,7 +78,7 @@ test('esconderijo: 1 a 1 leva ao desempate, que decide', () => {
   assert.equal(p.vencedor, undefined);
   assert.equal(d.round, 3);
   passo(p, DT);
-  assert.match(d.aviso, /DESEMPATE/);
+  assert.match(d.aviso, /Desempate/);
   const e = d.esconde;
   escolhe(p, e, 1); escolhe(p, 1 - e, 1);                     // Procura acha
   roda(p, 1.7);

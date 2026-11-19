@@ -15,9 +15,19 @@ const ARQUIVOS = {
   '/logica.mjs': ['logica.mjs', JS],
   '/three/three.module.js': ['node_modules/three/build/three.module.js', JS],
   '/three/three.core.js': ['node_modules/three/build/three.core.js', JS],
+  // carregador de modelos glTF (o importmap da tela aponta 'three/addons/' para ca); so o que o GLTFLoader importa
+  '/three/addons/loaders/GLTFLoader.js': ['node_modules/three/examples/jsm/loaders/GLTFLoader.js', JS],
+  '/three/addons/utils/BufferGeometryUtils.js': ['node_modules/three/examples/jsm/utils/BufferGeometryUtils.js', JS],
+  '/three/addons/utils/SkeletonUtils.js': ['node_modules/three/examples/jsm/utils/SkeletonUtils.js', JS],
 };
 const PASTA_JOGOS = path.join(__dirname, 'jogos');
+const PASTA_MODELOS = path.join(__dirname, 'modelos');
+const MODELO = /^\/modelos\/([a-z0-9_-]+)\/([a-z0-9_-]+)\.(glb|png)$/;     // so modelos/<pacote>/<arquivo>.glb ou .png (a textura); licenca e o resto nao saem
+const TIPO_MODELO = { glb: 'model/gltf-binary', png: 'image/png' };
 const NOME_JOGO = /^[a-z0-9-]+\.mjs$/;          // so minijogos prontos; testes e apoio (_x, x.test) ficam de fora
+const PASTA_FONTES = path.join(__dirname, 'fontes');
+const FONTE = /^\/fontes\/([a-z0-9_-]+)\.woff2$/;    // so fontes/<nome>.woff2; a licenca OFL fica ao lado e nao sai
+const COMANDOS = ['pula', 'reinicia', 'menu', 'continua'];      // o que o Jogador 1 pode pedir pela pausa do celular
 
 let telas = [];
 const SLOTS = 4;                                // de 1 a 4 jogadores (o Classico usa so os dois primeiros)
@@ -116,7 +126,24 @@ function websocket(req, socket) {
 const servidor = http.createServer((req, res) => {
   const [url, consulta = ''] = req.url.split('?');
   if (Object.hasOwn(ARQUIVOS, url)) return arquivo(res, path.join(__dirname, ARQUIVOS[url][0]), ARQUIVOS[url][1]);
+  const modelo = MODELO.exec(url);
+  if (modelo) {
+    const caminho = path.join(PASTA_MODELOS, modelo[1], modelo[2] + '.' + modelo[3]);
+    if (!fs.existsSync(caminho)) { res.writeHead(404); return res.end(); }
+    return arquivo(res, caminho, TIPO_MODELO[modelo[3]]);
+  }
+  const fonte = FONTE.exec(url);
+  if (fonte) {
+    const caminho = path.join(PASTA_FONTES, fonte[1] + '.woff2');
+    if (!fs.existsSync(caminho)) { res.writeHead(404); return res.end(); }
+    return arquivo(res, caminho, 'font/woff2');
+  }
   if (url === '/ip') return res.end(`http://${ip()}:${PORT}/c`);
+
+  if (url === '/lugares' && req.method === 'GET') {     // quais lugares tem celular conectado agora (a escolha do lugar no celular mostra "ocupado")
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    return res.end(JSON.stringify(celulares.map(c => c.size > 0)));
+  }
 
   if (url === '/jogos') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
@@ -191,10 +218,29 @@ const servidor = http.createServer((req, res) => {
     return res.end('ok');
   }
 
-  if (url === '/pausa' && req.method === 'POST') {    // botao de pausa do celular
-    for (const t of telas) manda(t, JSON.stringify({ pausa: true }));
-    req.resume();
-    return res.end('ok');
+  if (url === '/pausa' && req.method === 'POST') {    // botao de pausa do celular; corpo opcional { j, continua }: quem pediu e se e so para continuar
+    let corpo = '', grande = false;
+    req.on('data', d => { corpo += d; if (corpo.length > 100) { grande = true; req.destroy(); } });
+    req.on('end', () => {
+      if (grande) return;
+      let m = {};
+      try { m = corpo ? JSON.parse(corpo) : {}; } catch {}
+      const msg = { pausa: true };
+      if (slot(m?.j)) msg.j = m.j;
+      if (m?.continua === true) msg.continua = true;
+      for (const t of telas) manda(t, JSON.stringify(msg));
+      res.end('ok');
+    });
+    return;
+  }
+
+  if (url === '/comando' && req.method === 'POST') {  // pausa do celular do Jogador 1: pular, recomecar, voltar ao menu ou continuar
+    leCorpo(req, 100, m => {
+      if (m?.j !== 1 || !COMANDOS.includes(m.c)) return;
+      for (const t of telas) manda(t, JSON.stringify({ comando: m.c }));
+    });
+    req.on('end', () => res.end('ok'));
+    return;
   }
 
   if (url === '/tela' && req.method === 'POST') {     // { c: [estado do jogador 1, 2, 3 e 4] }

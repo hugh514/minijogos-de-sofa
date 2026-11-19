@@ -4,7 +4,7 @@ import { posiciona } from '../logica.mjs';
 const META = 6, PUXAO = 0.32, ESCORREGA = 1.1, LIMITE = 45;
 
 export default {
-  id: 'cabo', nome: 'Cabo de guerra', dica: 'Aperte rápido para puxar. Na luz VERMELHA, pare: quem apertar escorrega!',
+  id: 'cabo', genero: 'reflexo', nome: 'Cabo de guerra', dica: 'Aperte rápido para puxar. Na luz vermelha, pare: quem apertar escorrega!',
   semMovimento: true, controle: { modo: 'botao', a: 'PUXA!' },
 
   inicia(p) {
@@ -22,7 +22,7 @@ export default {
       p.eventos.push('troca');
       for (const i of [0, 1]) p.celular[i] = { vibra: (p.celular[i].vibra ?? 0) + (d.vermelho ? 1 : 0) };
     }
-    d.aviso = d.vermelho ? 'PARE!' : ''; d.avisoCor = '#ff4a4a';
+    d.aviso = d.vermelho ? 'Pare!' : ''; d.avisoCor = '#ff4a4a';
     p.jogadores.forEach((j, i) => {
       const lado = i ? 1 : -1;                    // cada um puxa para o seu lado
       if (j.apertouA) d.corda += lado * j.apertouA * (d.vermelho ? -ESCORREGA : PUXAO);

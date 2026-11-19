@@ -35,8 +35,8 @@ const PORTOES = [
 ];
 
 export default {
-  id: 'corrida', nome: 'Corrida de voltas', dica: 'Dê 3 voltas na pista. A grama freia, o óleo escorrega e a seta amarela acelera!',
-  rotulo: 'voltas', semPulo: true, controle: { modo: 'padrao', a: 'EMPURRA', b: '' },
+  id: 'corrida', genero: 'corrida', nome: 'Corrida de voltas', dica: 'Dê 3 voltas na pista. A grama freia, o óleo escorrega e a seta amarela acelera!',
+  rotulo: 'voltas', semPulo: true, duracao: LIMITE, controle: { modo: 'padrao', a: 'EMPURRA', b: '' },
 
   inicia(p) {
     p.arena = { tipo: 'ret', lx: 11, lz: 8.5, parede: true };
@@ -79,7 +79,7 @@ export default {
         if (d.prox[i] === 0) {
           d.placar[i]++; p.eventos.push('moeda'); fx(d, j.x, j.z, i, 16);
           if (d.placar[i] >= VOLTAS) venceu ??= i;
-          else if (d.placar[i] === VOLTAS - 1 && d.placar[1 - i] < VOLTAS - 1) { d.aviso = 'ÚLTIMA VOLTA!'; d.avisoCor = '#ffd84d'; d.tAviso = 1.5; }
+          else if (d.placar[i] === VOLTAS - 1 && d.placar[1 - i] < VOLTAS - 1) { d.aviso = 'Última volta!'; d.avisoCor = '#ffd84d'; d.tAviso = 1.5; }
         }
         d.prox[i] = (d.prox[i] + 1) % 4;
       }

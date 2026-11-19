@@ -1,5 +1,6 @@
 // Esconde no escuro: o Fugitivo fica invisivel na tela e so aparece dentro do cone de luz do Cacador,
-// ou por um instante quando bate em algo ou da o empurrao. O rastro de pegadas dura 1 s.
+// ou por um instante quando bate em algo. O rastro de pegadas dura 1 s. Na TV so um contorno fraco marca onde o Fugitivo esta
+// (ele precisa se enxergar); o Fugitivo nao tem botao A, que so servia para se denunciar.
 import { posiciona, elimina, RAIO } from '../logica.mjs';
 
 const TEMPO = 30, RAIO_ARENA = 9;
@@ -9,6 +10,8 @@ const R_PILAR = 0.7, N_PILARES = 5;
 const T_PEGADA = 1, PASSO = 0.9;                     // pegada some em 1 s; uma a cada 0.9 de caminho
 const T_FLAGRA = 0.6, BATIDA_MIN = 4;                // tempo que a faisca denuncia; velocidade minima da batida
 const PERTO = 4.5, QUENTE = 5;
+const T_QUIETO = 0.5, V_QUIETO = 0.6;               // parado por 0.5 s o Fugitivo some de vez (nem o contorno fica)
+const TOQUES = 2, T_IMUNE = 1.5, T_PAPEIS = 2.5;    // toques para pegar; depois do 1o o Fugitivo fica imune e visivel
 
 function difAng(a, b) {                              // menor diferenca entre dois angulos, de -PI a PI
   let d = (a - b) % (Math.PI * 2);
@@ -20,8 +23,8 @@ function difAng(a, b) {                              // menor diferenca entre do
 function vibra(p, i) { p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 }; }
 
 export default {
-  id: 'lanterna', nome: 'Esconde no escuro',
-  dica: 'O Caçador tem 30 s para encostar no Fugitivo invisível. Seu papel está no celular!',
+  id: 'lanterna', genero: 'blefe', nome: 'Esconde no escuro',
+  dica: 'O Caçador tem 30 s para encostar 2 vezes no Fugitivo invisível. Parado, o Fugitivo some de vez!',
   controle: { modo: 'padrao', a: 'EMPURRA', b: '' }, semPulo: true, duracao: TEMPO,
 
   inicia(p) {
@@ -37,20 +40,31 @@ export default {
     p.dados = {
       cac, fug, pilares,
       ang: Math.atan2(-c.z, -c.x),                   // a lanterna comeca apontada para o centro
-      visto: false, flagra: 0, pegadas: [], caminho: 0, lado: 1, faiscas: [],
-      vibraFug: 0, vibraCac: 2, empAntes: 0, velAntes: { vx: 0, vz: 0 },
+      visto: false, flagra: 0, quieto: 0, pegadas: [], caminho: 0, lado: 1, faiscas: [],
+      vibraFug: 0, vibraCac: 2, velAntes: { vx: 0, vz: 0 },
+      pegou: 0, imune: 0, aviso: '', avisoCor: '#ffffff', inventario: [[], []],
     };
+    p.dados.inventario[cac] = [`Faltam ${TOQUES}`];
+    p.jogadores[fug].cd = 1e9;                       // sem empurrao para o Fugitivo (a recarga nunca zera)
     p.jogadores[cac].turbo = 0.9; p.jogadores[fug].turbo = 0.8;
-    p.celular[cac] = { texto: 'Você é o CAÇADOR: ilumine e encoste no outro!', vibra: 0 };
-    p.celular[fug] = { texto: 'Você é o FUGITIVO: invisível! Fuja da luz por 30 s', vibra: 0 };
+    p.celular[cac] = { texto: 'Você é o CAÇADOR: ilumine e encoste 2 vezes no outro!', vibra: 0 };
+    p.celular[fug] = { texto: 'Você é o FUGITIVO: parado você some de vez, mas andando deixa o contorno!', a: '', vibra: 0 };
   },
 
   atualiza(p, dt) {
     const d = p.dados, c = p.jogadores[d.cac], f = p.jogadores[d.fug];
-    if (p.tocou) {
-      elimina(p, f, 12); p.eventos.push('explosao');
+    d.imune -= dt;
+    if (p.t < T_PAPEIS) { d.aviso = `Jogador ${d.cac + 1} caça! Jogador ${d.fug + 1} foge!`; d.avisoCor = '#ffe066'; }
+    else if (d.imune <= 0) d.aviso = '';
+    if (p.tocou && d.imune <= 0) {
+      d.pegou++; d.inventario[d.cac] = [`Falta ${TOQUES - d.pegou}`];
       d.visto = true; d.faiscas.push({ x: f.x, z: f.z, n: 24 });
-      return d.cac;
+      if (d.pegou >= TOQUES) { elimina(p, f, 12); p.eventos.push('explosao'); return d.cac; }
+      d.imune = T_IMUNE; d.flagra = T_IMUNE;      // pisca e foge: o toque seguinte so vale depois
+      const dx = f.x - c.x, dz = f.z - c.z, n = Math.hypot(dx, dz) || 1;
+      f.vx = dx / n * 9; f.vz = dz / n * 9;
+      d.aviso = 'Pegou 1! Falta 1'; d.avisoCor = '#ff8a3d';
+      p.eventos.push('batida'); vibra(p, d.fug);
     }
 
     // pilares: seguram os dois; batida forte do Fugitivo solta faisca
@@ -67,13 +81,12 @@ export default {
     // parede: o motor ja segurou; a batida se ve pela velocidade que ele tinha indo para fora
     const distF = Math.hypot(f.x, f.z);
     if (distF >= RAIO_ARENA - RAIO - 0.01 && (d.velAntes.vx * f.x + d.velAntes.vz * f.z) / distF > BATIDA_MIN) bateu = true;
-    const empurrou = f.empurroes > d.empAntes;         // o contador subiu: acabou de dar o empurrao
     d.flagra -= dt;
-    if ((bateu || empurrou) && d.flagra < T_FLAGRA - 0.3) {
+    if (bateu && d.flagra < T_FLAGRA - 0.3) {
       d.flagra = T_FLAGRA; d.faiscas.push({ x: f.x, z: f.z, n: 12 });
-      if (bateu) p.eventos.push('batida');
+      p.eventos.push('batida');
     }
-    d.empAntes = f.empurroes; d.velAntes = { vx: f.vx, vz: f.vz };
+    d.velAntes = { vx: f.vx, vz: f.vz };
 
     // lanterna: vira para onde o Cacador anda
     const vel = Math.hypot(c.vx, c.vz);
@@ -90,6 +103,7 @@ export default {
     for (const pg of d.pegadas) pg.t += dt;
     d.pegadas = d.pegadas.filter(pg => pg.t < T_PEGADA);
     const velF = Math.hypot(f.vx, f.vz);
+    d.quieto = velF < V_QUIETO ? d.quieto + dt : 0;
     d.caminho += velF * dt;
     if (d.caminho >= PASSO && velF > 0.01) {
       d.caminho = 0; d.lado = -d.lado;
@@ -128,6 +142,12 @@ export default {
     pecas.cone.add(leque, borda); pecas.cone.position.y = 0.05;
     pecas.leque = leque;
     grupo.add(pecas.breu, pecas.cone);
+    // contorno fraco do Fugitivo: arame da esfera e anel no chao, na cor dele. Some quando a luz o revela.
+    pecas.contorno = new THREE.Group();
+    const arame = new THREE.Mesh(new THREE.SphereGeometry(RAIO * 1.05, 14, 10), new THREE.MeshBasicMaterial({ color: cores[d.fug], wireframe: true, transparent: true, opacity: 0.3, depthWrite: false }));
+    const aro = new THREE.Mesh(new THREE.TorusGeometry(RAIO * 1.25, 0.05, 6, 28), new THREE.MeshBasicMaterial({ color: cores[d.fug], transparent: true, opacity: 0.4, depthWrite: false }));
+    aro.rotation.x = Math.PI / 2; aro.position.y = -RAIO + 0.08;
+    pecas.contorno.add(arame, aro); grupo.add(pecas.contorno);
     const CORES_PILAR = [0xffc531, 0x35c26b, 0x9b5cf6, 0xff7a2f, 0x22c7d6];
     d.pilares.forEach((pl, k) => {
       const cor = CORES_PILAR[k % CORES_PILAR.length];
@@ -140,6 +160,10 @@ export default {
     const { THREE, p, pecas, cores } = c, d = p.dados, cac = p.jogadores[d.cac];
     const jogando = p.fase === 'jogando';
     c.bonecos[d.fug].visible = !jogando || d.visto;          // na intro e no resultado todo mundo aparece
+    const fug = p.jogadores[d.fug];
+    pecas.contorno.visible = jogando && !d.visto && fug.vivo && d.quieto < T_QUIETO;
+    pecas.contorno.position.set(fug.x, RAIO + fug.y, fug.z);
+    pecas.contorno.rotation.y = t * 0.8;
     pecas.breu.material.opacity = jogando ? 0.72 : 0.35;
     pecas.cone.visible = cac.vivo;
     pecas.cone.position.set(cac.x, 0.05, cac.z);

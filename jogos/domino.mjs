@@ -1,10 +1,15 @@
 // Dominó: aperte A no ritmo da batida para pôr a próxima peça. Peça fora do ritmo sai torta e quebra a cascata ali.
 // Ao fim de 20 s (ou quando você aperta B) a sua fileira é derrubada, uma peça por vez. Derrubou mais, ganhou.
 const N = 26, OFF = 0.8, PER = 0.7, TOL = 0.12, TEMPO = 20;       // peças por fileira, primeira batida, intervalo, tolerância, tempo
+const ACEL = 0.008;                                                // o ritmo acelera: cada intervalo é 0.008 s menor que o anterior
 const INT = 0.12, FINAL = 1, ESP = 0.68, X0 = -8.5, ZF = [-3, 3], X_BONECO = -10;
 const SEGURA = 1;                                                  // segundos segurando B para derrubar a fileira
 const S = 1.5;                                                     // tamanho das peças
 const TOMBO = 1.25;                                                // inclinação final de uma peça caída (rad)
+
+// Instante da batida k (o intervalo encurta a cada batida) e a batida mais próxima de t.
+const batidaEm = k => OFF + k * PER - ACEL * k * (k - 1) / 2;
+const maisPerto = t => { let m = 0; for (let k = 1; k <= N + 2; k++) if (Math.abs(t - batidaEm(k)) < Math.abs(t - batidaEm(m))) m = k; return m; };
 
 // Quantas peças caem se a fileira for derrubada agora: as retas antes da primeira torta.
 const corteDe = fila => { const k = fila.findIndex(x => x.torta); return k < 0 ? fila.length : k; };
@@ -18,8 +23,8 @@ function derruba(d, i) {
 // Um toque de A: confere se caiu perto de uma batida ainda não usada por este jogador.
 function aperta(p, d, i) {
   const fila = d.fila[i], topo = fila[fila.length - 1];
-  const k = Math.round((p.t - OFF) / PER);
-  const noRitmo = k >= 0 && Math.abs(p.t - OFF - k * PER) <= TOL && k !== d.ult[i];
+  const k = maisPerto(p.t);
+  const noRitmo = Math.abs(p.t - batidaEm(k)) <= TOL && k !== d.ult[i];
   if (noRitmo) {
     d.ult[i] = k;
     if (topo?.torta) { topo.torta = false; topo.t = p.t; d.fx.push({ tipo: 'conserta', i, k: fila.length - 1 }); }
@@ -32,7 +37,7 @@ function aperta(p, d, i) {
 }
 
 export default {
-  id: 'domino', nome: 'Dominó', dica: 'Aperte A no ritmo para pôr peças. Fora do ritmo, a peça entorta! Segure B para derrubar tudo.',
+  id: 'domino', genero: 'ritmo', nome: 'Dominó', dica: 'Aperte A no ritmo, que vai acelerando. Fora do ritmo, a peça entorta! Segure B para derrubar tudo.',
   controle: { modo: 'padrao', a: 'PEÇA', b: 'DERRUBA', joystick: false }, semMovimento: true, rotulo: 'peças', duracao: TEMPO,
 
   inicia(p) {
@@ -47,8 +52,7 @@ export default {
 
   atualiza(p, dt) {
     const d = p.dados;
-    const k = Math.floor((p.t - OFF) / PER);                       // marca a batida (som)
-    if (k > d.bat) { d.bat = k; if (k >= 0) p.eventos.push('troca'); }
+    while (batidaEm(d.bat + 1) <= p.t && d.bat < N + 2) { d.bat++; p.eventos.push('troca'); }   // marca a batida (som)
 
     p.jogadores.forEach((j, i) => {
       j.vx = j.vz = 0; j.x = X_BONECO; j.z = ZF[i];
@@ -80,7 +84,12 @@ export default {
 
     if (d.estado.every(e => e === 'fim')) {
       d.fim += dt;
-      if (d.fim >= FINAL) { const [a, b] = d.placar; return a === b ? -1 : a > b ? 0 : 1; }
+      if (d.fim >= FINAL) {
+        const [a, b] = d.placar;
+        if (a !== b) return a > b ? 0 : 1;
+        const [ta, tb] = [0, 1].map(i => d.fila[i][N - 1]?.t);           // as duas fileiras completas: quem fechou primeiro vence
+        return ta !== undefined && tb !== undefined && ta !== tb ? (ta < tb ? 0 : 1) : -1;
+      }
     }
   },
 
@@ -101,7 +110,7 @@ export default {
 
   desenha(c, dt, t) {
     const p = c.p, d = p.dados, { THREE, pecas } = c;
-    const fase = ((p.t - OFF) / PER) % 1, batida = Math.max(0, 1 - Math.abs(fase < 0 ? fase + 1 : fase) * 6);
+    const kb = maisPerto(p.t), per = PER - ACEL * kb, batida = Math.max(0, 1 - Math.abs(p.t - batidaEm(kb)) / per * 6);
     pecas.pulso.material.emissiveIntensity = 0.3 + batida * 3;
     pecas.pulso.scale.z = 1 + batida * 2;
 

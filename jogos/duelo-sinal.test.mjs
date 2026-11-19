@@ -22,7 +22,7 @@ test('duelo-sinal: o verde chega entre 2 e 6 s com luz e aviso', () => {
   assert.notEqual(p.dados.luz, 'verde');
   ateVerde(p);
   assert.equal(p.dados.luz, 'verde');
-  assert.equal(p.dados.aviso, 'JÁ!');
+  assert.equal(p.dados.aviso, 'Já!');
 });
 
 test('duelo-sinal: quem aperta antes do verde perde o round', () => {
@@ -34,7 +34,7 @@ test('duelo-sinal: quem aperta antes do verde perde o round', () => {
   assert.ok(p.jogadores[0].vy > 0 || p.jogadores[0].y > 0, 'quem queimou pula para trás');
 });
 
-test('duelo-sinal: o primeiro a apertar no verde ganha o round, melhor de 3', () => {
+test('duelo-sinal: o primeiro a apertar no verde ganha o round, quem fizer 3 vence', () => {
   const p = nova();
   ateVerde(p); aperta(p, 1); passo(p, DT);
   assert.deepEqual(p.dados.placar, [0, 1]);
@@ -43,13 +43,25 @@ test('duelo-sinal: o primeiro a apertar no verde ganha o round, melhor de 3', ()
   assert.deepEqual(p.dados.placar, [0, 1]);
   roda(p, 2);
   assert.equal(p.dados.fase, 'espera');
-  ateVerde(p); aperta(p, 0); passo(p, DT);
-  assert.deepEqual(p.dados.placar, [1, 1]);
-  roda(p, 2);
+  for (const [quem, placar] of [[0, [1, 1]], [1, [1, 2]], [0, [2, 2]]]) {
+    ateVerde(p); aperta(p, quem); passo(p, DT);
+    assert.deepEqual(p.dados.placar, placar);
+    assert.equal(p.vencedor, undefined, 'com 2 ainda não acabou');
+    roda(p, 2);
+  }
   ateVerde(p); aperta(p, 1); passo(p, DT);
-  assert.deepEqual(p.dados.placar, [1, 2]);
+  assert.deepEqual(p.dados.placar, [2, 3]);
   assert.equal(p.vencedor, 1);
   assert.equal(p.jogadores[0].vivo, false, 'o perdedor sai voando');
+});
+
+test('duelo-sinal: avisos em caixa normal', () => {
+  const p = nova();
+  roda(p, 0.5);
+  assert.equal(p.dados.aviso, 'Preparar...');
+  aperta(p, 0); passo(p, DT);
+  assert.equal(p.dados.aviso, 'Queimou a largada!');
+  assert.doesNotMatch(jogo.dica, /VERDE/);
 });
 
 test('duelo-sinal: os dois no mesmo quadro no verde, ninguém pontua', () => {
@@ -65,7 +77,7 @@ test('duelo-sinal: sinais falsos nunca acendem o verde e vibram o celular', () =
   p.dados.falsos = [{ t: 1, tipo: 'amarela', quem: 2 }, { t: 2, tipo: 'vibra', quem: 0 }, { t: 3, tipo: 'quase', quem: 2 }];
   roda(p, 1.2); assert.equal(p.dados.luz, 'amarela');
   roda(p, 1); assert.equal(p.celular[0].vibra, 1); assert.equal(p.celular[1].vibra, undefined);
-  roda(p, 1); assert.equal(p.dados.aviso, 'QUASE...'); assert.equal(p.dados.luz, 'apagada');
+  roda(p, 1); assert.equal(p.dados.aviso, 'Quase...'); assert.equal(p.dados.luz, 'apagada');
   assert.equal(p.dados.fase, 'espera');
 });
 

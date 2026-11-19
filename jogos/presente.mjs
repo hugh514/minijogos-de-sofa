@@ -1,7 +1,7 @@
 // Bomba ou presente: so o Entregador sabe o que tem na caixa. Ele fala, o outro decide se aceita.
 import { posiciona, elimina } from '../logica.mjs';
 
-const T_FALA = 8, T_REVELA = 3, T_FINAL = 1.5, VITORIAS = 2;
+const T_FALA = 8, T_REVELA = 3, T_FINAL = 1.5, VITORIAS = 3;
 
 function novoRound(p) {
   const d = p.dados;
@@ -42,14 +42,14 @@ function resolve(p, aceitou) {
     p.jogadores[ganhou].vy = 8;                   // pulinho de comemoracao
     p.eventos.push('moeda');
   }
-  d.aviso = (d.bomba ? 'BOMBA! ' : 'PRESENTE! ') + (aceitou ? 'Aceitou.' : 'Recusou.') + ` Ponto do Jogador ${ganhou + 1}`;
+  d.aviso = (d.bomba ? 'Bomba! ' : 'Presente! ') + (aceitou ? 'Aceitou.' : 'Recusou.') + ` Ponto do Jogador ${ganhou + 1}`;
   d.avisoCor = d.bomba ? '#ff4a4a' : '#ffd84d';
   const texto = d.bomba ? 'Era uma BOMBA!' : 'Era um PRESENTE!';
   for (const i of [0, 1]) p.celular[i] = { modo: 'espera', texto: texto + (i === ganhou ? ' Ponto seu!' : ' Ponto do outro.') };
 }
 
 export default {
-  id: 'presente', nome: 'Bomba ou presente', dica: 'Só o Entregador sabe o que tem na caixa. Ele fala, o outro aceita ou recusa!',
+  id: 'presente', genero: 'blefe', nome: 'Bomba ou presente', dica: 'Só o Entregador sabe o que tem na caixa. Ele fala, o outro aceita ou recusa. Quem fizer 3 pontos vence!',
   semMovimento: true, semDash: true, semPulo: true, rotulo: 'rounds', controle: { modo: 'espera' },
 
   inicia(p) {

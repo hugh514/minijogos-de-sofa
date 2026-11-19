@@ -1,7 +1,7 @@
 // Motor com 2 a 4 jogadores: modo Festa (vs, times, coop). O Classico (2 jogadores) tem os testes em logica.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { criaPartida, configura, passo, entrada, pulaPara, registra, jogavel, reinicia, NOITES_COOP, venceu, timeDe, ehCoop, elegiveis, moedasDaRodada, posicionaCantos, posicionaRoda, JOGOS, PONTOS_VITORIA } from './logica.mjs';
+import { criaPartida, configura, passo, entrada, pulaPara, registra, jogavel, reinicia, NOITES_COOP, venceu, timeDe, ehCoop, elegiveis, moedasDaRodada, posicionaCantos, posicionaRoda, JOGOS, PONTOS_VITORIA, MODIFICADORES, GENEROS } from './logica.mjs';
 
 const DT = 1 / 60;
 const roda = (p, seg) => { for (let i = 0; i < seg * 60; i++) passo(p, DT); };
@@ -54,7 +54,8 @@ test('festa: a rotacao filtra pelo modo e pelo numero de jogadores', () => {
   try {
     const ids = (modo, n) => elegiveis(modo, n).map(j => j.id).sort();
     assert.deepEqual(ids('vs', 3), ['f-vs']);
-    assert.deepEqual(ids('vs', 2), ['f-dois', 'f-vs']);
+    const classicos = JOGOS.filter(j => !j.festa && !j.coop).map(j => j.id);
+    assert.deepEqual(ids('vs', 2), ['f-dois', 'f-vs', ...classicos].sort(), 'todos contra todos com 2 usa tambem os do Classico');
     assert.deepEqual(ids('times', 4), ['f-times', 'f-vs']);
     assert.deepEqual(ids('coop', 2), ['f-coop']);
     assert.ok(elegiveis('classico', 2).every(j => !j.festa), 'o classico nunca recebe minijogo de festa');
@@ -76,19 +77,18 @@ test('festa: times so existe com 4 jogadores', () => {
   assert.throws(() => criaPartida(sorte, { n: 2, modo: 'times' }), /jogadores/);
 });
 
-test('festa: rodada especial (modificador) nunca sai, mesmo depois de muitas rodadas e com p.modificadores ligado', () => {
+test('festa: rodada especial (modificador) sai na Festa com p.modificadores ligado e nunca desligado', () => {
   const jogo = falso('f-vs', { min: 2, max: 4, modos: ['vs'] });
   jogo.atualiza = () => undefined;
   registra(jogo);
   try {
     const p = criaPartida(() => 0.1, { n: 3, modo: 'vs' });
-    p.modificadores = true; p.rodada = 50;
-    for (let k = 0; k < 30; k++) { p.fase = 'resultado'; p.t = 2.6; passo(p, DT); assert.equal(p.mod, null, 'rodada ' + k); }
-    const c = criaPartida(() => 0.1);
-    c.modificadores = true; c.rodada = 50;
+    p.rodada = 50;
+    for (let k = 0; k < 30; k++) { p.fase = 'resultado'; p.t = 2.6; passo(p, DT); assert.equal(p.mod, null, 'desligado, rodada ' + k); }
+    p.modificadores = true;
     let teve = false;
-    for (let k = 0; k < 30; k++) { c.fase = 'resultado'; c.t = 2.6; passo(c, DT); teve ||= !!c.mod; }
-    assert.ok(teve, 'o Classico continua sorteando modificador');
+    for (let k = 0; k < 30; k++) { p.fase = 'resultado'; p.t = 2.6; passo(p, DT); teve ||= !!p.mod; }
+    assert.ok(teve, 'ligado, a Festa sorteia modificador');
   } finally { limpa(); }
 });
 
@@ -173,7 +173,8 @@ test('festa times: 10 pontos do time encerram a partida com os dois campeoes', (
   registra(jogo);
   try {
     const p = criaPartida(sorte, { n: 4, modo: 'times' });
-    for (const i of [0, 2]) p.jogadores[i].pontos = PONTOS_VITORIA - 1;
+    assert.equal(p.alvo, 6, 'so ha 1 minijogo de times: partida curta');
+    for (const i of [0, 2]) p.jogadores[i].pontos = p.alvo - 1;
     jogaRodada(p, jogo, 0);
     assert.equal(p.fase, 'fim');
     assert.deepEqual(p.campeoes, [0, 2]);
@@ -198,7 +199,7 @@ test('festa coop: 2 faz todos pontuarem, -1 ninguem, e 10 pontos fazem todos cam
     jogaRodada(p, jogo, -1);
     assert.deepEqual(p.jogadores.map(j => j.pontos), [1, 1, 1]);
     assert.deepEqual([0, 1, 2].map(i => moedasDaRodada(p, i)), [3, 3, 3]);
-    for (const j of p.jogadores) j.pontos = PONTOS_VITORIA - 1;
+    for (const j of p.jogadores) j.pontos = p.alvo - 1;
     jogaRodada(p, jogo, 2);
     assert.equal(p.fase, 'fim');
     assert.deepEqual(p.campeoes, [0, 1, 2]);
@@ -312,5 +313,123 @@ test('festa coop: a partida dura 5 noites, conta as vencidas e acaba na quinta',
     for (let k = 0; k < NOITES_COOP; k++) jogaRodada(p, jogo, k < 2 ? 2 : -1);
     assert.equal(p.fase, 'fim');
     assert.deepEqual(p.campeoes, [], '2 de 5: a equipe perdeu a partida');
+  } finally { limpa(); }
+});
+
+// ---------- variedade na Festa (secao 3 da proposta): poucos elegiveis ----------
+function semente(a) { return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const quatro = (modo, prefixo) => ['a', 'b', 'c', 'd'].map((x, i) => ({ ...falso(prefixo + x, { min: 2, max: 4, modos: [modo] }), genero: GENEROS[i], atualiza: () => undefined }));
+// Joga a partida por pulaPara() e devolve o que saiu em cada rodada.
+function sequencia(p, rodadas) {
+  const vistos = [{ id: p.jogo.id, mod: p.mod?.id ?? null, repete: p.repete }];
+  for (let k = 1; k < rodadas; k++) { pulaPara(p); vistos.push({ id: p.jogo.id, mod: p.mod?.id ?? null, repete: p.repete }); }
+  return vistos;
+}
+
+test('festa vs com 4 elegiveis: todo minijogo repetido na mesma partida volta com modificador diferente do da vez anterior', () => {
+  const jogos = quatro('vs', 'v');
+  jogos.forEach(registra);
+  try {
+    for (const semi of [1, 2, 3, 4, 5]) {
+      const p = criaPartida(semente(semi), { n: 3, modo: 'vs' });
+      p.modificadores = true;
+      const ultimo = {};
+      let repetidos = 0;
+      for (const [k, r] of sequencia(p, 120).entries()) {
+        if (k > 0 && r.id in ultimo) { repetidos++; assert.notEqual(r.mod, ultimo[r.id], `semente ${semi}, rodada ${k}, ${r.id}`); assert.ok(r.mod && r.repete, 'volta temperado'); }
+        ultimo[r.id] = r.mod;
+      }
+      assert.ok(repetidos > 50);
+    }
+  } finally { limpa(); }
+});
+
+test('festa: o modificador de repeticao respeita o minijogo (sem movimento nao recebe gelo) e reinicia zera a memoria', () => {
+  const jogos = quatro('vs', 'm');
+  jogos[0].semMovimento = true;
+  jogos.forEach(registra);
+  try {
+    const p = criaPartida(semente(9), { n: 3, modo: 'vs' });
+    p.modificadores = true;
+    for (const r of sequencia(p, 80)) if (r.id === 'ma' && r.mod) assert.ok(!MODIFICADORES.find(m => m.id === r.mod).anda, r.mod);
+    reinicia(p);
+    assert.equal(Object.keys(p.modsVistos).length, 1, 'a partida nova comeca sem memoria de modificador');
+  } finally { limpa(); }
+});
+
+test('festa coop: as 5 noites cobrem os 4 minijogos coop distintos e a quinta volta com modificador', () => {
+  const jogos = quatro('coop', 'c');
+  jogos.forEach(registra);
+  try {
+    for (let semi = 1; semi <= 40; semi++) {
+      const p = criaPartida(semente(semi), { n: 3, modo: 'coop' });
+      p.modificadores = true;
+      const noites = [{ id: p.jogo.id, mod: p.mod?.id ?? null, repete: p.repete }];
+      for (let rodada = p.rodada; p.fase !== 'fim'; ) {
+        passo(p, DT);
+        if (p.rodada !== rodada) { rodada = p.rodada; noites.push({ id: p.jogo.id, mod: p.mod?.id ?? null, repete: p.repete }); }
+      }
+      assert.equal(noites.length, NOITES_COOP);
+      assert.equal(new Set(noites.slice(0, 4).map(x => x.id)).size, 4, 'semente ' + semi);
+      assert.ok(noites[4].mod && noites[4].repete, 'a quinta e repetida e temperada');
+      assert.notEqual(noites[4].mod, noites.find(x => x.id === noites[4].id).mod);
+      assert.ok(noites.every(x => x.mod !== 'ouro'), 'ouro nao entra nas 5 noites do coop');
+    }
+  } finally { limpa(); }
+});
+
+test('festa: alvo de pontos (p.alvo) e 6 com menos de 6 elegiveis e 10 com 6 ou mais, e a partida acaba nele', () => {
+  const quatroVs = quatro('vs', 'p');
+  quatroVs.forEach(registra);
+  try {
+    const p = criaPartida(sorte, { n: 3, modo: 'vs' });
+    assert.equal(elegiveis('vs', 3).length, 4);
+    assert.equal(p.alvo, 6);
+    const jogo = quatroVs[0];
+    jogo.atualiza = () => 1;
+    const joga = () => { pulaPara(p, jogo); while (p.fase === 'intro') passo(p, DT); passo(p, DT); };
+    for (let k = 0; k < 5; k++) { joga(); assert.equal(p.fase, 'resultado'); }
+    assert.equal(p.jogadores[1].pontos, 5);
+    joga();
+    assert.equal(p.fase, 'fim');
+    assert.deepEqual(p.campeoes, [1]);
+    assert.equal(p.jogadores[1].pontos, 6);
+    ['pe', 'pf'].forEach(x => registra(falso(x, { min: 2, max: 4, modos: ['vs'] })));
+    assert.equal(criaPartida(sorte, { n: 3, modo: 'vs' }).alvo, PONTOS_VITORIA, 'com 6 elegiveis volta aos 10');
+    reinicia(p);
+    assert.equal(p.alvo, PONTOS_VITORIA, 'reinicia confere de novo');
+  } finally { limpa(); }
+});
+
+test('festa: todos contra todos com 2 pessoas sorteia tambem minijogos do Classico, e coop do Classico nunca entra', () => {
+  const festa = quatro('vs', 'q');
+  festa.forEach(registra);
+  const coopClassico = { id: 'q-coop', nome: 'q', dica: 'q', coop: true, inicia() {}, atualiza: () => undefined };
+  registra(coopClassico);
+  try {
+    const p = criaPartida(semente(3), { n: 2, modo: 'vs' });
+    const vistos = new Set(sequencia(p, 200).map(r => r.id));
+    assert.ok([...vistos].some(id => JOGOS.find(j => j.id === id && !j.festa)), 'saiu algum do Classico');
+    assert.ok(festa.every(j => vistos.has(j.id)), 'e os de festa continuam saindo');
+    assert.ok(!vistos.has('q-coop'));
+    assert.deepEqual(elegiveis('vs', 3).map(j => j.id).sort(), festa.map(j => j.id).sort(), 'com 3 so os de festa');
+  } finally { limpa(); }
+});
+
+test('festa: configura zera a fila (outro modo), reinicia nao', () => {
+  const festa = quatro('vs', 'r');
+  festa.forEach(registra);
+  try {
+    const p = criaPartida(semente(4), { n: 3, modo: 'vs' });
+    const fila = [...p.fila];
+    assert.ok(fila.length > 0);
+    reinicia(p);
+    assert.ok(p.fila.every(j => festa.includes(j)));
+    assert.ok(p.fila.length > 0, 'a fila segue depois de reiniciar');
+    configura(p, { n: 4, modo: 'vs' });
+    assert.equal(p.n, 4);
+    assert.equal(p.fila.length, 0, 'fila zerada; a rodada nao comecada volta pela prioridade');
+    pulaPara(p);
+    assert.equal(p.fila.length, 3, 'baralho novo de 4 menos o da rodada que comecou');
   } finally { limpa(); }
 });

@@ -108,3 +108,107 @@ test('servidor: /tela entrega o estado ao celular de cada um dos 4 slots', async
   cels.forEach((c, k) => assert.ok(c.msgs.some(m => m.jogo === 'j' + (k + 1)), 'slot ' + (k + 1)));
   cels.forEach(c => c.fecha());
 });
+
+// Modelos 3D (CC0): so arquivos de dentro de modelos/<pacote>/, com nome em regex fechada.
+function baixa(caminho) {
+  return new Promise((ok, erro) => {
+    http.get({ ...base, path: caminho }, res => {
+      const partes = [];
+      res.on('data', d => partes.push(d));
+      res.on('end', () => ok({ status: res.statusCode, tipo: res.headers['content-type'], corpo: Buffer.concat(partes) }));
+    }).on('error', erro);
+  });
+}
+
+test('servidor: /modelos serve o glb e a textura com o tipo certo', async () => {
+  const glb = await baixa('/modelos/graveyard-kit/character-zombie.glb');
+  assert.equal(glb.status, 200);
+  assert.equal(glb.tipo, 'model/gltf-binary');
+  assert.equal(glb.corpo.subarray(0, 4).toString('latin1'), 'glTF', 'cabecalho de glb');
+  const png = await baixa('/modelos/graveyard-kit/colormap.png');
+  assert.equal(png.status, 200);
+  assert.equal(png.tipo, 'image/png');
+  assert.equal(png.corpo.subarray(1, 4).toString('latin1'), 'PNG');
+});
+
+test('servidor: /modelos recusa caminho fora da regex (traversal, maiusculas, licenca, extensao, arquivo que nao existe)', async () => {
+  const ruins = [
+    '/modelos/../server.js', '/modelos/graveyard-kit/../../server.js', '/modelos/graveyard-kit/..%2f..%2fserver.js',
+    '/modelos/graveyard-kit/%2e%2e/%2e%2e/server.js', '/modelos/..%2fnode_modules/x.glb', '/modelos//graveyard-kit/character-zombie.glb',
+    '/modelos/graveyard-kit/License.txt', '/modelos/graveyard-kit/Character-Zombie.glb', '/modelos/Graveyard-kit/character-zombie.glb',
+    '/modelos/graveyard-kit/character-zombie.glb/x', '/modelos/graveyard-kit/character-zombie.js', '/modelos/graveyard-kit/nao-existe.glb',
+    '/modelos/graveyard-kit/character-zombie.glb%00.png', '/modelos/graveyard-kit/', '/modelos/',
+  ];
+  for (const c of ruins) {
+    const r = await baixa(c);
+    assert.equal(r.status, 404, c + ' deveria ser 404 e foi ' + r.status);
+    assert.ok(!r.corpo.includes('createServer') && !r.corpo.includes('glTF'), c + ' nao devolve arquivo');
+  }
+});
+
+test('servidor: os modulos do GLTFLoader sao servidos como javascript', async () => {
+  for (const m of ['loaders/GLTFLoader.js', 'utils/BufferGeometryUtils.js', 'utils/SkeletonUtils.js']) {
+    const r = await baixa('/three/addons/' + m);
+    assert.equal(r.status, 200, m);
+    assert.match(r.tipo, /javascript/);
+    assert.ok(r.corpo.length > 1000, m);
+  }
+  assert.equal((await baixa('/three/addons/loaders/../../../../server.js')).status, 404);
+});
+
+test('servidor: /lugares diz quais lugares tem celular conectado, so leitura', async () => {
+  const vazio = await baixa('/lugares');
+  assert.equal(vazio.status, 200);
+  assert.match(vazio.tipo, /application\/json/);
+  assert.deepEqual(JSON.parse(vazio.corpo), [false, false, false, false]);
+  const c2 = escuta('/eventos-c?j=2'), c4 = escuta('/eventos-c?j=4');
+  await espera(100);
+  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, true, false, true]);
+  c2.fecha(); c4.fecha();
+  await espera(100);
+  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, false, false, false], 'quem saiu libera o lugar');
+  assert.equal(await pede('POST', '/lugares', '{}'), 404, 'nada se escreve em /lugares');
+});
+
+test('servidor: /comando so aceita o j 1, a lista fechada e corpo pequeno', async () => {
+  const tela = escuta('/eventos');
+  await espera(80);
+  const ruins = [
+    JSON.stringify({ j: 2, c: 'pula' }), JSON.stringify({ j: '1', c: 'pula' }), JSON.stringify({ c: 'pula' }),
+    JSON.stringify({ j: 1, c: 'hack' }), JSON.stringify({ j: 1, c: 'constructor' }), JSON.stringify({ j: 1, c: ['pula'] }),
+    'nao e json', JSON.stringify({ j: 1, c: 'menu', lixo: 'x'.repeat(200) }),
+  ];
+  for (const corpo of ruins) await pede('POST', '/comando', corpo).catch(() => {});
+  await pede('GET', '/comando');
+  for (const c of ['pula', 'reinicia', 'menu', 'continua']) await pede('POST', '/comando', JSON.stringify({ j: 1, c }));
+  await espera(150);
+  assert.deepEqual(tela.msgs.filter(m => m.comando).map(m => m.comando), ['pula', 'reinicia', 'menu', 'continua']);
+  tela.fecha();
+});
+
+test('servidor: /pausa sem corpo alterna como antes; com corpo diz quem pediu e se e para continuar', async () => {
+  const tela = escuta('/eventos');
+  await espera(80);
+  await pede('POST', '/pausa');
+  await pede('POST', '/pausa', JSON.stringify({ j: 3 }));
+  await pede('POST', '/pausa', JSON.stringify({ j: 9, continua: 'sim' }));
+  await pede('POST', '/pausa', JSON.stringify({ j: 2, continua: true }));
+  await pede('POST', '/pausa', 'x'.repeat(300)).catch(() => {});
+  await espera(150);
+  assert.deepEqual(tela.msgs.filter(m => m.pausa), [
+    { pausa: true }, { pausa: true, j: 3 }, { pausa: true }, { pausa: true, j: 2, continua: true },
+  ]);
+  tela.fecha();
+});
+
+test('servidor: /fontes serve so a fonte woff2 da pasta, nunca a licenca nem caminho torto', async () => {
+  const f = await baixa('/fontes/baloo2.woff2');
+  assert.equal(f.status, 200);
+  assert.equal(f.tipo, 'font/woff2');
+  assert.equal(f.corpo.subarray(0, 4).toString('latin1'), 'wOF2');
+  for (const c of ['/fontes/OFL.txt', '/fontes/../server.js', '/fontes/..%2fserver.js', '/fontes/Baloo2.woff2', '/fontes/baloo2.ttf',
+    '/fontes/nao-existe.woff2', '/fontes/', '/fontes//baloo2.woff2', '/fontes/baloo2.woff2/x', '/fontes/baloo2.woff2%00']) {
+    const r = await baixa(c);
+    assert.equal(r.status, 404, c + ' deveria ser 404 e foi ' + r.status);
+  }
+});

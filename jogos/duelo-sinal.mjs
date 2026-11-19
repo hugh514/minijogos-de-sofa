@@ -1,9 +1,9 @@
-// Duelo do sinal: espere a luz VERDE e aperte primeiro. Quem aperta antes queima a largada. Melhor de 3.
+// Duelo do sinal: espere a luz VERDE e aperte primeiro. Quem aperta antes queima a largada. Quem fizer 3 rounds vence.
 import { posiciona, maiorPlacar, elimina } from '../logica.mjs';
 
-const X = 4, VITORIAS = 2, PAUSA = 1.8, T_FALSO = 0.5, T_DORME = 3, LIMITE = 45;
+const X = 4, VITORIAS = 3, PAUSA = 1.8, T_FALSO = 0.5, T_DORME = 3, LIMITE = 45;
 const FALSOS = ['amarela', 'vermelha', 'quase', 'vibra'];
-const CORES = { apagada: 0x2a3040, amarela: 0xffd21f, vermelha: 0xff2a2a, verde: 0x2bff6a };
+const CORES = { apagada: 0x9aa3b8, amarela: 0xffd21f, vermelha: 0xff2a2a, verde: 0x2bff6a };
 
 function novoRound(p) {
   const d = p.dados;
@@ -34,7 +34,7 @@ function fimRound(p, vencedor, voam, aviso, cor) {
 }
 
 export default {
-  id: 'duelo-sinal', nome: 'Duelo do sinal', dica: 'Espere a luz VERDE e aperte primeiro. Apertou antes? Queimou a largada!',
+  id: 'duelo-sinal', genero: 'reflexo', nome: 'Duelo do sinal', dica: 'Espere a luz verde e aperte primeiro. Apertou antes? Queimou a largada! Quem fizer 3 vence.',
   semMovimento: true, controle: { modo: 'botao', a: 'JÁ!' }, rotulo: 'rounds',
 
   inicia(p) {
@@ -51,9 +51,9 @@ export default {
 
     const a = p.jogadores[0].apertouA > 0, b = p.jogadores[1].apertouA > 0;
     if (d.fase === 'espera') {
-      if (a && b) return fimRound(p, -1, [0, 1], 'OS DOIS QUEIMARAM!', '#ff4a4a');
-      if (a || b) return fimRound(p, a ? 1 : 0, [a ? 0 : 1], 'QUEIMOU A LARGADA!', '#ff4a4a');
-      d.luz = 'apagada'; d.aviso = d.t < 1 ? 'PREPARAR...' : ''; d.avisoCor = '#ffffff';
+      if (a && b) return fimRound(p, -1, [0, 1], 'Os dois queimaram!', '#ff4a4a');
+      if (a || b) return fimRound(p, a ? 1 : 0, [a ? 0 : 1], 'Queimou a largada!', '#ff4a4a');
+      d.luz = 'apagada'; d.aviso = d.t < 1 ? 'Preparar...' : ''; d.avisoCor = '#ffffff';
       for (const f of d.falsos) {
         if (d.t < f.t) continue;
         if (!f.feito) {
@@ -61,16 +61,16 @@ export default {
           if (f.tipo === 'vibra') for (const i of [0, 1]) if (f.quem === 2 || f.quem === i) p.celular[i] = { ...p.celular[i], vibra: (p.celular[i].vibra ?? 0) + 1 };
         }
         if (d.t >= f.t + T_FALSO) continue;
-        if (f.tipo === 'quase') { d.aviso = 'QUASE...'; d.avisoCor = '#ffd21f'; }
+        if (f.tipo === 'quase') { d.aviso = 'Quase...'; d.avisoCor = '#ffd21f'; }
         else if (f.tipo !== 'vibra') d.luz = f.tipo;
       }
-      if (d.t >= d.tVerde) { d.fase = 'verde'; d.t = 0; d.luz = 'verde'; d.aviso = 'JÁ!'; d.avisoCor = '#2bff6a'; p.eventos.push('gol'); }
+      if (d.t >= d.tVerde) { d.fase = 'verde'; d.t = 0; d.luz = 'verde'; d.aviso = 'Já!'; d.avisoCor = '#2bff6a'; p.eventos.push('gol'); }
       return;
     }
     // verde
-    if (a && b) return fimRound(p, -1, [], 'EMPATE! DE NOVO', '#ffffff');
-    if (a || b) return fimRound(p, a ? 0 : 1, [a ? 1 : 0], 'MAIS RÁPIDO!', '#2bff6a');
-    if (d.t >= T_DORME) return fimRound(p, -1, [], 'DORMIRAM? DE NOVO', '#ffffff');
+    if (a && b) return fimRound(p, -1, [], 'Empate! De novo', '#ffffff');
+    if (a || b) return fimRound(p, a ? 0 : 1, [a ? 1 : 0], 'Mais rápido!', '#2bff6a');
+    if (d.t >= T_DORME) return fimRound(p, -1, [], 'Dormiram? De novo', '#ffffff');
   },
 
   monta(c) {
@@ -79,7 +79,7 @@ export default {
     poste.position.set(0, 1.6, -3);
     pecas.luz = malha(new THREE.SphereGeometry(1.3, 24, 16), CORES.apagada, { emissive: CORES.apagada, emissiveIntensity: 1 });
     pecas.luz.position.set(0, 4.2, -3);
-    pecas.disco = malha(new THREE.CylinderGeometry(1.8, 1.8, 0.06, 32), CORES.apagada, { emissive: CORES.apagada, emissiveIntensity: 0.8 });
+    pecas.disco = malha(new THREE.CylinderGeometry(2.6, 2.6, 0.06, 40), CORES.apagada, { emissive: CORES.apagada, emissiveIntensity: 0.8 });
     pecas.disco.position.y = 0.03;
     grupo.add(poste, pecas.luz, pecas.disco);
     pecas.marcas = [];

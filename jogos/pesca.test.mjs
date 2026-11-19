@@ -99,7 +99,7 @@ test('pesca: a bota velha vale zero e aparece o aviso', () => {
   fisga(p, 0, 'bota');
   aperta(p, 0, 10);
   assert.deepEqual(p.dados.placar, [0, 0]);
-  assert.equal(p.dados.aviso, 'BOTA VELHA!');
+  assert.equal(p.dados.aviso, 'Bota velha!');
   assert.deepEqual(p.dados.pegos[0], [tipo('bota')]);
   roda(p, 2);
   assert.equal(p.dados.aviso, '', 'o aviso some');

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { entrada } from '../logica.mjs';
-import { partidaCom, roda, fumaca } from '../jogos/_teste.mjs';
-import jogo, { temChao } from './viga.mjs';
+import { entrada, passo } from '../logica.mjs';
+import { partidaCom, roda, fumaca, DT } from '../jogos/_teste.mjs';
+import jogo, { temChao, progresso } from './viga.mjs';
 
 const distancia = p => Math.hypot(p.jogadores[1].x - p.jogadores[0].x, p.jogadores[1].z - p.jogadores[0].z);
 
@@ -30,12 +30,37 @@ test('viga: um puxa sozinho e o outro vem junto, sem a viga esticar', () => {
   assert.ok(p.jogadores[1].x !== antes || p.jogadores[1].z < -3.8, 'o outro foi arrastado');
 });
 
-test('viga: um sai do caminho, os dois caem e da empate', () => {
-  const p = partidaCom(jogo);
+test('viga: um sai do caminho, ninguem cai de vez: os dois voltam e o outro vai na frente', () => {
+  const p = partidaCom(jogo), d = p.dados;
   entrada(p, 0, { x: 0, y: -1 });
-  roda(p, 3);
-  assert.equal(p.vencedor, -1);
-  assert.ok(!p.jogadores[0].vivo && !p.jogadores[1].vivo);
+  for (let k = 0; k < 60 * 3 && !d.quedas; k++) passo(p, DT);
+  assert.equal(d.quedas, 1, 'pisou fora');
+  entrada(p, 0, { x: 0, y: 0 });
+  roda(p, 2);
+  assert.equal(p.fase, 'jogando');
+  assert.ok(p.jogadores[0].vivo && p.jogadores[1].vivo);
+  assert.ok(temChao(p.jogadores[0].x, p.jogadores[0].z) && temChao(p.jogadores[1].x, p.jogadores[1].z));
+  assert.ok(Math.abs(distancia(p) - 4) < 0.05);
+  assert.ok(progresso(p.jogadores[1].x, p.jogadores[1].z) > progresso(p.jogadores[0].x, p.jogadores[0].z) + 3, 'quem nao caiu vai na frente');
+});
+
+test('viga: depois da curva, a queda volta para a curva e nao para a saida', () => {
+  const p = partidaCom(jogo), d = p.dados, [a, b] = p.jogadores;
+  Object.assign(a, { x: 8, z: -2 }); Object.assign(b, { x: 8, z: 2 });
+  passo(p, DT);
+  Object.assign(a, { x: 0, z: 3, vx: 0, vz: 0 }); Object.assign(b, { x: 0, z: -1, vx: 0, vz: 0 });
+  passo(p, DT);
+  assert.equal(d.quedas, 1);
+  roda(p, 1.5);
+  assert.ok(Math.hypot(a.x - 8, a.z) < 0.3, 'quem caiu volta na curva');
+  assert.ok(Math.hypot(b.x - 4, b.z) < 0.3, 'o outro fica 4 passos na frente');
+});
+
+test('viga: no limite de tempo vence quem esta mais perto da meta pelo caminho', () => {
+  const p = partidaCom(jogo), [a, b] = p.jogadores;
+  Object.assign(a, { x: -3.6, z: -5.8 }); Object.assign(b, { x: -7.6, z: -5.8 });
+  roda(p, 51);
+  assert.equal(p.vencedor, 0);
 });
 
 test('viga: o primeiro a encostar na meta vence', () => {

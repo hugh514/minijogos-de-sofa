@@ -76,7 +76,7 @@ test('sumiu: sem resposta em 7 s a rodada segue; 3 rodadas e maior placar vence'
   const p = nova();
   ateFase(p, 'pergunta');
   toca(p, 0, certa(p, 0));
-  roda(p, 6.5);
+  roda(p, 5.5);
   assert.equal(p.dados.fase, 'pergunta');
   roda(p, 0.6);
   assert.equal(p.dados.fase, 'revela');
@@ -86,10 +86,31 @@ test('sumiu: sem resposta em 7 s a rodada segue; 3 rodadas e maior placar vence'
 
 test('sumiu: ninguem responde, empata', () => {
   const p = nova();
-  roda(p, 41);
-  assert.equal(p.vencedor, -1);
+  roda(p, 38);
+  assert.equal(p.dados.rodada, 3, 'empatou: rodada de desempate');
+  assert.match(p.dados.aviso, /Desempate/);
+  for (let k = 0; k < 1200 && p.fase === 'jogando'; k++) passo(p, DT);
+  assert.equal(p.vencedor, -1, 'sem ninguem responder o empate fica');
 });
 
 test('sumiu: roda inteiro, parado e com dedos aleatorios, sem erro', () => {
   assert.equal(fumaca(jogo).length, 15);
+});
+
+test('sumiu: a ultima rodada vale em dobro e avisa na tela', () => {
+  const p = nova();
+  roda(p, 13 * 2);
+  assert.equal(p.dados.rodada, 2);
+  assert.match(p.dados.aviso, /vale em dobro/);
+  ateFase(p, 'pergunta');
+  toca(p, 0, certa(p, 0));
+  assert.equal(p.dados.placar[0], 2);
+  assert.match(jogo.dica, /dobro/);
+});
+
+test('sumiu: empate depois das 3 rodadas leva a uma rodada de desempate', () => {
+  const p = nova();
+  roda(p, 13 * 3);
+  assert.equal(p.fase, 'jogando');
+  assert.equal(p.dados.rodada, 3);
 });

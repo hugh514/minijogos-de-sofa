@@ -14,7 +14,7 @@ function segue(caixa, alvo, dt) {
 const perto = (j, caixa) => Math.hypot(j.x - caixa.x, j.z - caixa.z) < PEGA;
 
 export default {
-  id: 'rabo', nome: 'Rabo de caixas', dica: 'Encoste na ÚLTIMA caixa do rabo do outro para roubar. Quem tiver mais caixas vence!',
+  id: 'rabo', genero: 'empurra', nome: 'Rabo de caixas', dica: 'Encoste na última caixa do rabo do outro para roubar. Quem tiver mais caixas vence!',
   rotulo: 'caixas', duracao: TEMPO,
 
   inicia(p) {

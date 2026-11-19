@@ -7,12 +7,13 @@ const META = 3, LIMITE = 50, T_SEGUNDO = 20, PAUSA = 0.8, QUIQUE = 0.95;
 const AMARELO = 0xffd23f, CIANO = 0x3fe8ff;
 
 // Disco novo no centro: fica um instante parado (pausa) e sai para o lado dado (-1 esquerda, 1 direita).
+// Sai sempre na diagonal (2,5 a 4,5 de lado): chega ao fundo fora do vao do gol, entao o saque nunca e gol sozinho.
 function novoDisco(p, lado) {
-  return { x: 0, z: 0, vx: 0, vz: 0, pausa: PAUSA, lado, sz: (p.rng() * 2 - 1) * 3, lento: 0, som: 0 };
+  return { x: 0, z: 0, vx: 0, vz: 0, pausa: PAUSA, lado, sz: (p.rng() < 0.5 ? -1 : 1) * (2.5 + p.rng() * 2), lento: 0, som: 0 };
 }
 
 export default {
-  id: 'hoquei', nome: 'Hóquei de mesa', dica: 'Bata o disco no gol do outro. A dá a tacada. Primeiro a 3 gols vence!',
+  id: 'hoquei', genero: 'gol', nome: 'Hóquei de mesa', dica: 'Bata o disco no gol do outro. Tacada dá um arranque. Primeiro a 3 gols vence!',
   controle: { modo: 'padrao', a: 'TACADA', b: '' }, semPulo: true, rotulo: 'gols', duracao: LIMITE,
 
   inicia(p) {
@@ -36,7 +37,7 @@ export default {
     if (!d.segundo && p.t >= T_SEGUNDO) {
       d.segundo = true;
       d.discos.push(novoDisco(p, p.rng() < 0.5 ? -1 : 1));
-      d.aviso = 'DISCO EXTRA!'; d.avisoCor = '#ffd23f'; d.avisoT = 1.2;
+      d.aviso = 'Disco extra!'; d.avisoCor = '#ffd23f'; d.avisoT = 1.2;
       p.eventos.push('troca');
     }
 
@@ -78,7 +79,7 @@ export default {
             const quem = b.x > 0 ? 0 : 1;
             d.placar[quem]++;
             d.gol = { n: d.gol.n + 1, x: Math.sign(b.x) * LX, z: b.z, quem };
-            d.aviso = 'GOL!'; d.avisoCor = '#ffd23f'; d.avisoT = 1.2;
+            d.aviso = 'Gol!'; d.avisoCor = '#ffd23f'; d.avisoT = 1.2;
             p.eventos.push('gol');
             const levou = 1 - quem;
             p.celular[levou] = { ...p.celular[levou], vibra: (p.celular[levou].vibra ?? 0) + 1 };
