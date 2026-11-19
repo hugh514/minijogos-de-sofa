@@ -1,7 +1,7 @@
 // Motor com 2 a 4 jogadores: modo Festa (vs, times, coop). O Classico (2 jogadores) tem os testes em logica.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { criaPartida, configura, passo, entrada, pulaPara, registra, jogavel, reinicia, NOITES_COOP, venceu, timeDe, ehCoop, elegiveis, moedasDaRodada, posicionaCantos, posicionaRoda, JOGOS, PONTOS_VITORIA, MODIFICADORES, GENEROS } from './logica.mjs';
+import { vista, criaPartida, configura, passo, entrada, pulaPara, registra, jogavel, reinicia, NOITES_COOP, venceu, timeDe, ehCoop, elegiveis, moedasDaRodada, posicionaCantos, posicionaRoda, JOGOS, PONTOS_VITORIA, MODIFICADORES, GENEROS } from './logica.mjs';
 
 const DT = 1 / 60;
 const roda = (p, seg) => { for (let i = 0; i < seg * 60; i++) passo(p, DT); };
@@ -56,7 +56,7 @@ test('festa: a rotacao filtra pelo modo e pelo numero de jogadores', () => {
     assert.deepEqual(ids('vs', 3), ['f-vs']);
     const classicos = JOGOS.filter(j => !j.festa && !j.coop).map(j => j.id);
     assert.deepEqual(ids('vs', 2), ['f-dois', 'f-vs', ...classicos].sort(), 'todos contra todos com 2 usa tambem os do Classico');
-    assert.deepEqual(ids('times', 4), ['f-times', 'f-vs']);
+    assert.deepEqual(ids('times', 4), ['f-times', 'f-vs', ...classicos].sort(), 'duplas com 4 usa tambem os do Classico, em revezamento');
     assert.deepEqual(ids('coop', 2), ['f-coop']);
     assert.ok(elegiveis('classico', 2).every(j => !j.festa), 'o classico nunca recebe minijogo de festa');
     const p = criaPartida(sorte, { n: 3, modo: 'vs' });
@@ -169,6 +169,7 @@ test('festa times: o time A e J1+J3, o B e J2+J4, e os dois do time pontuam', ()
 });
 
 test('festa times: 10 pontos do time encerram a partida com os dois campeoes', () => {
+  const sozinhos = JOGOS.splice(0);       // so o minijogo de teste (Duplas tambem usa os do Classico)
   const jogo = falso('f-times', { min: 4, max: 4, modos: ['times'] });
   registra(jogo);
   try {
@@ -184,7 +185,7 @@ test('festa times: 10 pontos do time encerram a partida com os dois campeoes', (
     assert.equal(p.fase, 'intro', 'a partida recomeca');
     assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 0, 0, 0]);
     assert.equal(p.modo, 'times');
-  } finally { limpa(); }
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });
 
 test('festa coop: 2 faz todos pontuarem, -1 ninguem, e 10 pontos fazem todos campeoes', () => {
@@ -432,4 +433,80 @@ test('festa: configura zera a fila (outro modo), reinicia nao', () => {
     pulaPara(p);
     assert.equal(p.fila.length, 3, 'baralho novo de 4 menos o da rodada que comecou');
   } finally { limpa(); }
+});
+
+// ---------- Duplas com minijogo de 2 (revezamento): joga um de cada dupla por rodada, o ponto e da dupla ----------
+function classico(id, resposta) {
+  return { id, nome: id, dica: 'Jogador 1 contra Jogador 2', inicia(p) { p.dados = { n: p.jogadores.length }; p.celular[1].texto = 'oi'; },
+    atualiza(p) { return resposta(p); } };
+}
+
+test('duplas: minijogo de 2 roda so com os dois da vez e a dupla de quem venceu leva o ponto', () => {
+  const sozinhos = JOGOS.splice(0);       // so o minijogo de teste na rodada
+  const jogo = classico('c-duelo', () => 1);
+  registra(jogo);
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    assert.equal(p.jogo, jogo);
+    assert.deepEqual(p.duelo, [0, 1], 'primeiro duelo: J1 (laranja) contra J2 (roxo)');
+    const v = vista(p);
+    assert.equal(v.jogadores.length, 2);
+    assert.equal(v.jogadores[0], p.jogadores[0]);
+    assert.equal(v.jogadores[1], p.jogadores[1]);
+    assert.equal(v.n, 2);
+    assert.equal(p.dados.n, 2, 'o minijogo so enxerga os dois da vez');
+    assert.equal(p.celular[1].texto, 'oi', 'o que o minijogo escreve no celular chega no celular de verdade');
+    assert.equal(p.jogadores.length, 4, 'a partida segue com os 4');
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT);
+    assert.equal(p.vencedor, 1);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 1, 0, 1], 'ponto para J2 e J4 (time roxo)');
+    assert.ok(venceu(p, 3) && !venceu(p, 0));
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
+});
+
+test('duplas: os parceiros revezam e todo mundo enfrenta todo mundo', () => {
+  const sozinhos = JOGOS.splice(0);
+  registra(classico('c-duelo', () => 0));
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    const vistos = [];
+    for (let k = 0; k < 4; k++) { vistos.push(p.duelo.join('-')); pulaPara(p); }
+    assert.deepEqual(vistos, ['0-1', '2-3', '0-3', '2-1']);
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT);
+    assert.equal(p.vencedor, 0);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [1, 0, 1, 0], 'J3 venceu: ponto do time laranja');
+    reinicia(p);
+    assert.deepEqual(p.duelo, [0, 1], 'partida nova comeca o revezamento do zero');
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
+});
+
+test('duplas: minijogo de festa usa os 4 e minijogo coop de 2 nao entra', () => {
+  const sozinhos = JOGOS.splice(0);
+  const festa = falso('f-times', { min: 4, max: 4, modos: ['times'] }, 0);
+  const coop = { ...classico('c-coop', () => 2), coop: true };
+  [festa, coop].forEach(registra);
+  try {
+    assert.deepEqual(elegiveis('times', 4).map(j => j.id), ['f-times']);
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    assert.equal(p.jogo, festa);
+    assert.equal(p.duelo, null);
+    assert.equal(vista(p), p);
+    assert.equal(vista(p).jogadores.length, 4);
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
+});
+
+test('duplas: so quem esta na vez se move no minijogo de 2', () => {
+  const sozinhos = JOGOS.splice(0);
+  registra(classico('c-duelo', () => undefined));
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    while (p.fase !== 'jogando') passo(p, DT);
+    for (const i of [0, 1, 2, 3]) entrada(p, i, { x: 1, y: 0, d: false, b: false });
+    roda(p, 0.5);
+    assert.ok(p.jogadores[0].x > 1 && p.jogadores[1].x > 1, 'os da vez andam');
+    assert.equal(p.jogadores[2].x, 0, 'o parceiro J3 fica parado');
+    assert.equal(p.jogadores[3].x, 0, 'o parceiro J4 fica parado');
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });

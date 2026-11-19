@@ -33,7 +33,31 @@ export function venceu(p, i) {
 export function elegiveis(modo, n) {
   if (modo === 'classico') return JOGOS.filter(j => !j.festa);
   const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && n <= j.festa.max && j.festa.modos.includes(modo));
-  return modo === 'vs' && n === 2 ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
+  const deDois = (modo === 'vs' && n === 2) || modo === 'times';       // Duplas: os de 2 entram em revezamento (um de cada dupla por rodada)
+  return deDois ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
+}
+
+// ---------- Duplas com minijogo de 2: joga um de cada dupla e o parceiro torce; a cada rodada de 2 a vez passa ----------
+// A ordem faz todo mundo enfrentar todo mundo: J1 x J2, J3 x J4, J1 x J4, J3 x J2. O indice 0 e sempre do time laranja (par).
+const DUELOS = [[0, 1], [2, 3], [0, 3], [2, 1]];
+// O minijogo de 2 recebe a vista: a mesma partida, mas jogadores, celular e nomes so dos dois da vez.
+// Fora de duelo a vista e a propria partida. O motor e a tela usam p (os 4) para placar, pontos e celulares.
+export function vista(p) { return p.duelo ? p.vistaDuelo : p; }
+function montaDuelo(p) {
+  if (p.modo !== 'times' || p.jogo.festa) { p.duelo = null; p.vistaDuelo = null; return; }
+  const par = DUELOS[p.duelos++ % DUELOS.length];
+  p.duelo = par;
+  const proprio = { jogadores: par.map(i => p.jogadores[i]), celular: par.map(i => p.celular[i]), n: 2, nomes: undefined };
+  Object.defineProperty(proprio, 'nomes', { get: () => p.nomes && par.map(i => p.nomes[i]), set: () => {}, enumerable: true });
+  p.vistaDuelo = new Proxy(p, {
+    get: (alvo, k) => (k in proprio ? proprio[k] : Reflect.get(alvo, k)),
+    set: (alvo, k, v) => (k in proprio ? (proprio[k] = v, true) : Reflect.set(alvo, k, v)),
+  });
+}
+function devolveCelular(p) {       // o minijogo pode trocar o objeto do celular inteiro: o da partida acompanha
+  if (!p.duelo) return;
+  const c = p.vistaDuelo.celular;
+  p.duelo.forEach((i, k) => { p.celular[i] = c?.[k] ?? {}; });
 }
 // Minijogo que quebrou sozinho no modo (nao havia outro para cobrir): fica na lista, mas o modo nao pode comecar.
 const QUEBRADOS = new Set();
@@ -793,7 +817,8 @@ function proximaRodada(p, forcado) {
     p.fase = 'intro'; p.t = 0; p.rodada++;
     p.mod = null;
     try {
-      p.jogo.inicia(p); p.mod = sorteiaModificador(p);
+      montaDuelo(p);
+      p.jogo.inicia(vista(p)); devolveCelular(p); p.mod = sorteiaModificador(p);
       p.historico.push(p.jogo.id); p.historico.splice(0, p.historico.length - HISTORICO_MAX); p.noitesVistas.push(p.jogo.id);
       if (!p.jogo.coop)             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima
         for (const [i, j] of p.jogadores.entries()) if (j.direito) { j.oferta = sorteiaCartas(p, i); j.direito = false; }
@@ -884,7 +909,7 @@ export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', histo
   confereModo(n, modo);
   const p = {
     rng, fila: [], prioridade: [], noitesVistas: [], jogo: null, historico: limpaHistorico(historico), modsVistos: {}, rodada: 0, eventos: [], erros: [], anuncios: [], n, modo,
-    noites: { jogadas: 0, vencidas: 0 }, seq: Array(n).fill(0), deficit: Array(n).fill(0), campeao: undefined,       // vitorias seguidas e maior desvantagem (para "virada")
+    noites: { jogadas: 0, vencidas: 0 }, duelos: 0, duelo: null, seq: Array(n).fill(0), deficit: Array(n).fill(0), campeao: undefined,       // vitorias seguidas e maior desvantagem (para "virada")
     jogadores: Array.from({ length: n }, novoJogador),
   };
   p.alvo = alvoDe(p);
@@ -896,7 +921,7 @@ export function reinicia(p) {
   for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; }
   p.seq = p.jogadores.map(() => 0); p.deficit = p.jogadores.map(() => 0); p.campeao = undefined; p.campeoes = undefined;
   esquece(p); p.noitesVistas = [];
-  p.noites = { jogadas: 0, vencidas: 0 }; p.modsVistos = {}; p.alvo = alvoDe(p);
+  p.noites = { jogadas: 0, vencidas: 0 }; p.duelos = 0; p.modsVistos = {}; p.alvo = alvoDe(p);
   recicla(p);
   proximaRodada(p);
 }
@@ -985,12 +1010,13 @@ export function passo(p, dt) {
     if (p.t >= T_INTRO) { p.fase = 'jogando'; p.t = 0; for (const j of p.jogadores) { j.escolhaDesde = j.oferta || j.carta ? ESPERA_CARTA : 0; j.oferta = null; } }    // quem nao escolheu fica sem carta
     return;
   }
-  if (p.fase === 'fim') { fisicaSegura(p, dt); if (p.t >= T_FIM && !p.esperaRevanche) reinicia(p); return; }     // esperaRevanche (a tela liga): o podio espera a escolha de revanche
-  if (p.fase === 'resultado') { fisicaSegura(p, dt); if (p.t >= T_RESULTADO) proximaRodada(p); return; }
+  if (p.fase === 'fim') { fisicaSegura(vista(p), dt); if (p.t >= T_FIM && !p.esperaRevanche) reinicia(p); return; }     // esperaRevanche (a tela liga): o podio espera a escolha de revanche
+  if (p.fase === 'resultado') { fisicaSegura(vista(p), dt); if (p.t >= T_RESULTADO) proximaRodada(p); return; }
   let vencedor;
   try {
-    fisica(p, dt);
-    vencedor = p.jogo.atualiza(p, dt);
+    fisica(vista(p), dt);
+    vencedor = p.jogo.atualiza(vista(p), dt);
+    devolveCelular(p);
     if (!resultadosValidos(p).includes(vencedor)) throw new Error('atualiza devolveu ' + String(vencedor));
   } catch (e) { descarta(p, p.jogo, e); vencedor = -1; }
   if (vencedor === undefined && p.t > LIMITE_MOTOR) vencedor = -1;       // nenhuma rodada passa disso

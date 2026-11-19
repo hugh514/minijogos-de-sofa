@@ -122,7 +122,10 @@ async function celular(browser, n) {
   await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
   let e = await estado();
   assert.equal(e.modo, 'times'); assert.equal(e.n, 4);
-  assert.ok(await ev(() => !!window.__p.jogo.festa), 'o primeiro minijogo e de festa');
+  if (!(await ev(() => !!window.__p.jogo.festa))) {       // Duplas tambem sorteia os de 2 (revezamento): estas checagens sao da rodada com os 4
+    await ev(() => window.__jogo('tinta-festa'));
+    await tela.waitForFunction(() => window.__p.jogo.id === 'tinta-festa' && window.__bonecos.filter(b => b.visible).length === 4, null, { timeout: 5000 });
+  }
   assert.equal(await cartoes(), 4, 'placar com 4 cartoes');
   assert.equal(await tela.locator('#placar .cartao.time').count(), 4, 'em times cada cartao tem a cor do time');
   assert.equal(await tela.locator('#placar .lado').count(), 2, 'dois cartoes de cada lado');
@@ -198,6 +201,34 @@ async function celular(browser, n) {
   await foto('futebol-times-3-fim');
   await semErro('futebol-times');
   console.log(`ok futebol-times: gol no placar ${e.placar.join(' x ')}, fim por tempo, time A venceu`);
+
+  // =================================================== 5b. Duplas com minijogo de 2: um de cada dupla joga, o parceiro torce
+  for (const id of ['sumo', 'bomba', 'kart']) {
+    antes = await pontos();
+    await comeca(id, `duelo-${id}-1-explicacao`);
+    const d = await ev(() => window.__p.duelo);
+    assert.ok(Array.isArray(d) && d.length === 2 && d[0] % 2 === 0 && d[1] % 2 === 1, `${id}: duelo com um de cada dupla: ${d}`);
+    assert.equal(await ev(() => window.__p.jogadores.length), 4, 'a partida segue com os 4');
+    assert.equal(await cartoes(), 4, 'o placar continua com os 4');
+    await tela.waitForFunction(d => window.__bonecos.every((b, i) => b.visible === d.includes(i)), d, { timeout: 5000 }).catch(() => {});
+    assert.deepEqual(await ev(() => window.__bonecos.flatMap((b, i) => b.visible ? [i] : [])), [...d].sort(), 'so os dois da vez na arena');
+    const fora = [0, 1, 2, 3].filter(i => !d.includes(i));
+    for (const i of fora) await fones[i].waitForFunction(() => document.body.innerText.includes('Daqui você torce'), null, { timeout: 5000 });
+    await anda(d.map(i => fones[i]), 2500, (i, k) => roda(i, k));
+    await foto(`duelo-${id}-2-meio`);
+    await foto(`duelo-${id}-3-celular-de-fora-j${fora[0] + 1}`, fones[fora[0]]);
+    await foto(`duelo-${id}-4-celular-da-vez-j${d[0] + 1}`, fones[d[0]]);
+    await ev(() => { const p = window.__p; p.t = Math.max(p.t, (p.jogo.duracao || 60) - 0.4); });
+    await ev(() => { const p = window.__p; if (window.__p.jogo.id === 'sumo') { p.dados.placar = [1, 0]; p.t = 6; p.jogadores[p.duelo[1]].vivo = false; } });
+    await tela.waitForFunction(() => ['resultado', 'fim'].includes(window.__p.fase), null, { timeout: 80000 });
+    await espera(900);
+    const r = await ev(() => ({ v: window.__p.vencedor, pts: window.__p.jogadores.map(j => j.pontos) }));
+    if (id === 'sumo') assert.equal(r.v, 0, 'sumo: o da vez do time laranja derrubou o rival');
+    if (r.v >= 0) assert.deepEqual(soma(r.pts, antes), r.v === 0 ? [1, 0, 1, 0] : [0, 1, 0, 1], `${id}: ponto para os dois da dupla`);
+    await foto(`duelo-${id}-5-fim`);
+    await semErro('duelo ' + id);
+    console.log(`ok ${id} em Duplas: J${d[0] + 1} contra J${d[1] + 1}, parceiros torcendo, vencedor ${r.v}, pontos ${r.pts.join(',')}`);
+  }
 
   // =================================================== 6. podio com 4 (um time chega a 10 pontos)
   await ev(() => { for (const i of [0, 2]) window.__p.jogadores[i].pontos = 9; });
