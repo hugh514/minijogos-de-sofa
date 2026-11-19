@@ -60,7 +60,7 @@ async function celular(browser, n) {
     await frente();
     if (await ev(k => window.__p.jogadores[k].pronto, i)) return;
     const f = fones[i];
-    await f.waitForFunction(() => document.getElementById('btG').textContent === 'PRONTO!' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
+    await f.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
     for (let tentativa = 0; tentativa < 5; tentativa++) {
       await f.locator('#btG').tap();
       await frente();
@@ -94,12 +94,12 @@ async function celular(browser, n) {
   fones.push(await celular(browser, 1), await celular(browser, 2), await celular(browser, 3)); await frente();
   await tela.waitForFunction(() => window.__sala().seguidos === 3, null, { timeout: 8000 });
   await fones[0].locator('#menu').waitFor({ state: 'visible' });
-  assert.equal(await fones[0].locator('#menuLista button[data-m=times]').isDisabled(), true, 'times 2x2 desabilitado com 3 conectados');
-  assert.equal(await fones[0].locator('#menuLista button[data-m=vs]').isDisabled(), false);
+  assert.equal(await fones[0].locator('#menuLista button[data-m=times]').getAttribute('aria-disabled'), 'true', 'times 2x2 desabilitado com 3 conectados');
+  assert.equal(await fones[0].locator('#menuLista button[data-m=vs]').getAttribute('aria-disabled'), 'false');
   console.log('ok 3 conectados: o menu do Jogador 1 mostra o times 2x2 desabilitado');
   fones.push(await celular(browser, 4)); await frente();
   await tela.waitForFunction(() => window.__sala().seguidos === 4, null, { timeout: 8000 });
-  await fones[0].locator('#menuLista button[data-m=times]:not([disabled])').waitFor({ timeout: 4000 });
+  await fones[0].locator('#menuLista button[data-m=times][aria-disabled=false]').waitFor({ timeout: 4000 });
   const chips = await tela.locator('#espera .chip b.ok').count();
   assert.equal(chips, 4, 'os 4 conectados aparecem na espera');
   assert.deepEqual(await ev(() => window.__cores.slice()), [0, 1, 2, 3], 'cores padrao: azul, rosa, verde, amarelo');
@@ -117,7 +117,7 @@ async function celular(browser, n) {
   await espera(700);
   await foto('03-espera-modo-times');
   await foto('04-menu-celular-times-escolhido', fones[0]);
-  assert.ok((await tela.locator('#modoEsp').textContent()).includes('times 2x2'));
+  assert.ok((await tela.locator('#modoEsp').textContent()).includes('Duplas'));
   await fones[0].locator('#menuGo').tap(); await frente();
   await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
   let e = await estado();
@@ -210,6 +210,13 @@ async function celular(browser, n) {
   await foto('06-podio-4-time-campeao');
   console.log('ok o time com 10 pontos fecha a partida e o podio mostra os 4');
 
+  // O coop sorteia entre varios jogos; para as fotos dos zumbis, forca o zumbis-coop mantendo modo e jogadores
+  async function zumbisNoCoop(n) {
+    await tela.waitForFunction(() => { if (window.__p.jogo?.id !== 'zumbis-coop') window.__jogo('zumbis-coop'); return window.__p.jogo?.id === 'zumbis-coop'; }, null, { timeout: 30000, polling: 500 });
+    const e = await estado();
+    assert.deepEqual([e.modo, e.n, e.jogo], ['coop', n, 'zumbis-coop']);
+    return e;
+  }
   // =================================================== 7. zumbis em coop com 4
   await tela.keyboard.press('KeyV');
   await tela.locator('#espera').waitFor({ state: 'visible' });
@@ -218,7 +225,8 @@ async function celular(browser, n) {
   await fones[0].locator('#menuGo').tap(); await frente();
   await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
   e = await estado();
-  assert.deepEqual([e.modo, e.n, e.jogo], ['coop', 4, 'zumbis-coop'], 'em coop com 4 so sai o zumbis');
+  assert.ok(e.modo === 'coop' && e.n === 4 && e.jogo.endsWith('-coop'), 'em coop com 4 so sai jogo coop: ' + e.jogo);
+  e = await zumbisNoCoop(4);
   assert.equal(await tela.locator('#placar .cartao.time').count(), 0, 'sem cor de time fora do modo times');
   await tela.waitForFunction(() => window.__p.fase === 'intro');
   await espera(600); await foto('zumbis-coop-0-explicacao');
@@ -228,7 +236,8 @@ async function celular(browser, n) {
   await foto('zumbis-coop-4-1-comeco'); await foto('zumbis-coop-celular-j1', fones[0]);
   await ev(() => { const d = window.__p.dados; d.imune = d.imune.map(() => 99); });       // a rodada nao acaba antes do print do meio
   await anda(fones, 9500, (i, k) => roda(i, k, 3));
-  assert.ok(await ev(() => window.__p.dados.zumbis.length >= 4), 'zumbis em campo');
+  // a 2a onda sai aos 12,5 s de jogo; com a maquina carregada o jogo anda mais devagar que o relogio do teste
+  assert.ok(await tela.waitForFunction(() => window.__p.dados.zumbis.length >= 4, null, { timeout: 15000 }).then(() => true, () => false), 'zumbis em campo');
   await todosApareceram(4); await foto('zumbis-coop-4-2-meio');
   await ev(() => { const p = window.__p, d = p.dados; p.t = p.jogo.duracao - 0.6; d.caido[0] = false; d.imune = d.imune.map(() => 99); });       // pelo menos um em pe aos 45 s: vitoria de todos
   await termina();
@@ -243,7 +252,7 @@ async function celular(browser, n) {
   await tela.waitForFunction(() => window.__sala().seguidos === 3, null, { timeout: 8000 });
   await tela.keyboard.press('KeyV');
   await tela.locator('#espera').waitFor({ state: 'visible' });
-  assert.equal(await fones[0].locator('#menuLista button[data-m=times]').isDisabled(), true);
+  assert.equal(await fones[0].locator('#menuLista button[data-m=times]').getAttribute('aria-disabled'), 'true');
   await fones[0].locator('#menuLista button[data-m=vs]').tap(); await frente();
   await tela.waitForFunction(() => window.__sala().escolhaModo === 'vs', null, { timeout: 4000 });
   await foto('07-espera-3-conectados-vs');
@@ -284,7 +293,8 @@ async function celular(browser, n) {
   await fones[0].locator('#menuGo').tap(); await frente();
   await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
   e = await estado();
-  assert.deepEqual([e.modo, e.n, e.jogo], ['coop', 2, 'zumbis-coop']);
+  assert.ok(e.modo === 'coop' && e.n === 2 && e.jogo.endsWith('-coop'), 'em coop com 2 so sai jogo coop: ' + e.jogo);
+  e = await zumbisNoCoop(2);
   await tela.waitForFunction(() => window.__p.fase === 'intro');
   for (let i = 0; i < 2; i++) await prontoDe(i);
   await fase('jogando');

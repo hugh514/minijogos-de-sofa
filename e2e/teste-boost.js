@@ -48,7 +48,7 @@ async function celular(browser, botao, seed, pos) {
   async function prontoDe(i) {
     if (await ev(k => window.__p.jogadores[k].pronto, i)) return;      // ja apertou
     const f = fones[i];
-    await f.waitForFunction(() => document.getElementById('btG').textContent === 'PRONTO!' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
+    await f.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
     for (let tentativa = 0; tentativa < 5; tentativa++) {        // toque na tela velha (jogo trocado na hora) se perde: tenta de novo
       await f.locator('#btG').tap();
       try { await tela.waitForFunction(k => window.__p.jogadores[k].pronto || window.__p.fase !== 'intro', i, { timeout: 1500 }); return; } catch {}
@@ -56,7 +56,7 @@ async function celular(browser, botao, seed, pos) {
     throw new Error('PRONTO nao chegou do jogador ' + (i + 1));
   }
   // o celular precisa mostrar exatamente a oferta trocada pelo teste, na ordem (senao o toque cai na carta errada)
-  const NOMES = { dobro: 'Vale dobro', moedas: 'Moedas em dobro', escudo: 'Escudo de ponto', turbo: 'Turbo', dash: 'Dash rápido', pulo: 'Pulo alto' };
+  const NOMES = { dobro: 'Vale dobro', moedas: 'Cofre em dobro', escudo: 'Escudo', turbo: 'Turbo', dash: 'Empurrão ligeiro', pulo: 'Mola' };
   const esperaOferta = (f, ids) => f.waitForFunction(n => JSON.stringify([...document.querySelectorAll('#opcoes button.carta b')].map(b => b.textContent)) === n,
     JSON.stringify(ids.map(id => NOMES[id])), { timeout: 5000 });
   // explicacao: quem tem oferta pega "Moedas em dobro" (nao mexe no ponto), e os dois apertam PRONTO
@@ -64,7 +64,7 @@ async function celular(browser, botao, seed, pos) {
     await tela.waitForFunction(() => window.__p.fase === 'intro', null, { timeout: 15000 });
     await ev(() => { for (const j of window.__p.jogadores) if (j.oferta) j.oferta = ['moedas', 'turbo', 'dash']; });
     for (const i of [0, 1]) {
-      if (await ev(k => !!window.__p.jogadores[k].oferta, i)) await esperaOferta(fones[i], ['moedas', 'turbo', 'dash']), await fones[i].locator('#opcoes button.carta', { hasText: 'Moedas em dobro' }).tap();
+      if (await ev(k => !!window.__p.jogadores[k].oferta, i)) await esperaOferta(fones[i], ['moedas', 'turbo', 'dash']), await fones[i].locator('#opcoes button.carta', { hasText: 'Cofre em dobro' }).tap();
       await prontoDe(i);
     }
   }
@@ -72,12 +72,17 @@ async function celular(browser, botao, seed, pos) {
   async function joga() {
     await prontos();
     await fase('jogando');
-    await ev(() => window.__p.fila.unshift(window.__p.jogo));
+    await ev(() => window.__p.prioridade.push(window.__p.jogo));       // p.prioridade: o motor sorteia isto antes da fila e do genero
   }
   // termina a rodada: o perdedor cai da arena (caminho real do motor: quemSobrou)
   async function vence(i) {
-    await ev(k => { window.__p.dados.placar[k] = 1; window.__p.jogadores[1 - k].vivo = false; }, i);       // melhor de 3 quedas: a de k ja valia 1, esta decide (so encerra depois de 5 s de jogo)
-    await tela.waitForFunction(() => ['resultado', 'fim'].includes(window.__p.fase));
+    // melhor de 3 quedas: a de k ja valia 1, esta decide (so encerra depois de 5 s de jogo). Repete a queda ate fechar:
+    // logo depois de voltar ao centro o jogador fica 1,5 s protegido e a queda nao conta.
+    await tela.waitForFunction(k => {
+      const p = window.__p;
+      if (p.fase === 'jogando') { p.dados.placar[k] = 1; p.jogadores[1 - k].vivo = false; }
+      return ['resultado', 'fim'].includes(p.fase);
+    }, i, { polling: 500, timeout: 30000 });
   }
   const anuncios = () => tela.locator('#resultado .anun').allTextContents();
   const pontos = () => ev(() => window.__p.jogadores.map(j => j.pontos));
@@ -143,10 +148,10 @@ async function celular(browser, botao, seed, pos) {
   console.log(`ok turbo vale no movimento: velocidade J1 ${vel[0].toFixed(1)}, J2 com turbo ${vel[1].toFixed(1)}`);
   await vence(0);
   await tela.locator('#resultado .anun').first().waitFor();
-  assert.ok((await anuncios()).some(t => /2 seguidas!/i.test(t)), 'faixa de 2 seguidas: ' + await anuncios());
+  assert.ok((await anuncios()).some(t => /fez 2 seguidas/i.test(t)), 'faixa de 2 seguidas: ' + await anuncios());
   await espera(400);
   await foto('faixa-2-seguidas');
-  console.log('ok faixa "2 seguidas!" depois de duas vitorias');
+  console.log('ok faixa "fez 2 seguidas" depois de duas vitorias');
 
   // ---- rodada 3: J2 escolhe Vale dobro e vence: 2 pontos, empata 2 x 2 depois de estar 2 atras = virada
   f = await escolhe(1, ['dobro', 'moedas', 'turbo'], 'Vale dobro');
@@ -155,7 +160,7 @@ async function celular(browser, botao, seed, pos) {
   await joga();
   await vence(1);
   assert.deepEqual(await pontos(), [2, 2], 'vale dobro deu 2 pontos');
-  assert.ok((await anuncios()).some(t => /virada/i.test(t)), 'faixa de virada: ' + await anuncios());
+  assert.ok((await anuncios()).some(t => /virou!/i.test(t)), 'faixa de virada: ' + await anuncios());
   await espera(400);
   await foto('faixa-virada');
   console.log('ok Vale dobro deu 2 pontos e a faixa de virada apareceu (2 x 2)');
@@ -167,12 +172,12 @@ async function celular(browser, botao, seed, pos) {
   assert.ok((await anuncios()).some(t => /2 seguidas/i.test(t)));
   await joga(); await vence(1);
   const a5 = await anuncios();
-  assert.ok(a5.some(t => /3 seguidas, está on fire!/i.test(t)), 'on fire: ' + a5);
-  assert.ok(a5.some(t => /ponto da partida/i.test(t)), 'ponto da partida: ' + a5);
+  assert.ok(a5.some(t => /fez 3 seguidas. Alguém para essa pessoa!/i.test(t)), 'on fire: ' + a5);
+  assert.ok(a5.some(t => /a um ponto do título/i.test(t)), 'ponto da partida: ' + a5);
   await tela.locator('#placar .cartao.dir.quase').waitFor();
   await espera(400);
   await foto('faixa-on-fire-e-ponto-da-partida');
-  console.log(`ok faixas "3 seguidas, está on fire!" e "Ponto da partida" (${(await pontos()).join(' x ')})`);
+  console.log(`ok faixas "fez 3 seguidas" e "a um ponto do título" (${(await pontos()).join(' x ')})`);
 
   // ---- contagem vibrante e ponto decisivo em camera lenta
   // J1 perdeu: recusa a carta com "Sem carta", que ja conta como PRONTO
@@ -180,9 +185,9 @@ async function celular(browser, botao, seed, pos) {
   await ev(() => { window.__p.jogadores[0].oferta = ['moedas', 'turbo', 'dash']; });
   await esperaOferta(um, ['moedas', 'turbo', 'dash']);
   await foto('cartas-sem-carta-celular', um);
-  await um.locator('#opcoes button', { hasText: 'Sem carta' }).tap();
+  await um.locator('#opcoes button', { hasText: 'Não quero carta' }).tap();
   await tela.waitForFunction(() => window.__p.jogadores[0].pronto && !window.__p.jogadores[0].oferta && !window.__p.jogadores[0].carta);
-  console.log('ok "Sem carta" recusa a oferta e ja deixa o jogador pronto');
+  console.log('ok "Não quero carta" recusa a oferta e ja deixa o jogador pronto');
   await prontoDe(1);
   await tela.waitForFunction(() => document.querySelector('#conta span')?.textContent === '1', null, { timeout: 6000 });
   await foto('contagem-1');
@@ -209,11 +214,11 @@ async function celular(browser, botao, seed, pos) {
   await foto('coop-cartao');
   for (const i of [0, 1]) await prontoDe(i);
   await tela.waitForFunction(() => window.__p.fase === 'resultado', null, { timeout: 25000 });
-  await tela.locator('#resultado .faixa.equipe', { hasText: 'Vitória em equipe!' }).waitFor();
+  await tela.locator('#resultado .faixa.equipe', { hasText: 'Deu certo!' }).waitFor();
   assert.deepEqual(await pontos(), [1, 1]);
   await espera(400);
   await foto('coop-vitoria-equipe');
-  console.log('ok rodada cooperativa: cartao "Cooperativo", faixa "Vitória em equipe!" e 1 ponto para cada um');
+  console.log('ok rodada cooperativa: cartao "Todo mundo do mesmo lado", faixa "Deu certo!" e 1 ponto para cada um');
 
   // ---- labirinto: itens no chao, coleta e selos de itens no HUD
   await tela.waitForFunction(() => window.__p.fase === 'intro', null, { timeout: 8000 });

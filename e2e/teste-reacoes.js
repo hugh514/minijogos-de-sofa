@@ -77,7 +77,7 @@ async function celular(browser, botao, seed) {
   // ---- celular 1 entra: a partida comeca. Tem 300 moedas para comprar.
   const um = await celular(browser, 'Jogador 1', { cores: [0, 1], chapeus: [0], moedas: 300 });
   await tela.locator('#espera').waitFor({ state: 'hidden' });
-  await um.waitForFunction(() => document.getElementById('btG').textContent === 'PRONTO!' && getComputedStyle(document.getElementById('botao')).display !== 'none');
+  await um.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none');
   console.log('ok os dois celulares conectaram e a partida comecou');
 
   // botao de carinha visivel e tocavel (nada por cima) em todos os modos, inclusive no PRONTO
