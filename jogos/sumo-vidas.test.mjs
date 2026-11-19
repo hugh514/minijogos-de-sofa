@@ -105,7 +105,7 @@ test('sumo-vidas: a arena encolhe devagar ate um minimo que ainda cabe todo mund
   assert.equal(p.arena.raio, r0, 'nao encolhe nos primeiros segundos');
   roda(p, 10);
   assert.ok(p.arena.raio < r0 && p.arena.raio > r0 - 2, 'encolhe devagar: ' + p.arena.raio);
-  roda(p, 40);
+  for (let k = 0; k < 60 * 40 && p.fase === 'jogando'; k++) passo(p, DT);       // so a rodada: a seguinte pode ser outro minijogo
   assert.ok(p.arena.raio >= 4.5, 'minimo de 4,5: ' + p.arena.raio);
 });
 

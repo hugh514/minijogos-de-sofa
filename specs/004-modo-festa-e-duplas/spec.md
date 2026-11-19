@@ -36,6 +36,7 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 - RF-12. O menu do Jogador 1 mostra as quatro brincadeiras. Duplas aparece desabilitada, com o motivo, enquanto não houver 4 celulares conectados. Só o celular do Jogador 1 tem o menu.
 - RF-13. Com os Jogadores 1 e 2 conectados e ninguém mexendo no menu, o Duelo começa sozinho depois de 6 s, com contagem na TV e no celular. Com um modo da Festa escolhido, nada começa sozinho.
 - RF-14. O Jogador 1 é quem se declara Jogador 1 ao abrir o controle. Não há autenticação (ver `specs/002-servidor-carteiro`).
+- RF-15. Em Duplas a rotação também usa os minijogos do Duelo, menos os cooperativos. Numa rodada dessas joga um de cada dupla (`p.duelo`, o primeiro sempre do time A), na ordem J1 x J2, J3 x J4, J1 x J4, J3 x J2, que recomeça a cada partida. O minijogo recebe `vista(p)`: a mesma partida com `jogadores`, `celular` e `nomes` só dos dois da vez e `n` igual a 2. O placar, os pontos e os celulares seguem com os 4: o resultado `0` ou `1` é o time, os dois da dupla pontuam, só os dois da vez aparecem na arena e o celular do parceiro diz de quem é a vez e que ele torce.
 
 ## Critérios de aceite
 
@@ -57,11 +58,14 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 - CA-16. O Duelo com 2 jogadores segue com o placar de sempre e nenhum minijogo de festa entra na rotação (RF-1).
 - CA-17. O Duelo começa sozinho depois de 6 s com os Jogadores 1 e 2 conectados (RF-13). Sem teste automatizado.
 - CA-18. Valor de moedas em empate no Duelo e em Cada um por si: o teste cobre 5 moedas só para o Duelo, não para os modos da Festa (RF-5).
+- CA-19. Em Duplas entram os minijogos do Duelo sem os cooperativos; numa rodada deles só os dois da vez jogam e se movem, um de cada dupla, na ordem J1 x J2, J3 x J4, J1 x J4, J3 x J2, e os dois da dupla vencedora pontuam. Minijogo da Festa continua com os 4 (RF-15).
+- CA-20. No navegador, uma rodada do Duelo em Duplas mostra só os dois da vez na arena, o placar com os 4, "Nesta rodada: X contra Y" na explicação e "Daqui você torce" no celular de quem está de fora, sem erro de minijogo nem de console (RF-15).
 
 ## Fora do escopo
 
 - Mais de 4 jogadores.
 - Jogadores com times de tamanhos desiguais (Duplas é sempre 2 contra 2).
+- Revezamento em Cada um por si com 3 ou 4 jogadores (lá só entram os minijogos feitos para a Festa).
 - Cartas de poder e anúncios de arcade na Festa. Ficam desligados nesta versão.
 - Placar entre partidas guardado fora do navegador do PC.
 
@@ -92,6 +96,12 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 | CA-15 | `e2e/teste-festa.js` | `ok partida de 2 em cooperativo: zumbis, vitoria de todos` |
 | CA-16 | `e2e/teste-festa.js` | `ok Classico com 2: partida, ponto, placar de sempre e nenhum minijogo de festa na rotacao` |
 | CA-17 | sem teste automatizado | |
+| CA-19 | `logica-festa.test.mjs` | `duplas: minijogo de 2 roda so com os dois da vez e a dupla de quem venceu leva o ponto` |
+| CA-19 | `logica-festa.test.mjs` | `duplas: os parceiros revezam e todo mundo enfrenta todo mundo` |
+| CA-19 | `logica-festa.test.mjs` | `duplas: minijogo de festa usa os 4 e minijogo coop de 2 nao entra` |
+| CA-19 | `logica-festa.test.mjs` | `duplas: so quem esta na vez se move no minijogo de 2` |
+| CA-19 | `logica-festa.test.mjs` | `festa: a rotacao filtra pelo modo e pelo numero de jogadores` |
+| CA-20 | `e2e/teste-festa.js` | `ok sumo em Duplas: ...`, `ok bomba em Duplas: ...` e `ok kart em Duplas: ...` (o texto segue com os jogadores da vez e o placar) |
 | CA-18 | `logica.test.mjs` | `cartas: moedas em dobro e valores das moedas da rodada` (cobre 5 moedas para empate no Duelo; não há teste equivalente para a Festa) |
 
 Os nomes `ok ...` de `e2e/teste-festa.js` são linhas que o script imprime depois do `assert` correspondente, porque os testes de navegador são scripts e não têm nome de teste do `node --test`. Alguns textos ainda dizem "times 2x2", que é o nome antigo de Duplas.

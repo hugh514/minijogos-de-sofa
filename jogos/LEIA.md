@@ -4,7 +4,7 @@ Jogo de festa para 2 a 4 jogadores na mesma sala. O PC mostra a tela 3D (three.j
 
 Há dois modos, escolhidos no menu do celular do Jogador 1 (o anfitrião) antes de começar:
 
-- **Clássico**: exatamente 2 jogadores e os minijogos sem o campo `festa` (todos os que estão neste manual, fora a seção "Modo Festa"). Nada neles muda com 3 ou 4 jogadores: os celulares 3 e 4 só assistem.
+- **Clássico**: exatamente 2 jogadores e os minijogos sem o campo `festa` (todos os que estão neste manual, fora a seção "Modo Festa"). Nada neles muda com 3 ou 4 jogadores: os celulares 3 e 4 só assistem. Em Duplas eles também entram, em revezamento: joga um de cada dupla e o minijogo recebe `vista(p)`, com `p.jogadores`, `p.celular` e `p.nomes` só dos dois da vez. Por isso use sempre `p.jogadores`, `c.cores` e `c.bonecos` (nunca o índice de um lugar fixo da tela) e devolva `0` ou `1` como sempre.
 - **Festa**: de 2 a 4 jogadores, em três submodos (todos contra todos, times 2x2 e cooperativo), com minijogos próprios que declaram `festa` (seção "Modo Festa", no fim).
 
 Um minijogo é **um arquivo** `jogos/<id>.mjs` com `export default { ... }`, mais o teste `jogos/<id>.test.mjs`. A tela confere a pasta `jogos/` a cada 8 s e põe o arquivo novo na rotação sozinha, com os celulares conectados. Por isso:
@@ -187,7 +187,7 @@ do celular, mas `j.escolha` do minijogo só recebe toques na fase `'jogando'`, c
 
 ## Modo Festa (2 a 4 jogadores)
 
-Um minijogo de festa é um arquivo `jogos/<id>.mjs` como os outros, com o campo novo `festa`, e só entra na rotação da Festa. Os minijogos sem `festa` só entram no Clássico. Exemplos prontos: `tinta-festa`, `sumo-vidas`, `futebol-times` e `zumbis-coop`.
+Um minijogo de festa é um arquivo `jogos/<id>.mjs` como os outros, com o campo novo `festa`, e só entra na rotação da Festa. Os minijogos sem `festa` entram no Clássico, em Cada um por si com 2 pessoas e, em revezamento, em Duplas (os cooperativos, não). Exemplos prontos: `tinta-festa`, `sumo-vidas`, `futebol-times` e `zumbis-coop`.
 
 ```js
 export default {
