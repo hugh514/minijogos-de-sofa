@@ -626,3 +626,18 @@ test('cartas na festa: no revezamento so quem jogou e perdeu ganha a carta, e so
     assert.ok(Array.isArray(p.jogadores[1].oferta), 'voltou a jogar: escolhe a carta');
   } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });
+
+test('cartas na festa: quem ficou de fora no revezamento nao recebe o Escudo duas vezes seguidas', () => {
+  const sozinhos = JOGOS.splice(0);
+  registra(classico('c-duelo', () => 0));
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    p.jogadores[1].carta = 'escudo';                // J2 joga o duelo 0-1 com escudo
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT); roda(p, 2.6);                     // duelo 2-3: J2 de fora, sem carta
+    assert.equal(p.jogadores[1].cartaAnterior, 'escudo');
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT); roda(p, 2.6);                     // duelo 0-3
+    assert.equal(p.jogadores[1].cartaAnterior, 'escudo', 'de fora de novo: a ultima carta dele segue sendo o escudo');
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
+});

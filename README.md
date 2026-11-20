@@ -64,7 +64,7 @@ node --input-type=module -e "import fs from 'node:fs'; const L = await import('.
 O que o jogo tem, em resumo:
 
 - **Controle no celular feito para jogar olhando a TV:** joystick flutuante com zona morta e curva de resposta, a metade da tela vale como botão, e dá para deslizar o dedo entre A e B. Há vibração em pancada forte, e no iPhone a borda da tela pisca no lugar. Detalhes em [`specs/003-controle-no-celular`](specs/003-controle-no-celular/spec.md).
-- **Cartas de poder** no Duelo: quem perde a rodada escolhe uma carta para a rodada seguinte (por exemplo Turbo, Vale dobro e Escudo de ponto).
+- **Cartas de poder** no Duelo, em Cada um por si e em Duplas: quem jogou e perdeu a rodada escolhe uma carta para a rodada seguinte (por exemplo Turbo, Vale dobro e Escudo de ponto).
 - **Rodadas temperadas** de vez em quando (rodada de ouro, no gelo, foguete, esquerda e direita trocadas, na lua).
 - **Rotação com variedade:** o mesmo minijogo não volta cedo, e o mesmo tipo de jogo não sai duas vezes seguidas. Veja [`specs/005-rotacao-e-variedade`](specs/005-rotacao-e-variedade/spec.md).
 - **Nenhuma rodada acaba em menos de 5 segundos**, por mais que alguém aperte sem querer. Veja [`specs/006-regra-dos-5-segundos`](specs/006-regra-dos-5-segundos/spec.md).

@@ -805,7 +805,8 @@ function sorteiaProximo(p) {
 
 function proximaRodada(p, forcado) {
   // carta usada na ultima rodada competitiva (coop no meio nao conta); calculada uma vez, antes de qualquer nova tentativa
-  const anterior = p.jogadores.map(j => (p.jogo?.coop ? j.cartaAnterior : j.carta) ?? null);
+  // quem ficou de fora no revezamento tambem nao jogou carta: vale a da ultima rodada em que jogou
+  const anterior = p.jogadores.map((j, i) => (p.jogo?.coop || (p.duelo && !p.duelo.includes(i)) ? j.cartaAnterior : j.carta) ?? null);
   if (p.jogadores.every(j => j.pontos === 0)) p.alvo = alvoDe(p);       // a pasta de minijogos ainda pode estar carregando: o alvo acompanha a lista ate o placar andar
   for (let tentativa = 0; tentativa < 100; tentativa++) {
     p.jogo = forcado ?? sorteiaProximo(p);

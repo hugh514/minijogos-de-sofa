@@ -2507,7 +2507,8 @@ function fraseDoFim(i) {       // o que o celular de cada um diz quando a rodada
   if (p.vencedor === undefined) return '';
   if (ehCoop(p)) return 'Não foi dessa vez';
   if (p.vencedor < 0) return 'Empatou!';
-  return p.jogadores[i].direito && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';       // direito: jogou e perdeu (quem so assistiu nao ganha carta)
+  const jogou = !p.duelo || p.duelo.includes(i);       // quem so assistiu nao perdeu nada agora (o direito guardado dele espera a vez de jogar)
+  return jogou && p.jogadores[i].direito && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';
 }
 function celularDoPodio(i) {
   const falta = 'Revanche em ' + faltaRevanche();
@@ -2762,15 +2763,15 @@ function hud(agora) {
   // resultado da rodada e fim de partida
   let res = '';
   const camp = p.campeoes ?? [], juntos = camp.length === p.jogadores.length, cc = camp.length ? (times ? hex(TIMES[timeDe(p, camp[0])]) : css(camp[0])) : css(0);
-  const escudo = (p.anuncios ?? []).some(a => a.tipo === 'escudo');
+  const donoEscudo = (p.anuncios ?? []).find(a => a.tipo === 'escudo')?.quem, escudo = donoEscudo !== undefined;
   const gradEquipe = p.jogadores.length > 2 ? ` style="background:linear-gradient(90deg,${todos().map(css).join(',')})"` : ` style="--c0:${css(0)};--c1:${css(1)}"`;
   if (p.fase === 'fim' && !podio) res = `<div class="faixa tit" style="--cor:${cc}">Acabou!</div>` + anuncios();
   if (p.fase === 'resultado') res = (v >= 0 && ehCoop(p) ? `<div class="faixa tit equipe"${gradEquipe}>Deu certo!</div><small>Ponto e 10 moedas para todo mundo</small>`
     : v < 0 && ehCoop(p) ? '<div class="faixa tit">Não foi dessa vez</div><small>3 moedas de consolo para cada um</small>'
     : v < 0 ? '<div class="faixa tit">Empatou!</div><small>5 para cada um</small>'
-    : times && escudo ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">${NOME_TIME[v]} venceu, mas o escudo segurou!</div><small>Ponto bloqueado, 10 moedas para cada um da dupla</small>`
+    : times && escudo ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">${NOME_TIME[v]} venceu, mas o escudo de ${limpa(nome(donoEscudo))} segurou!</div><small>Ponto bloqueado, 10 moedas para cada um da dupla</small>`
     : times ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">Ponto do ${NOME_TIME[v]}!</div><small>+10 para cada um da dupla</small>`
-    : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu, mas o escudo segurou!</div><small>Ponto bloqueado, 10 moedas para ${limpa(nome(v))}</small>`
+    : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu, mas o escudo${p.modo === 'classico' ? '' : ' de ' + limpa(nome(donoEscudo))} segurou!</div><small>Ponto bloqueado, 10 moedas para ${limpa(nome(v))}</small>`
     : `<div class="faixa tit" style="--cor:${css(v)}">Ponto de ${limpa(nome(v))}!</div><small>+10 para ${limpa(nome(v))}, +3 de consolo</small>`) + anuncios();
   poe('resultado', res);
   $('fim').classList.toggle('on', podio);
