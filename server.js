@@ -189,11 +189,11 @@ const servidor = http.createServer((req, res) => {
     return;
   }
 
-  if (url === '/perfil' && req.method === 'POST') {   // nome e skin escolhidos no celular
+  if (url === '/perfil' && req.method === 'POST') {   // nome, skin, pet e rastro escolhidos no celular
     leCorpo(req, 500, m => {
       if (!slot(m?.j)) return;
       const i = m.j - 1;
-      perfis[i] = JSON.stringify({ perfil: { j: i + 1, nome: String(m.nome ?? '').slice(0, 10), cor: inteiro(m.cor) ?? i, chapeu: inteiro(m.chapeu) ?? 0 } });
+      perfis[i] = JSON.stringify({ perfil: { j: i + 1, nome: String(m.nome ?? '').slice(0, 10), cor: inteiro(m.cor) ?? i, chapeu: inteiro(m.chapeu) ?? 0, pet: inteiro(m.pet) ?? 0, rastro: inteiro(m.rastro) ?? 0 } });
       for (const t of telas) manda(t, perfis[i]);
     });
     req.on('end', () => res.end('ok'));

@@ -205,10 +205,12 @@
   #trocar{position:relative;overflow:hidden;align-self:center;display:flex;align-items:center;gap:5px;font-size:12px;color:#8f98c4;padding:3px 10px}
   #direita{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
   #cabeca{display:flex;gap:8px;align-items:center}
-  #abas{flex:1;display:flex;gap:3px;padding:3px;min-width:0;background:#12162a;border-radius:12px}
-  .aba{flex:1;height:36px;border-radius:9px;font-size:14px;font-weight:700;color:#8f98c4;position:relative}
+  #abas{flex:1;display:flex;gap:3px;padding:3px;min-width:0;background:#12162a;border-radius:12px;overflow-x:auto;scrollbar-width:none}
+  #abas::-webkit-scrollbar{display:none}
+  .aba{flex:1 0 auto;padding:0 9px;height:36px;border-radius:9px;font-size:14px;font-weight:700;color:#8f98c4;position:relative}
   .aba.ativa{background:linear-gradient(#4a58a6,#36418a);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 2px 0 #1b2147}
   .aba .novo{top:4px;right:6px;border-color:#12162a}
+  @media (max-width:900px){ .aba{font-size:13px;padding:0 4px} }      /* seis abas no celular deitado: apertam e, se ainda faltar, a faixa rola */
   #fechar{height:48px;padding:0 16px;border-radius:12px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:6px;background:linear-gradient(#45d683,#1fa158);box-shadow:0 3px 0 #0f6a37}
   #fechar:active,.item:active,#comprar:active{transform:translateY(2px)}
   #paineis{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;touch-action:pan-x pan-y;scrollbar-width:none;border-radius:14px;background:rgba(10,13,28,.55);border:1px solid #2b3360}
@@ -296,6 +298,7 @@
   <symbol id="i-cofre" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></symbol>
   <symbol id="i-chapeu" viewBox="0 0 24 24"><path d="M3 18h18M7 18V7h10v11M7 14h10"/></symbol>
   <symbol id="i-gota" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-pata" viewBox="0 0 24 24"><circle cx="6.5" cy="10" r="1.7"/><circle cx="10" cy="6" r="1.7"/><circle cx="14" cy="6" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/><path d="M12 11.5c-2.8 0-5 2.8-5 5 0 2.6 2.8 2.4 5 1.7 2.2.7 5 .9 5-1.7 0-2.2-2.2-5-5-5z"/></symbol>
   <symbol id="i-carinha" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.500 14c1 1.600 2.200 2.300 3.500 2.300s2.500-.7 3.500-2.300"/><path d="M9 9.500h.01M15 9.500h.01" stroke-width="3"/></symbol>
   <symbol id="i-igual" viewBox="0 0 24 24"><path d="M6 9.500h12M6 14.500h12" stroke-width="3"/></symbol>
   <symbol id="i-raio" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
@@ -374,6 +377,8 @@
         <button class="aba ativa">Cores</button>
         <button class="aba">Chapéus</button>
         <button class="aba">Reações</button>
+        <button class="aba">Pets</button>
+        <button class="aba">Rastros</button>
         <button class="aba">Troféus<i class="novo"></i></button>
         <button class="aba" hidden>Lanchonete</button>
       </div>
@@ -383,6 +388,8 @@
       <div class="painel"><div class="grade" id="lojaCores"></div></div>
       <div class="painel"><div class="grade" id="lojaChapeus"></div></div>
       <div class="painel"><div class="grade" id="lojaReacoes"></div></div>
+      <div class="painel"><div class="grade" id="lojaPets"></div></div>
+      <div class="painel"><div class="grade" id="lojaRastros"></div></div>
       <div class="painel"><div id="resumo"></div><div id="trofeus"></div></div>
       <div class="painel" hidden><div id="lanchonete"></div></div>
     </div>
@@ -408,11 +415,21 @@ const CORES = [['#2f7df6', 0], ['#f0458f', 0], ['#35c26b', 15], ['#ffc531', 15],
   ['#2438a8', 50, 'radial-gradient(circle,#fff 0 2.6px,#0000 3.2px) 1px 1px/12px 12px,#2438a8'],
   ['#5f7a3a', 55, 'radial-gradient(circle at 25% 30%,#2f4420 0 17%,#0000 18%),radial-gradient(circle at 72% 24%,#7a5a36 0 15%,#0000 16%),radial-gradient(circle at 62% 72%,#2f4420 0 19%,#0000 20%),radial-gradient(circle at 24% 76%,#b5a97a 0 13%,#0000 14%),radial-gradient(circle at 48% 50%,#7a5a36 0 9%,#0000 10%),#5f7a3a'],
   ['#d9ccff', 80, 'radial-gradient(circle,#ffffffd0 0 22%,#d9ccff90 58%,#a48cff50)'],
-  ['#ff4d5e', 65, 'radial-gradient(circle at 34% 30%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 62% 24%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 50% 44%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 74% 42%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 26% 46%,#1a1114 0 3.5%,#0000 4.5%),linear-gradient(180deg,#ff4d5e 0 62%,#f4ffe0 62% 68%,#2f9e44 68%)']];
+  ['#ff4d5e', 65, 'radial-gradient(circle at 34% 30%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 62% 24%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 50% 44%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 74% 42%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 26% 46%,#1a1114 0 3.5%,#0000 4.5%),linear-gradient(180deg,#ff4d5e 0 62%,#f4ffe0 62% 68%,#2f9e44 68%)'],
+  // cores chapadas baratas (22 a 27)
+  ['#0fa3a3', 15], ['#8e1b3a', 20], ['#b6e31c', 20], ['#ffb38a', 25], ['#b9a7f5', 30], ['#8a5a34', 15]];
 const NOMES_CORES = ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon',
-  'Lava', 'Gelo', 'Cromado', 'Zebra', 'Bolinhas', 'Camuflado', 'Fantasma', 'Melancia'];
+  'Lava', 'Gelo', 'Cromado', 'Zebra', 'Bolinhas', 'Camuflado', 'Fantasma', 'Melancia',
+  'Turquesa', 'Vinho', 'Lima', 'Pêssego', 'Lavanda', 'Marrom'];
 const CHAPEUS = [['Nenhum', 0], ['Cartola', 20], ['Coroa', 50], ['Orelhas', 30], ['Chifres', 30], ['Hélice', 40], ['Cone', 20], ['Antenas', 25], ['Pirata', 40], ['Chef', 30], ['Auréola', 80], ['Viking', 45], ['Faixa ninja', 35],
   ['Boné', 20], ['Bruxo', 45], ['Cowboy', 40], ['Flor', 25], ['Gorro', 30], ['Fone', 40], ['Laço', 25], ['Cogumelo', 45], ['Festa', 30], ['Louros', 60]];
+// Pet: bichinho que segue o boneco na TV (0 e nenhum). O item de desejo da loja, por isso o preco alto.
+const PETS = [['Nenhum', 0], ['Pintinho', 80], ['Gato', 100], ['Cachorro', 100], ['Patinho', 90], ['Robozinho', 150], ['Fantasminha', 130], ['Dragãozinho', 220], ['Óvni', 250]];
+// Rastro: particulas que saem do boneco quando ele anda. O terceiro item e a forma (a mesma textura da tela) e o quarto as cores.
+const RASTROS = [['Nenhum', 0], ['Estrelas', 40, 'estrela', ['#ffe14a', '#fff3a8']], ['Bolhas', 50, 'bolha', ['#bff2ff', '#8fd8ff']], ['Corações', 60, 'coracao', ['#ff4d7a', '#ff86a8']],
+  ['Fogo', 90, 'chama', ['#ff4a12', '#ff9a1a', '#ffd84d']], ['Arco-íris', 120, 'arco', ['#ff4d5e', '#ff9a1a', '#ffd84d', '#35c26b', '#2f7df6', '#9b5cf6']]];
+// O que vai para a tela pelo /perfil (limite de 500 bytes no servidor): so nome e indices, nunca moedas nem listas.
+const corpoPerfil = (j, p) => JSON.stringify({ j, nome: p.nome, cor: p.cor, chapeu: p.chapeu, pet: p.pet, rastro: p.rastro });
 // Indice salvo no celular: so inteiro que existe na lista vale (perfil antigo ou estragado volta ao padrao).
 const noCatalogo = (lista, i) => Number.isInteger(i) && i >= 0 && i < lista.length;
 // @fim-catalogo
@@ -420,10 +437,12 @@ const noCatalogo = (lista, i) => Number.isInteger(i) && i >= 0 && i < lista.leng
 const REACOES = [['\u{1F604}', 'Risada'], ['\u{1F602}', 'Choro de rir'], ['\u{1F621}', 'Raiva'], ['❤️', 'Coração'], ['\u{1F44D}', 'Joinha'], ['\u{1F631}', 'Susto'],
   ['\u{1F61B}', 'Língua'], ['\u{1F60E}', 'Óculos escuros'], ['\u{1F921}', 'Palhaço'], ['\u{1F634}', 'Dormindo'],
   ['\u{1F525}', 'Fogo'], ['\u{1F31F}', 'Estrelas'], ['\u{1F3C6}', 'Troféu'], ['\u{1F451}', 'Coroa'],
-  ['\u{1F414}', 'Galinha'], ['\u{1F40D}', 'Cobra'], ['\u{1F422}', 'Tartaruga'], ['\u{1F40C}', 'Caracol']];
+  ['\u{1F414}', 'Galinha'], ['\u{1F40D}', 'Cobra'], ['\u{1F422}', 'Tartaruga'], ['\u{1F40C}', 'Caracol'],
+  ['\u{1F355}', 'Pizza'], ['\u{1F37F}', 'Pipoca'], ['\u{1F366}', 'Sorvete'], ['\u{1F369}', 'Rosquinha'],
+  ['\u{1F47B}', 'Fantasma'], ['\u{1F47D}', 'Alienígena'], ['\u{1F916}', 'Robô'], ['\u{1F480}', 'Caveira']];
 const GRATIS = [0, 1, 2, 3, 4, 5];
-const PACOTES = [['Provocação', 25, [6, 7, 8, 9]], ['Festa', 35, [10, 11, 12, 13]], ['Bichos', 30, [14, 15, 16, 17]]];
-const LOJAS = { cor: [CORES, 'cores', 'lojaCores'], chapeu: [CHAPEUS, 'chapeus', 'lojaChapeus'], reacao: [PACOTES, 'pacotes', 'lojaReacoes'] };
+const PACOTES = [['Provocação', 25, [6, 7, 8, 9]], ['Festa', 35, [10, 11, 12, 13]], ['Bichos', 30, [14, 15, 16, 17]], ['Lanche', 30, [18, 19, 20, 21]], ['Monstros', 40, [22, 23, 24, 25]]];
+const LOJAS = { cor: [CORES, 'cores', 'lojaCores'], chapeu: [CHAPEUS, 'chapeus', 'lojaChapeus'], reacao: [PACOTES, 'pacotes', 'lojaReacoes'], pet: [PETS, 'pets', 'lojaPets'], rastro: [RASTROS, 'rastros', 'lojaRastros'] };
 // Estatisticas guardadas no perfil a partir do premio de cada rodada. porJogo: { id: [nome, vitorias] }.
 const EST0 = { rodadas: 0, vitorias: 0, partidas: 0, empates: 0, seq: 0, maiorSeq: 0, ganho: 0, reacoes: 0, porJogo: {} };
 // id, icone, nome, descricao, meta, bonus em moedas, valor atual
@@ -447,6 +466,11 @@ const TROFEUS = [
   ['rp1', 'carinha', 'Boca no mundo', 'Compre um pacote de reações', 1, 5, () => perfil.pacotes.length],
   ['rpT', 'carinha', 'Repertório', 'Todos os pacotes', PACOTES.length, 25, () => perfil.pacotes.length],
   ['rt50', 'carinha', 'Tagarela', 'Mande 50 reações', 50, 10, e => e.reacoes],
+  ['pet1', 'pata', 'Melhor amigo', 'Adote um pet', 1, 10, () => perfil.pets.length - 1],
+  ['pet4', 'pata', 'Casa cheia', 'Adote 4 pets', 4, 30, () => perfil.pets.length - 1],
+  ['petT', 'pata', 'Zoológico', 'Todos os pets', PETS.length - 1, 80, () => perfil.pets.length - 1],
+  ['ras1', 'estrela', 'Deixando rastro', 'Compre um rastro', 1, 5, () => perfil.rastros.length - 1],
+  ['rasT', 'estrela', 'Cometa', 'Todos os rastros', RASTROS.length - 1, 30, () => perfil.rastros.length - 1],
 ];
 
 const $ = id => document.getElementById(id);
@@ -560,7 +584,7 @@ function salvaPerfil() {
   $('meuNome').textContent = perfil.nome || 'Jogador ' + j;
   mostraMoedas();
   if (aberto) { desenhaLoja(); desenhaTrofeus(); }
-  fetch('/perfil', { method: 'POST', body: JSON.stringify({ j, nome: perfil.nome, cor: perfil.cor, chapeu: perfil.chapeu }) }).catch(() => {});
+  fetch('/perfil', { method: 'POST', body: corpoPerfil(j, perfil) }).catch(() => {});
 }
 
 // Um toque no cartao: usa se ja tem, compra e usa se o saldo da, senao mostra a previa com quanto falta.
@@ -607,9 +631,10 @@ function loja(campo) {
       fila.className = 'miniRea emoji';
       for (const k of PACOTES[i][2]) { const e = document.createElement('span'); e.textContent = REACOES[k][0]; fila.append(e); }
       bt.append(fila); nome.textContent = rotulo;
-    } else { bt.append(miniChapeu(i)); nome.textContent = rotulo; }
+    } else { bt.append(campo === 'pet' ? miniPet(i) : campo === 'rastro' ? miniRastro(i) : miniChapeu(i)); nome.textContent = rotulo; }
     etq.className = 'etq';
-    etq.innerHTML = usando ? ic('check') + 'Vestindo' : tem ? (campo === 'reacao' ? ic('check') + 'É seu' : 'Vestir') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
+    const leva = campo === 'pet' || campo === 'rastro';       // pet e rastro nao se vestem
+    etq.innerHTML = usando ? ic('check') + (leva ? 'Usando' : 'Vestindo') : tem ? (campo === 'reacao' ? ic('check') + 'É seu' : leva ? 'Usar' : 'Vestir') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
     bt.append(nome, etq);
     bt.onclick = () => toca(campo, i);
     cartao.append(bt);
@@ -623,7 +648,7 @@ function loja(campo) {
     grade.append(cartao);
   });
 }
-function desenhaLoja() { loja('cor'); loja('chapeu'); loja('reacao'); }
+function desenhaLoja() { for (const campo in LOJAS) loja(campo); }
 
 function desenhaTrofeus() {
   const e = perfil.est, resumo = $('resumo'), lista = $('trofeus');
@@ -659,6 +684,7 @@ abas.forEach((a, i) => { a.onclick = () => paineis.scrollTo({ left: i * paineis.
 paineis.addEventListener('scroll', () => {
   const atual = Math.round(paineis.scrollLeft / paineis.clientWidth);
   abas.forEach((a, i) => a.classList.toggle('ativa', i === atual));
+  abas[atual]?.scrollIntoView({ inline: 'nearest', block: 'nearest' });       // em tela estreita as abas rolam: a ativa fica a vista
 });
 
 $('nome').oninput = () => { $('conta').textContent = $('nome').value.length + '/10'; };
@@ -948,6 +974,103 @@ function miniChapeu(i) {                // cabeca com o chapeu, para o cartao da
   return cv;
 }
 
+// Pet visto de frente, pes no chao (y = 0), ~1 de altura: o mesmo bicho que a tela monta em 3D em pet().
+function pet2d(c, tipo, t) {
+  const olhos = (y, dx, r = 0.045) => { for (const s of [-1, 1]) elipse(c, s * dx, y, r, r * 1.15, '#111111', null); };
+  const ret = (x0, y0, x1, y1, cor, borda) => poli(c, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], cor, borda);
+  if (tipo >= 6) c.translate(0, 0.1 + Math.sin(t * 2.6) * 0.04);      // fantasminha, dragaozinho e ovni flutuam
+  if (tipo === 1) {                     // pintinho
+    for (const s of [-1, 1]) elipse(c, s * 0.12, 0.04, 0.1, 0.045, '#ff8a1a');
+    poli(c, [[-0.05, 0.84], [0.05, 0.84], [0, 1.0]], '#f5b800');
+    elipse(c, 0, 0.32, 0.3, 0.3, '#ffd93b');
+    for (const s of [-1, 1]) elipse(c, s * 0.3, 0.33, 0.07, 0.15, '#f5b800');
+    elipse(c, 0, 0.68, 0.22, 0.22, '#ffd93b');
+    olhos(0.73, 0.1);
+    poli(c, [[-0.07, 0.66], [0.07, 0.66], [0, 0.55]], '#ff8a1a', SOMBRA);
+  } else if (tipo === 2) {              // gato
+    c.beginPath(); c.moveTo(0.2, 0.15); c.quadraticCurveTo(0.52, 0.2, 0.42, 0.62);
+    c.lineCap = 'round'; c.lineWidth = 0.09; c.strokeStyle = '#c9741f'; c.stroke();
+    elipse(c, 0, 0.27, 0.28, 0.26, '#f29b3a');
+    for (const s of [-1, 1]) poli(c, [[s * 0.25, 0.7], [s * 0.2, 0.99], [s * 0.03, 0.8]], '#f29b3a');
+    elipse(c, 0, 0.62, 0.26, 0.23, '#f29b3a');
+    elipse(c, 0, 0.55, 0.11, 0.075, '#fff3e0', null); elipse(c, 0, 0.59, 0.03, 0.022, '#ff7a8a', null);
+    olhos(0.68, 0.11);
+  } else if (tipo === 3) {              // cachorro
+    elipse(c, 0, 0.28, 0.29, 0.27, '#b97a48');
+    elipse(c, 0, 0.64, 0.26, 0.24, '#b97a48');
+    for (const s of [-1, 1]) elipse(c, s * 0.27, 0.6, 0.075, 0.18, '#6b4226');
+    elipse(c, 0.1, 0.71, 0.085, 0.085, '#6b4226', null);
+    elipse(c, 0, 0.54, 0.14, 0.1, '#f0d9b5', null); elipse(c, 0, 0.45, 0.04, 0.05, '#ff6f91', null); elipse(c, 0, 0.59, 0.05, 0.035, '#111111', null);
+    olhos(0.71, 0.1);
+  } else if (tipo === 4) {              // patinho
+    for (const s of [-1, 1]) elipse(c, s * 0.13, 0.04, 0.11, 0.04, '#ff9a1a');
+    elipse(c, 0, 0.29, 0.31, 0.26, '#ffffff', SOMBRA);
+    for (const s of [-1, 1]) elipse(c, s * 0.29, 0.3, 0.06, 0.15, '#dfe6f0', SOMBRA);
+    elipse(c, 0, 0.68, 0.21, 0.21, '#ffffff', SOMBRA);
+    olhos(0.74, 0.1);
+    elipse(c, 0, 0.61, 0.14, 0.055, '#ff9a1a', SOMBRA);
+  } else if (tipo === 5) {              // robozinho
+    for (const s of [-1, 1]) { elipse(c, s * 0.2, 0.12, 0.07, 0.12, '#22252e'); ret(s * 0.23, 0.22, s * 0.32, 0.46, '#e8edf5'); }
+    ret(-0.22, 0.16, 0.22, 0.5, '#ff8a3c'); elipse(c, 0, 0.36, 0.05, 0.05, '#ffd84d', null);
+    ret(-0.015, 0.84, 0.015, 0.97, '#5d6880', null); elipse(c, 0, 1.0, 0.055, 0.055, '#ff4d5e');
+    ret(-0.19, 0.56, 0.19, 0.84, '#e8edf5'); ret(-0.15, 0.65, 0.15, 0.77, '#111827', null);
+    for (const s of [-1, 1]) elipse(c, s * 0.07, 0.71, 0.04, 0.04, '#22e0ff', null);
+  } else if (tipo === 6) {              // fantasminha
+    c.beginPath(); c.arc(0, 0.6, 0.3, 0, Math.PI);
+    for (const [x, y] of [[-0.3, 0.16], [-0.2, 0.05], [-0.1, 0.16], [0, 0.05], [0.1, 0.16], [0.2, 0.05], [0.3, 0.16]]) c.lineTo(x, y);
+    c.closePath(); c.shadowColor = '#b9c4ff'; c.shadowBlur = 10; pinta(c, 'rgba(255,255,255,.93)'); c.shadowBlur = 0;
+    for (const s of [-1, 1]) elipse(c, s * 0.11, 0.62, 0.05, 0.08, '#111111', null);
+    elipse(c, 0, 0.45, 0.04, 0.05, '#111111', null);
+  } else if (tipo === 7) {              // dragaozinho
+    const bate = Math.sin(t * 9) * 0.12;
+    for (const s of [-1, 1]) poli(c, [[s * 0.14, 0.55], [s * 0.58, 0.82 + bate], [s * 0.5, 0.36]], '#ff6b3d');
+    elipse(c, 0, 0.3, 0.28, 0.28, '#3fbf5f'); elipse(c, 0, 0.26, 0.17, 0.19, '#ffe08a', null);
+    for (const s of [-1, 1]) poli(c, [[s * 0.16, 0.8], [s * 0.13, 1.0], [s * 0.06, 0.82]], '#fff3d0', SOMBRA);
+    elipse(c, 0, 0.66, 0.23, 0.22, '#3fbf5f');
+    elipse(c, 0, 0.57, 0.13, 0.09, '#35a852', null);
+    for (const s of [-1, 1]) elipse(c, s * 0.05, 0.58, 0.02, 0.025, '#14301c', null);
+    olhos(0.72, 0.11);
+  } else if (tipo === 8) {              // ovni
+    elipse(c, 0, 0.44, 0.09, 0.09, '#7dff6a', null); olhos(0.46, 0.04, 0.02);
+    c.beginPath(); c.arc(0, 0.34, 0.23, 0, Math.PI); pinta(c, 'rgba(159,232,255,.5)', 'rgba(255,255,255,.6)');
+    elipse(c, 0, 0.2, 0.13, 0.05, '#ffe14a', null);
+    elipse(c, 0, 0.3, 0.45, 0.12, '#b8c2d6');
+    for (let k = -2; k <= 2; k++) elipse(c, k * 0.17, 0.28 - Math.abs(k) * 0.012, 0.04, 0.04, (k + Math.floor(t * 3)) & 1 ? '#ff4fa3' : '#ffe14a', null);
+  }
+}
+function nenhum2d(c, y) {               // cartao "Nenhum" de pet e de rastro: circulo cortado
+  c.beginPath(); c.arc(0, y, 0.34, 0, 7); c.moveTo(-0.24, y - 0.24); c.lineTo(0.24, y + 0.24);
+  c.lineWidth = 0.07; c.lineCap = 'round'; c.strokeStyle = '#6b74a3'; c.stroke();
+}
+function mini(desenha, escala, base) {  // desenho pequeno do cartao da loja, com y para cima e o zero em "base" px
+  const cv = document.createElement('canvas'), q = Math.min(devicePixelRatio || 1, 3);
+  cv.width = 56 * q; cv.height = 40 * q; cv.className = 'mini';
+  const c = cv.getContext('2d');
+  c.setTransform(escala * q, 0, 0, -escala * q, 28 * q, base * q);
+  desenha(c);
+  return cv;
+}
+function miniPet(i) { return mini(c => i ? pet2d(c, i, 0.3) : nenhum2d(c, 0.5), 35, 38); }
+// Uma particula do rastro (mesmas formas das texturas TX_RASTRO da tela), centrada em (x, y) com raio r.
+function forma2d(c, forma, x, y, r, cor) {
+  c.fillStyle = c.strokeStyle = cor; c.beginPath();
+  if (forma === 'estrela') { for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 + Math.PI / 2, q = k % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.fill(); }
+  else if (forma === 'bolha') { c.arc(x, y, r * 0.85, 0, 7); c.lineWidth = r * 0.22; c.stroke(); c.beginPath(); c.arc(x, y, r * 0.5, 2.2, 3.4); c.stroke(); }
+  else if (forma === 'coracao') { c.moveTo(x, y - r); c.bezierCurveTo(x - r * 1.9, y + r * 0.2, x - r * 0.9, y + r * 1.5, x, y + r * 0.5); c.bezierCurveTo(x + r * 0.9, y + r * 1.5, x + r * 1.9, y + r * 0.2, x, y - r); c.fill(); }
+  else if (forma === 'chama') { c.moveTo(x, y + r * 1.4); c.bezierCurveTo(x + r * 1.2, y + r * 0.2, x + r * 0.9, y - r, x, y - r); c.bezierCurveTo(x - r * 0.9, y - r, x - r * 1.2, y + r * 0.2, x, y + r * 1.4); c.fill(); }
+  else if (forma === 'arco') { c.arc(x, y, r * 0.8, 0, 7); c.fill(); }
+}
+function rastro2d(c, tipo, t, x0, x1, y0, r) {       // fila de particulas que nasce em x0 e some em x1
+  const [, , forma, cores] = RASTROS[tipo], n = 6, parado = forma === 'arco';
+  for (let k = 0; k < n; k++) {
+    const f = (t * 0.7 + k / n) % 1;
+    c.globalAlpha = Math.min(1, (1 - f) * 2.5);
+    forma2d(c, forma, x0 + (x1 - x0) * f, y0 + (parado ? 0 : f * r * 2.5 + Math.sin(k * 2.4) * r * 0.7), r * (1 - f * 0.4), cores[k % cores.length]);
+  }
+  c.globalAlpha = 1;
+}
+function miniRastro(i) { return mini(c => i ? rastro2d(c, i, 0.1, 0.45, -0.9, -0.1, 0.2) : nenhum2d(c, 0), 28, 20); }
+
 // palco do perfil: so anima com o perfil aberto, para nao gastar nada durante o jogo
 const palco = $('palco'), tela = $('previa'), ctx = tela.getContext('2d');
 let confete = [], pulo = 0, antes = 0;
@@ -967,16 +1090,24 @@ function quadro(agora) {
   const t = agora / 1000, dt = Math.min(0.05, t - antes); antes = t;
   const u = Math.min(h / 2.95, w / 1.9);
   const cor = previa?.campo === 'cor' ? previa.i : perfil.cor, tipo = previa?.campo === 'chapeu' ? previa.i : perfil.chapeu;
+  const bicho = previa?.campo === 'pet' ? previa.i : perfil.pet, risco = previa?.campo === 'rastro' ? previa.i : perfil.rastro;
   pulo = Math.max(0, pulo - dt * 1.4);
   const alto = Math.abs(Math.sin(pulo * Math.PI * 2)) * 0.3 * pulo, s = 1 + 0.03 * Math.sin(t * 2.6);
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
   ctx.setTransform(u, 0, 0, -u, w / 2, h / 2 + 0.3 * u);
   elipse(ctx, 0, -0.88, 0.95, 0.17, 'rgba(255,255,255,.07)', 'rgba(255,255,255,.12)');   // chao do palco
   elipse(ctx, 0, -0.88, 0.66 - alto * 0.5, 0.1, 'rgba(0,0,0,.4)', null);
+  if (risco) for (const lado of [-1, 1]) rastro2d(ctx, risco, t + (lado > 0 ? 0.6 : 0), lado * 0.5, lado * 0.9, -0.74, 0.1);      // sai de tras do boneco, rente ao chao
   ctx.save();
   ctx.translate(0, -0.88 + alto); ctx.scale(2 - s, s); ctx.translate(0, 0.88);           // respira apoiado nos pes
   boneco(ctx, cor, tipo, t, t % 3.4 < 0.13);
   ctx.restore();
+  if (bicho) {                          // o pet fica na frente, ao lado do pe, e da um pulinho de vez em quando
+    ctx.save();
+    ctx.translate(0.62, -0.93 + Math.max(0, Math.sin(t * 1.9)) ** 10 * 0.12 + alto * 0.6); ctx.scale(0.5, 0.5);
+    pet2d(ctx, bicho, t);
+    ctx.restore();
+  }
   confete = confete.filter(p => (p.vida -= dt) > 0);
   for (const p of confete) {
     p.vy -= 3.2 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.g += dt * 9;
@@ -1199,7 +1330,7 @@ function comecar(num) {
   j = num; guarda('slot', j);
   // perfil salvo antigo ou estragado: o que faltar ou vier torto volta para o padrao
   const salvo = le('perfil' + j), lista = (v, cat) => Array.isArray(v) ? [...new Set(v.filter(i => cat ? noCatalogo(cat, i) : Number.isInteger(i)))] : null;      // sem repetido nem indice de fora: os trofeus contam o tamanho
-  perfil = { nome: '', cor: j - 1, chapeu: 0, moedas: 0, cores: [0, 1], chapeus: [0], pacotes: [], premios: [], ...salvo };
+  perfil = { nome: '', cor: j - 1, chapeu: 0, pet: 0, rastro: 0, moedas: 0, cores: [0, 1], chapeus: [0], pets: [0], rastros: [0], pacotes: [], premios: [], ...salvo };
   perfil.nome = String(perfil.nome ?? '').slice(0, 10);
   perfil.moedas = Math.max(0, perfil.moedas | 0);
   perfil.cores = lista(perfil.cores, CORES) ?? [0, 1];
@@ -1210,6 +1341,11 @@ function comecar(num) {
   if (!Array.isArray(perfil.premios)) perfil.premios = [];
   if (!noCatalogo(CORES, perfil.cor)) perfil.cor = j - 1;       // so indice: "length" e cia nao passam
   if (!noCatalogo(CHAPEUS, perfil.chapeu)) perfil.chapeu = 0;
+  for (const [campo, cat, donos] of [['pet', PETS, 'pets'], ['rastro', RASTROS, 'rastros']]) {       // perfil de antes dos pets nao tem estes campos: nasce sem nenhum
+    perfil[donos] = lista(perfil[donos], cat) ?? [0];
+    if (!perfil[donos].includes(0)) perfil[donos].unshift(0);
+    if (!noCatalogo(cat, perfil[campo])) perfil[campo] = 0;
+  }
   perfil.est = { ...EST0, ganho: perfil.moedas, ...(salvo?.est && typeof salvo.est === 'object' ? salvo.est : null) };
   for (const k in EST0) if (k !== 'porJogo') perfil.est[k] = Math.max(0, perfil.est[k] | 0);
   if (!perfil.est.porJogo || typeof perfil.est.porJogo !== 'object') perfil.est.porJogo = {};
