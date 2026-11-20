@@ -86,7 +86,7 @@ test('trocaNomes: ao, pelo e no Jogador N viram a, por e em {nome}', () => {
 const cat = (() => {
   const html = fs.readFileSync(new URL('./tela.html', import.meta.url), 'utf8');
   const trecho = html.split('// @catalogo')[1].split('// @fim-catalogo')[0].replace(/^[^\n]*\n/, '');
-  return new Function(`${trecho}; return { PALETA, N_CHAPEUS, ACABAMENTO, indice, mesmaCor, semRepetir, corEscura };`)();
+  return new Function(`${trecho}; return { PALETA, N_CHAPEUS, N_PETS, RASTROS, ACABAMENTO, indice, mesmaCor, semRepetir, corEscura, perfilDaRede };`)();
 })();
 
 test('indice: cor ou chapeu invalido vindo da rede cai no padrao e nunca quebra', () => {
@@ -118,5 +118,27 @@ test('semRepetir: quaisquer 4 cores pedidas viram 4 cores validas que ninguem co
 
 test('corEscura: so as cores escuras do catalogo pedem contorno claro no nome', () => {
   const escuras = cat.PALETA.flatMap((c, i) => cat.corEscura(c) ? [i] : []);
-  assert.deepEqual(escuras, [9, 18], 'grafite e bolinhas (azul-marinho)');
+  assert.deepEqual(escuras, [9, 18, 23], 'grafite, bolinhas (azul-marinho) e vinho');
+});
+
+test('perfilDaRede: perfil antigo sem pet nem rastro vale, e indice invalido cai em nenhum', () => {
+  const { perfilDaRede, N_PETS, RASTROS, PALETA, N_CHAPEUS } = cat;
+  assert.deepEqual(perfilDaRede({ j: 2, nome: 'Bia', cor: 5, chapeu: 3 }, 1), { nome: 'Bia', cor: 5, chapeu: 3, pet: 0, rastro: 0 });
+  assert.deepEqual(perfilDaRede({ nome: 'Ana', cor: PALETA.length - 1, chapeu: N_CHAPEUS - 1, pet: N_PETS - 1, rastro: RASTROS.length - 1 }, 0),
+    { nome: 'Ana', cor: PALETA.length - 1, chapeu: N_CHAPEUS - 1, pet: N_PETS - 1, rastro: RASTROS.length - 1 });
+  for (const ruim of [999, -1, 1.5, '2', null, NaN, {}, [], 'length', '__proto__']) {
+    const r = perfilDaRede({ nome: 'x', cor: ruim, chapeu: ruim, pet: ruim, rastro: ruim }, 3);
+    assert.deepEqual(r, { nome: 'x', cor: 3, chapeu: 0, pet: 0, rastro: 0 }, String(ruim));
+  }
+  assert.equal(perfilDaRede({ pet: N_PETS }, 0).pet, 0, 'um a mais que o ultimo pet');
+  assert.equal(perfilDaRede({ rastro: RASTROS.length }, 0).rastro, 0, 'um a mais que o ultimo rastro');
+  assert.deepEqual(perfilDaRede({ nome: 12345678901234 }, 0), { nome: '1234567890', cor: 0, chapeu: 0, pet: 0, rastro: 0 }, 'nome cortado em 10');
+  assert.deepEqual(perfilDaRede({}, 2), { nome: '', cor: 2, chapeu: 0, pet: 0, rastro: 0 });
+});
+
+test('cores chapadas novas: par em PARECIDAS com quem confunde, e nenhuma confunde com as 4 padrao', () => {
+  const { mesmaCor, PALETA } = cat;
+  assert.equal(PALETA.length, 28);
+  for (let nova = 22; nova < 28; nova++) for (let padrao = 0; padrao < 4; padrao++) assert.equal(mesmaCor(nova, padrao), false, nova + ' x ' + padrao);
+  for (const [a, b] of [[22, 6], [23, 7], [24, 13], [25, 5], [26, 4], [26, 20]]) assert.equal(mesmaCor(a, b), true, a + ' x ' + b);
 });

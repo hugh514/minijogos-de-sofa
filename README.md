@@ -68,7 +68,7 @@ O que o jogo tem, em resumo:
 - **Rodadas temperadas** de vez em quando (rodada de ouro, no gelo, foguete, esquerda e direita trocadas, na lua).
 - **Rotação com variedade:** o mesmo minijogo não volta cedo, e o mesmo tipo de jogo não sai duas vezes seguidas. Veja [`specs/005-rotacao-e-variedade`](specs/005-rotacao-e-variedade/spec.md).
 - **Nenhuma rodada acaba em menos de 5 segundos**, por mais que alguém aperte sem querer. Veja [`specs/006-regra-dos-5-segundos`](specs/006-regra-dos-5-segundos/spec.md).
-- **Perfil, moedas, loja de cores e chapéus**, salvos no próprio celular.
+- **Perfil, moedas e loja** de cores, chapéus, pets que seguem o boneco na TV, rastros e pacotes de reações, salvos no próprio celular.
 - **Minijogo novo sem reiniciar:** a tela confere a pasta `jogos/` a cada 8 s e põe o arquivo novo na rotação.
 
 ## Como este projeto é construído

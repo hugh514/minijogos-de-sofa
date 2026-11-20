@@ -62,6 +62,21 @@ test('servidor: /perfil guarda o perfil de cada slot e ignora j invalido', async
   tela.fecha();
 });
 
+test('servidor: /perfil repassa pet e rastro, perfil antigo ganha 0 e o que nao e inteiro vira 0', async () => {
+  await pede('POST', '/perfil', JSON.stringify({ j: 1, nome: 'Ana', cor: 27, chapeu: 22, pet: 8, rastro: 5 }));
+  await pede('POST', '/perfil', JSON.stringify({ j: 2, nome: 'Bia', cor: 1, chapeu: 2 }));       // celular com a versao antiga na memoria
+  await pede('POST', '/perfil', JSON.stringify({ j: 3, nome: 'Caio', cor: 'x', chapeu: 1.5, pet: '3', rastro: { a: 1 } }));
+  await pede('POST', '/perfil', JSON.stringify({ j: 4, nome: '\u{1F600}'.repeat(5), cor: 27, chapeu: 22, pet: 8, rastro: 5 }));       // o maior corpo que o celular manda cabe nos 500 bytes
+  const tela = escuta('/eventos');
+  await espera(120);
+  const perfis = tela.msgs.filter(m => m.perfil).map(m => m.perfil);
+  assert.deepEqual(perfis.find(q => q.j === 1), { j: 1, nome: 'Ana', cor: 27, chapeu: 22, pet: 8, rastro: 5 });
+  assert.deepEqual(perfis.find(q => q.j === 2), { j: 2, nome: 'Bia', cor: 1, chapeu: 2, pet: 0, rastro: 0 });
+  assert.deepEqual(perfis.find(q => q.j === 3), { j: 3, nome: 'Caio', cor: 2, chapeu: 0, pet: 0, rastro: 0 });
+  assert.deepEqual(perfis.find(q => q.j === 4), { j: 4, nome: '\u{1F600}'.repeat(5), cor: 27, chapeu: 22, pet: 8, rastro: 5 });
+  tela.fecha();
+});
+
 test('servidor: /modo so aceita o anfitriao (j 1) e modos conhecidos, e repassa para a tela', async () => {
   const tela = escuta('/eventos');
   await espera(80);

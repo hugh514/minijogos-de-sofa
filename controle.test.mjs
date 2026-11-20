@@ -65,8 +65,8 @@ const catalogo = (arquivo, nomes) => {
   const fonte = fs.readFileSync(new URL('./' + arquivo, import.meta.url), 'utf8');
   return [fonte, new Function('THREE', `${fonte.split('// @catalogo')[1].split('// @fim-catalogo')[0].replace(/^[^\n]*\n/, '')}; return { ${nomes.join(', ')} };`)()];
 };
-const [fonteFone, loja] = catalogo('controle.html', ['CORES', 'NOMES_CORES', 'CHAPEUS', 'noCatalogo']);
-const [fonteTela, tv] = catalogo('tela.html', ['PALETA', 'N_CHAPEUS']);
+const [fonteFone, loja] = catalogo('controle.html', ['CORES', 'NOMES_CORES', 'CHAPEUS', 'PETS', 'RASTROS', 'noCatalogo', 'corpoPerfil']);
+const [fonteTela, tv] = catalogo('tela.html', ['PALETA', 'N_CHAPEUS', 'N_PETS', 'RASTROS']);
 
 test('catalogo: celular e tela tem o mesmo tamanho e a mesma cor em cada indice', () => {
   assert.equal(loja.CORES.length, tv.PALETA.length);
@@ -78,7 +78,9 @@ test('catalogo: celular e tela tem o mesmo tamanho e a mesma cor em cada indice'
 test('catalogo: so se acrescenta no fim (o perfil salvo guarda o indice)', () => {
   assert.deepEqual(loja.NOMES_CORES.slice(0, 14), ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon']);
   assert.deepEqual(loja.CHAPEUS.slice(0, 13).map(c => c[0]), ['Nenhum', 'Cartola', 'Coroa', 'Orelhas', 'Chifres', 'Hélice', 'Cone', 'Antenas', 'Pirata', 'Chef', 'Auréola', 'Viking', 'Faixa ninja']);
-  assert.equal(loja.CORES.length, 22, '14 cores antigas e 8 skins novas');
+  assert.deepEqual(loja.NOMES_CORES.slice(14, 22), ['Lava', 'Gelo', 'Cromado', 'Zebra', 'Bolinhas', 'Camuflado', 'Fantasma', 'Melancia']);
+  assert.deepEqual(loja.CHAPEUS.slice(13).map(c => c[0]), ['Boné', 'Bruxo', 'Cowboy', 'Flor', 'Gorro', 'Fone', 'Laço', 'Cogumelo', 'Festa', 'Louros']);
+  assert.equal(loja.CORES.length, 28, '14 cores antigas, 8 skins e 6 cores chapadas');
   assert.equal(loja.CHAPEUS.length, 23, 'nenhum, 12 antigos e 10 novos');
   assert.equal(new Set(loja.NOMES_CORES).size, loja.NOMES_CORES.length);
   assert.equal(new Set(loja.CHAPEUS.map(c => c[0])).size, loja.CHAPEUS.length);
@@ -86,7 +88,11 @@ test('catalogo: so se acrescenta no fim (o perfil salvo guarda o indice)', () =>
 
 test('catalogo: precos na faixa e toda skin especial tem amostra propria na loja', () => {
   loja.CHAPEUS.slice(1).forEach(([nome, preco]) => assert.ok(Number.isInteger(preco) && preco >= 20 && preco <= 80, nome));
-  loja.CORES.slice(10).forEach(([, preco, amostra], k) => {
+  loja.CORES.slice(22).forEach(([, preco, amostra], k) => {       // cores chapadas baratas: sem amostra propria
+    assert.ok(Number.isInteger(preco) && preco >= 15 && preco <= 30, loja.NOMES_CORES[k + 22]);
+    assert.equal(amostra, undefined, loja.NOMES_CORES[k + 22]);
+  });
+  loja.CORES.slice(10, 22).forEach(([, preco, amostra], k) => {
     assert.ok(Number.isInteger(preco) && preco >= 50 && preco <= 100, loja.NOMES_CORES[k + 10]);
     assert.ok(typeof amostra === 'string' && amostra.includes('gradient'), loja.NOMES_CORES[k + 10]);
   });
@@ -105,4 +111,54 @@ test('noCatalogo: so indice inteiro que existe na lista passa (perfil salvo tort
   assert.equal(noCatalogo(CHAPEUS, 0), true);
   assert.equal(noCatalogo(CHAPEUS, CHAPEUS.length - 1), true);
   for (const ruim of [CHAPEUS.length, -1, 1.5, '1', 'length', null, undefined, NaN, {}]) assert.equal(noCatalogo(CHAPEUS, ruim), false, String(ruim));
+});
+
+// ---------- pets, rastros e reacoes: categorias novas da loja ----------
+test('pets e rastros: celular e tela tem o mesmo tamanho, 0 e "Nenhum" de graca e os precos ficam na faixa', () => {
+  assert.equal(loja.PETS.length, tv.N_PETS);
+  assert.equal(loja.RASTROS.length, tv.RASTROS.length);
+  assert.equal(loja.PETS.length, 9, 'nenhum e 8 pets');
+  assert.equal(loja.RASTROS.length, 6, 'nenhum e 5 rastros');
+  for (const lista of [loja.PETS, loja.RASTROS]) {
+    assert.deepEqual(lista[0], ['Nenhum', 0]);
+    assert.equal(new Set(lista.map(c => c[0])).size, lista.length);
+  }
+  loja.PETS.slice(1).forEach(([nome, preco]) => assert.ok(Number.isInteger(preco) && preco >= 80 && preco <= 250, nome));
+  loja.RASTROS.slice(1).forEach(([nome, preco]) => assert.ok(Number.isInteger(preco) && preco >= 40 && preco <= 120, nome));
+  assert.equal(tv.RASTROS[0], null, 'rastro 0 na tela: nenhum');
+});
+
+test('pets e rastros: todo item tem desenho no celular e na tela', () => {
+  const corpo = (fonte, nome) => fonte.split('function ' + nome + '(')[1].split('\nfunction ')[0];
+  for (let i = 1; i < loja.PETS.length; i++) {
+    assert.ok(corpo(fonteFone, 'pet2d').includes(`tipo === ${i})`), 'celular: ' + loja.PETS[i][0]);
+    assert.ok(corpo(fonteTela, 'pet').includes(`tipo === ${i})`), 'tela: ' + loja.PETS[i][0]);
+  }
+  for (let i = 1; i < loja.RASTROS.length; i++) {
+    assert.equal(loja.RASTROS[i][2], tv.RASTROS[i][0], 'mesma forma no celular e na tela: ' + loja.RASTROS[i][0]);
+    assert.ok(corpo(fonteFone, 'forma2d').includes(`'${tv.RASTROS[i][0]}')`), 'celular: ' + loja.RASTROS[i][0]);
+    assert.ok(fonteTela.includes(`  ${tv.RASTROS[i][0]}: textura(`), 'tela: textura do rastro ' + loja.RASTROS[i][0]);
+    assert.ok(tv.RASTROS[i][1].length > 0 && tv.RASTROS[i][1].every(Number.isInteger), 'cores do rastro ' + loja.RASTROS[i][0]);
+  }
+});
+
+test('corpoPerfil: leva pet e rastro e cabe com folga no limite de 500 bytes do /perfil', () => {
+  const pior = { nome: '\u{1F600}'.repeat(5), cor: loja.CORES.length - 1, chapeu: loja.CHAPEUS.length - 1, pet: loja.PETS.length - 1, rastro: loja.RASTROS.length - 1, moedas: 99999, cores: [1, 2, 3] };
+  const corpo = loja.corpoPerfil(4, pior);
+  assert.deepEqual(JSON.parse(corpo), { j: 4, nome: pior.nome, cor: 27, chapeu: 22, pet: 8, rastro: 5 }, 'so o que a tela usa viaja (nada de moedas nem listas)');
+  assert.ok(Buffer.byteLength(corpo) < 250, Buffer.byteLength(corpo) + ' bytes');
+});
+
+test('reacoes: celular e tela tem a mesma lista na mesma ordem, e todo pacote aponta para emoji que existe', () => {
+  const lista = (fonte, nome) => new Function(`return ${fonte.split(`const ${nome} = `)[1].split('];')[0]}]`)();
+  const fone = lista(fonteFone, 'REACOES'), tela = lista(fonteTela, 'REACOES'), pacotes = lista(fonteFone, 'PACOTES');
+  const sons = fonteTela.split('const SOM_REA = [')[1].split(/\r?\n\];/)[0].split('\n').filter(l => l.trim().startsWith('{')).length;
+  assert.deepEqual(fone.map(r => r[0]), tela);
+  assert.equal(sons, tela.length, 'um som por reacao');
+  assert.ok(tela.length <= 64, 'o servidor so repassa indice de 0 a 63');
+  assert.equal(new Set(tela).size, tela.length);
+  assert.deepEqual(pacotes.slice(0, 3).map(p => p[0]), ['Provocação', 'Festa', 'Bichos'], 'so se acrescenta no fim');
+  assert.equal(pacotes.length, 5);
+  const usados = [0, 1, 2, 3, 4, 5, ...pacotes.flatMap(p => p[2])];
+  assert.deepEqual(usados, [...tela.keys()], 'cada emoji esta em um pacote so (ou e de graca)');
 });
