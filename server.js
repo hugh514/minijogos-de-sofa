@@ -203,10 +203,11 @@ const servidor = http.createServer((req, res) => {
   if (url === '/modo' && req.method === 'POST') {     // o Jogador 1 (anfitriao) escolhe o modo e manda comecar
     leCorpo(req, 200, m => {
       if (m?.j !== 1 || !MODOS.includes(m.modo)) return;
-      const msg = JSON.stringify({ escolha: { modo: m.modo, comeca: m.comeca === true } });
+      const par = [2, 3, 4].includes(m.par) ? m.par : undefined;       // Duplas: o lugar de quem joga com o Jogador 1 (sem o campo, a tela usa o lugar 3)
+      const msg = JSON.stringify({ escolha: { modo: m.modo, comeca: m.comeca === true, par } });
       for (const t of telas) manda(t, msg);
       // tela que abrir depois sabe o modo, mas nao recomeca nem cancela o inicio automatico; ao virar partida (comeca) a escolha e esquecida
-      escolha = m.comeca === true ? null : JSON.stringify({ escolha: { modo: m.modo, comeca: false, antiga: true } });
+      escolha = m.comeca === true ? null : JSON.stringify({ escolha: { modo: m.modo, comeca: false, par, antiga: true } });
     });
     req.on('end', () => res.end('ok'));
     return;

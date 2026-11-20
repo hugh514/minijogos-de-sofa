@@ -79,6 +79,19 @@ test('servidor: /modo so aceita o anfitriao (j 1) e modos conhecidos, e repassa 
   nova.fecha();
 });
 
+test('servidor: /modo repassa a dupla escolhida pelo anfitriao (par: lugar 2, 3 ou 4) e ignora valor torto', async () => {
+  const tela = escuta('/eventos');
+  await espera(80);
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: 2 }));
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: 4 }));
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: 1 }));
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: '3; drop' }));
+  await espera(150);
+  assert.deepEqual(tela.msgs.filter(m => m.escolha && !m.escolha.antiga).map(m => m.escolha.par), [2, 4, undefined, undefined]);
+  tela.fecha();
+  await pede('POST', '/modo-limpa', '{}');
+});
+
 test('servidor: a escolha de modo e esquecida quando vira partida (comeca) ou quando a tela limpa', async () => {
   const vista = async () => { const t = escuta('/eventos'); await espera(120); t.fecha(); return t.msgs.filter(m => m.escolha).map(m => m.escolha); };
   await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'vs', comeca: false }));

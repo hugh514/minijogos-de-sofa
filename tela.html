@@ -386,7 +386,12 @@ const REACOES = ['\u{1F604}', '\u{1F602}', '\u{1F621}', '❤️', '\u{1F44D}', '
 const cores = [PALETA[0], PALETA[1], PALETA[2], PALETA[3]];        // cor atual de cada jogador (os minijogos leem daqui)
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const css = i => hex(cores[i]);
-const nome = i => perfis[i].nome || 'Jogador ' + (i + 1);
+// Duplas escolhidas: o Jogador 1 escolhe quem joga com ele. Por dentro o time A e sempre os indices 0 e 2 e o B, 1 e 3
+// (os minijogos contam com isso), entao a pessoa escolhida troca de indice com quem esta no 2 enquanto a partida de Duplas dura.
+// troca = [a, b]: o celular do lugar a fala pelo indice b e vice-versa. Nome, cor, chapeu e contadores vao junto com a pessoa.
+let troca = null;
+const lugar = s => (!troca ? s : s === troca[0] ? troca[1] : s === troca[1] ? troca[0] : s);       // lugar do celular <-> indice na partida (a mesma conta nos dois sentidos)
+const nome = i => perfis[i].nome || 'Jogador ' + (lugar(i) + 1);
 const limpa = s => String(s).replace(/[<>&]/g, '');
 // @puras-texto (funcoes sem DOM: o tela.test.mjs le este trecho do html)
 // Todo texto que vem de minijogo ou da rede passa por aqui: so texto e numero finito, sem restos crus, com tamanho maximo.
@@ -407,7 +412,7 @@ const milhar = n => (Number.isInteger(n) ? n : 0).toLocaleString('pt-BR');
 // rotulo de botao vindo do minijogo: tudo em caixa alta ("ENCHE!") vira caixa normal ("Enche!"); o resto passa como veio
 function rotulo(s, max = 20) { const t = textoSeguro(s, max); return t.length > 1 && t === t.toLocaleUpperCase('pt-BR') && t !== t.toLocaleLowerCase('pt-BR') ? t[0] + t.slice(1).toLocaleLowerCase('pt-BR') : t; }
 // @fim-puras-texto
-const nomesPerfis = () => perfis.map(pf => pf.nome);
+const nomesPerfis = () => perfis.map((pf, i) => pf.nome || (troca ? nome(i) : ''));       // com lugares trocados, "Jogador 3" no texto do minijogo vira o lugar de verdade de quem esta ali
 // Minijogo de 2 em revezamento fala de "Jogador 1" e "Jogador 2": sao os dois da vez, nao os lugares 1 e 2.
 const nomesDoJogo = () => (p.duelo ? p.duelo.map(nome) : nomesPerfis());
 const doJogo = (s, max = 120) => textoSeguro(trocaNomes(s, nomesDoJogo()), max);       // texto de minijogo pronto para a tela
@@ -1019,10 +1024,10 @@ function anima(b, e, dt, t) {
 }
 
 function aplicaPerfil(m) {
-  const i = m.j - 1;
-  if (!(i >= 0 && i < SLOTS)) return;
-  if (i < 2) celularReal[i] = performance.now();
-  perfis[i] = { nome: String(m.nome ?? '').slice(0, 10), cor: indice(m.cor, PALETA.length, i), chapeu: indice(m.chapeu, N_CHAPEUS, 0) };
+  if (!(m.j >= 1 && m.j <= SLOTS)) return;
+  if (m.j <= 2) celularReal[m.j - 1] = performance.now();
+  const i = lugar(m.j - 1);
+  perfis[i] = { nome: String(m.nome ?? '').slice(0, 10), cor: indice(m.cor, PALETA.length, m.j - 1), chapeu: indice(m.chapeu, N_CHAPEUS, 0) };
   semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
   fazBonecos();
   rodadaMontada = -1; palcoChave = '';       // arenas que usam a cor dos jogadores sao refeitas
@@ -1320,7 +1325,21 @@ const MODOS_TXT = {
   times: ['Duplas', ''],
   coop: ['Todos juntos', 'Vocês contra o jogo por 5 noites'],
 };
-const dicaModo = m => m === 'times' ? `${nome(0)} e ${nome(2)} contra ${nome(1)} e ${nome(3)}` : MODOS_TXT[m][1];
+let parceiro = 2;       // quem joga com o Jogador 1 nas Duplas (indice do lugar: 1, 2 ou 3); o anfitriao escolhe no celular
+const rivais = () => [1, 2, 3].filter(i => i !== parceiro);
+const dicaModo = m => m === 'times' ? `${nome(0)} e ${nome(parceiro)} contra ${rivais().map(nome).join(' e ')}` : MODOS_TXT[m][1];
+function trocaLugares(a, b) {       // tudo que e de cada pessoa (e de cada celular) muda de indice junto
+  for (const v of [perfis, visto, conectado, premios, vib, nrVisto, ultimaRea, sessaoVista, qVisto, ntVisto, ultimaTorcida, querRevanche, vibraVisto]) [v[a], v[b]] = [v[b], v[a]];
+  const ja = p.jogadores[a], jb = p.jogadores[b];
+  if (ja && jb) for (const k of ['n', 'nb', 'nop', 's', 'q', 'ent']) [ja[k], jb[k]] = [jb[k], ja[k]];       // contadores de toque sao do celular: sem isso a troca viraria toque fantasma
+  semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
+  fazBonecos();
+  rodadaMontada = -1; palcoChave = '';
+}
+function sentaDupla(par) {       // par: indice do lugar do parceiro, ou 2 para a ordem de sempre
+  if (troca) { trocaLugares(...troca); troca = null; }
+  if (par !== 2 && [1, 3].includes(par)) { trocaLugares(par, 2); troca = [par, 2]; }
+}
 let escolhaModo = 'classico', semAuto = false, autoDesde = 0, modoPadrao = true;
 // Ninguem escolheu no menu: o padrao segue quem esta no sofa (2 = Duelo, 3 ou 4 = Cada um por si) e comeca sozinho depois de AUTO_MS, com contagem na TV e no celular
 const AUTO_MS = 6000;
@@ -1344,6 +1363,7 @@ function comecaPartida(teclado = false) {
   const falta = teclado && modo === 'classico' ? quebrado(modo, 2) : faltaPara(modo);
   if (falta) return avisa(falta);
   if (modo !== 'classico' && !elegiveis(modo, n).length) return avisa('Ainda carregando os minijogos. Tente em 5 segundos');
+  sentaDupla(modo === 'times' ? parceiro : 2);
   if (modo !== p.modo || n !== p.n) configura(p, { n, modo });
   iniciou = true; zeraNoite();
   limpaEscolha();
@@ -1375,18 +1395,20 @@ function limpaEscolha() { fetch('/modo-limpa', { method: 'POST' }).catch(() => {
 function voltaAoMenu() {       // de volta a espera: o anfitriao escolhe de novo, a partida recomeca do zero
   if (!iniciou) return;
   iniciou = false; semAuto = true; autoDesde = 0;
+  sentaDupla(2);       // no menu cada um volta ao seu lugar
   limpaEscolha();
   recomeca();
 }
 function recebeEscolha(e) {
   if (iniciou || !MODOS_TXT[e.modo]) return;
+  if ([2, 3, 4].includes(e.par) && e.par - 1 !== parceiro) { parceiro = e.par - 1; if (!e.antiga) novidade(`${nome(0)} escolheu ${nome(parceiro)} de dupla`); }
   if (!e.antiga && e.modo !== escolhaModo) novidade(nome(0) + ' escolheu ' + MODOS_TXT[e.modo][0]);
   escolhaModo = e.modo;
   if (!e.antiga || !MODOS_AUTO.includes(e.modo)) modoPadrao = false;       // escolha antiga de Duelo ou Cada um por si (repetida a tela nova) nao desliga o padrao por quantos estao no sofa
   if (!e.antiga) semAuto = true;      // o anfitriao mexeu no menu agora: nada de comecar sozinho (a escolha antiga, repetida a tela nova, nao conta)
   if (e.comeca) comecaPartida();
 }
-window.__sala = () => ({ escolhaModo, seguidos: seguidos(), iniciou, semAuto, lugarRobo: robo.lugar });
+window.__sala = () => ({ escolhaModo, seguidos: seguidos(), iniciou, semAuto, lugarRobo: robo.lugar, parceiro, troca });
 // A frase da espera nos celulares muda com o que acontece na TV (troca de modo, alguem sentou) por alguns segundos.
 let novo = { txt: '', ate: 0 };
 function novidade(txt) { novo = { txt, ate: performance.now() + 4000 }; }
@@ -1407,11 +1429,11 @@ new EventSource('/eventos').onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.perfil) return aplicaPerfil(m.perfil);
   if (m.escolha) return recebeEscolha(m.escolha);
-  if (m.pausa) return pausa(Number.isInteger(m.j) && m.j >= 1 && m.j <= SLOTS ? m.j - 1 : -1, m.continua === true);
+  if (m.pausa) return pausa(Number.isInteger(m.j) && m.j >= 1 && m.j <= SLOTS ? lugar(m.j - 1) : -1, m.continua === true);
   if (m.comando) return comando(m.comando);
-  const i = m.j - 1;
-  if (!(i >= 0 && i < SLOTS)) return;
-  if (i < 2) celularReal[i] = performance.now();
+  if (!(m.j >= 1 && m.j <= SLOTS)) return;
+  if (m.j <= 2) celularReal[m.j - 1] = performance.now();
+  const i = lugar(m.j - 1);
   visto[i] = performance.now();
   if (iniciou && !p.jogadores[i]) {      // celular de um lugar que nao esta na partida: nao joga, mas pode torcer e reagir
     if (!pausado && !ajustesAberto) recebeReacao(i, m);
@@ -2487,7 +2509,7 @@ function celularDaEspera(i) {
   const auto = autoSeg() || null, seg = seguidos();
   // qtd: quantos minijogos cada brincadeira tem com quem esta no sofa agora; nomes e cores: para as pilulas de quem esta conectado
   const qtd = { classico: elegiveis('classico', 2).length, vs: elegiveis('vs', Math.max(2, seg)).length, times: elegiveis('times', 4).length, coop: elegiveis('coop', Math.max(2, seg)).length };
-  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, on: conectado.slice(), seg, auto, qtd, nomes: [0, 1, 2, 3].map(nome), cores: [0, 1, 2, 3].map(css),
+  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, par: parceiro + 1, on: conectado.slice(), seg, auto, qtd, nomes: [0, 1, 2, 3].map(nome), cores: [0, 1, 2, 3].map(css),
     faltas: Object.fromEntries(Object.keys(MODOS_TXT).map(m => [m, faltaPara(m)])) } };
 }
 // Gancho da Lanchonete (frente C): campos extras do estado de cada celular. Vazio por enquanto.
@@ -2552,7 +2574,7 @@ function mandaCelulares(agora) {
     if (pausado) e.pausa = { quem: quemPausou >= 0 ? nome(quemPausou) : '', manda: i === 0 };      // o celular mostra o menu da pausa (o J1 tem as acoes da partida)
     Object.assign(e, estadoExtra(i));
   });
-  const txt = JSON.stringify({ c: estado });
+  const txt = JSON.stringify({ c: estado.map((e, s) => estado[lugar(s)] ?? e) });       // o servidor entrega por lugar do celular
   if (txt === mandado || agora - ultimoEnvio < 80) return;
   mandado = txt; ultimoEnvio = agora;
   fetch('/tela', { method: 'POST', body: txt }).catch(() => { mandado = ''; });

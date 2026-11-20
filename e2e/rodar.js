@@ -6,7 +6,7 @@ const path = require('path');
 
 const PORTA = Number(process.env.PORTA_E2E) || 8170;
 const URL_JOGO = `http://127.0.0.1:${PORTA}`;
-const TESTES = ['teste-boost.js', 'teste-festa.js', 'teste-controles.js', 'teste-textos.js', 'teste-novos.js', 'teste-robo.js', 'teste-reacoes.js', 'teste-kart.js'];
+const TESTES = ['teste-boost.js', 'teste-festa.js', 'teste-duplas.js', 'teste-controles.js', 'teste-textos.js', 'teste-novos.js', 'teste-robo.js', 'teste-reacoes.js', 'teste-kart.js'];
 const TEMPO_POR_TESTE = 10 * 60 * 1000;      // um navegador travado nao segura o runner para sempre
 const raiz = path.join(__dirname, '..');
 
