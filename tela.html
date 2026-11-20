@@ -1534,6 +1534,7 @@ p.modificadores = true;     // de vez em quando uma rodada vem com tempero (gelo
 const todos = () => p.jogadores.map((_, i) => i);       // indices dos jogadores da partida (2 no Classico, 2 a 4 na Festa)
 window.__p = p;      // para depurar e para o teste automatico
 window.__perfis = perfis;
+window.__premioDe = i => premios[i];       // para o teste automatico
 window.__ids = () => JOGOS.map(j => j.id);
 window.__jogo = id => pulaPara(p, JOGOS.find(j => j.id === id));
 window.__registra = j => registra(comMinimo(j));
@@ -2565,7 +2566,7 @@ function vibracoes(eventos) {
   if (faseAntes === 'jogando' && (p.fase === 'resultado' || p.fase === 'fim'))
     for (const i of todos()) {
       if (venceu(p, i)) vibraSe(i, [40, 50, 40, 50, 140]);    // comemoracao (quem venceu, o time ou todos na vitoria em equipe)
-      else if (p.vencedor >= 0) vibraSe(i, [350]);                // perdeu a rodada
+      else if (p.vencedor >= 0 && !descansou(i)) vibraSe(i, [350]);                // perdeu a rodada (quem descansou nao perdeu nada)
     }
   vivoAntes = p.jogadores.map(j => j.vivo); faseAntes = p.fase;
 }
@@ -2709,6 +2710,7 @@ function premia() {
   const v = p.vencedor, campeoes = p.fase === 'fim' ? p.campeoes ?? [] : [];
   for (const i of todos()) {
     // venceu/partida/jogo servem para os trofeus que o celular guarda (vitoria em equipe conta para todos, em times para os dois do time)
+    if (descansou(i)) { premios[i] = null; continue; }
     premios[i] = { id: `${sessao}-${p.rodada}`, valor: moedasDaRodada(p, i), venceu: venceu(p, i), empate: v < 0 && !ehCoop(p), partida: campeoes.includes(i), jogo: p.jogo.id, nomeJogo: p.jogo.nome };
   }
   for (const i of todos()) {
@@ -2766,6 +2768,7 @@ function ctlCelular(j) {       // o desenho do controle que o celular mostra na 
 function fraseDoFim(i) {       // o que o celular de cada um diz quando a rodada acaba
   if (venceu(p, i)) return p.modo === 'times' ? 'Ponto da sua dupla!' : ehCoop(p) ? 'Deu certo, equipe!' : 'Ponto seu!';
   if (p.vencedor === undefined) return '';
+  if (descansou(i)) return p.fase === 'fim' ? 'Acabou a partida' : 'Você volta na próxima rodada';
   if (ehCoop(p)) return 'Não foi dessa vez';
   if (p.vencedor < 0) return 'Empatou!';
   const jogou = !p.duelo || p.duelo.includes(i);       // quem so assistiu nao perdeu nada agora (o direito guardado dele espera a vez de jogar)
@@ -2777,6 +2780,9 @@ function celularDoPodio(i) {
   return { modo: 'opcoes', texto: querRevanche[i] ? 'Pedido feito. ' + falta : falta, opcoes: ['Quero revanche'] };
 }
 const deFora = i => !!p.duelo && !p.duelo.includes(i) && p.fase !== 'fim';       // nesta rodada este jogador so assiste
+// Descansou no rodizio de Cada um por si: nao jogou, entao nao ganha moeda, nao perde sequencia e o celular nao diz que perdeu.
+// (Nas Duplas quem esta de fora divide o resultado do time, e no cooperativo a vitoria e de todos.)
+const descansou = i => !!p.duelo && p.modo === 'vs' && !p.duelo.includes(i);
 function mandaCelulares(agora) {
   const ctl = p.jogo.controle ?? {};
   const explica = iniciou && aguardando(p);      // na explicacao o celular mostra o minijogo e o botao Entendi

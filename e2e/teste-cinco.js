@@ -87,6 +87,8 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     const r = await ev(() => ({ v: window.__p.vencedor, pts: window.__p.jogadores.map(j => j.pontos) }));
     assert.ok(r.v === -1 || d.includes(r.v), `${id}: o vencedor e um dos que jogaram: ${r.v}`);
     if (r.v >= 0) assert.deepEqual(r.pts.map((v, i) => v - antes[i]), [0, 1, 2, 3, 4].map(i => (i === r.v ? 1 : 0)), 'so o vencedor pontua');
+    assert.equal(await ev(x => window.__perfis && window.__premioDe(x), fora), null, 'quem descansou nao recebe premio nem estatistica da rodada');
+    await fones[fora].waitForFunction(() => document.body.innerText.includes('Você volta na próxima rodada'), null, { timeout: 5000 });
     await foto(`${k + 2}-${id}-4-fim`);
     console.log(`ok ${id} com 5: jogaram ${d.map(i => 'J' + (i + 1)).join(' ')}, descansou J${fora + 1}, vencedor ${r.v < 0 ? 'empate' : 'J' + (r.v + 1)}`);
   }

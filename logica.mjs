@@ -113,7 +113,7 @@ function sorteiaModificador(p) {
 export const CARTAS = [
   { id: 'dobro', nome: 'Vale dobro', dica: 'Venceu, leva 2' },
   { id: 'moedas', nome: 'Cofre em dobro', dica: 'Moedas em dobro nesta' },
-  { id: 'escudo', nome: 'Escudo', dica: 'Se perder, ninguém pontua', atras: true },
+  { id: 'escudo', nome: 'Escudo', dica: 'Segura o ponto. 1 por partida', atras: true },
   { id: 'turbo', nome: 'Turbo', dica: 'Pernas ligeiras', anda: true, acel: 1.35 },
   { id: 'dash', nome: 'Empurrão ligeiro', dica: 'Recarrega na metade', anda: true, recarga: 0.5, precisaDash: true },
   { id: 'pulo', nome: 'Mola', dica: 'Pula bem mais alto', anda: true, pulo: 1.45, precisaPulo: true },
@@ -124,7 +124,9 @@ const N_OFERTA = 3, ESPERA_CARTA = 0.35;     // segundos em que o toque na carta
 function sorteiaCartas(p, i) {
   const j = p.jogo, eu = p.jogadores[i];
   const rivais = p.jogadores.filter((_, k) => k !== i && (p.modo !== 'times' || timeDe(p, k) !== timeDe(p, i)));       // em Duplas o parceiro nao e rival
-  const atras = rivais.some(r => eu.pontos < r.pontos);
+  // Escudo com freio, senao ninguem pontua nunca: so para quem esta em ultimo (sozinho ou empatado, mas atras de alguem),
+  // uma vez por jogador na partida, e nunca na rodada seguinte a um ponto que um escudo segurou.
+  const atras = rivais.some(r => eu.pontos < r.pontos) && rivais.every(r => eu.pontos <= r.pontos) && !eu.escudos && !p.escudoSegurou;
   const servem = CARTAS.filter(c => (!c.anda || deJoystick(j)) && (!c.precisaDash || !j.semDash) && (!c.precisaPulo || !j.semPulo)
     && (!c.atras || (atras && eu.cartaAnterior !== c.id)) && !j.semCarta?.includes(c.id));       // semCarta: cartas que atrapalham ou nao fazem nada neste minijogo
   return embaralha(servem, p.rng).slice(0, N_OFERTA).map(c => c.id);
@@ -848,9 +850,8 @@ function coopCabe(p, vale = 1) {
 
 // vencedor: 0 ou 1, -1 (empate ou fracasso cooperativo) ou 2 (vitoria em equipe, so em minijogo coop).
 function termina(p, vencedor) {
-  p.vencedor = vencedor; p.t = 0; p.fase = 'resultado';
   if (p.duelo && p.modo === 'vs' && vencedor >= 0) vencedor = p.duelo[vencedor];       // rodizio: o minijogo aponta um dos da vez, o ponto e do lugar de verdade
-  p.vencedor = vencedor;
+  p.vencedor = vencedor; p.t = 0; p.fase = 'resultado';
   if (p.modo !== 'classico') return terminaFesta(p);
   const js = p.jogadores, antes = js.map(j => j.pontos), vale = p.mod?.pontos ?? 1;
   const anuncios = p.anuncios = [];
@@ -862,6 +863,7 @@ function termina(p, vencedor) {
     const escudo = js[o].carta === 'escudo';
     if (escudo) anuncios.push({ tipo: 'escudo', quem: o });
     else j.pontos = Math.min(p.alvo, j.pontos + vale + (j.carta === 'dobro' ? 1 : 0));
+    p.escudoSegurou = escudo;
     js[o].direito = true;
     if (!escudo) p.seq[vencedor]++;     // ponto segurado nao soma na sequencia
     p.seq[o] = 0;
@@ -897,6 +899,7 @@ function terminaFesta(p) {
     const dobro = js.some((j, i) => venceu(p, i) && j.carta === 'dobro') ? 1 : 0;
     if (escudo !== undefined) p.anuncios.push({ tipo: 'escudo', quem: escudo });
     else js.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale + dobro); });
+    p.escudoSegurou = escudo !== undefined;
     for (const i of perdeu) js[i].direito = true;
   } else js.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale); });
   p.campeoes = js.flatMap((j, i) => j.pontos >= p.alvo ? [i] : []);
@@ -942,7 +945,8 @@ export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', histo
 }
 
 export function reinicia(p) {
-  for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; }
+  for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; j.escudos = 0; }
+  p.escudoSegurou = false;
   p.seq = p.jogadores.map(() => 0); p.deficit = p.jogadores.map(() => 0); p.campeao = undefined; p.campeoes = undefined;
   esquece(p); p.noitesVistas = [];
   p.noites = { jogadas: 0, vencidas: 0 }; p.duelos = 0; p.modsVistos = {}; p.alvo = alvoDe(p);
@@ -1006,7 +1010,7 @@ export function entrada(p, i, m, semToque = false) {
     if (b) { j.querPulo = ESPERA_BOTAO; j.apertouB += b; }
     if (escolheu && p.t >= j.escolhaDesde) j.escolha = m.op;     // toque atrasado na carta nao vira resposta do minijogo
   } else if (p.fase === 'intro' && escolheu && j.oferta) {
-    if (j.oferta[m.op]) { j.carta = j.oferta[m.op]; j.oferta = null; p.eventos.push('carta'); }     // carta de poder escolhida na explicacao
+    if (j.oferta[m.op]) { j.carta = j.oferta[m.op]; j.oferta = null; if (j.carta === 'escudo') j.escudos = (j.escudos ?? 0) + 1; p.eventos.push('carta'); }     // carta de poder escolhida na explicacao
     else if (m.op === j.oferta.length) { j.oferta = null; if (aguardando(p)) { j.pronto = true; p.eventos.push('moeda'); } }   // "sem carta": ja fica pronto
   }
   j.ent = { x, y, d: !!m.d, b: !!m.b };

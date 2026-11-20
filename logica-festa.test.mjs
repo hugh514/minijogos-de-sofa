@@ -742,3 +742,32 @@ test('cinco jogadores: quem descansa fica parado fora da arena e minijogo so par
     assert.ok(Math.hypot(...antes) > 10, 'e fica fora da arena');
   } finally { volta(); }
 });
+
+test('escudo com freio: so para quem esta em ultimo, uma vez por jogador na partida e nunca logo depois de um escudo segurar o ponto', () => {
+  const volta = semClassicos();
+  const jogo = { ...falso('f-e', { min: 2, max: 4, modos: ['vs'] }), semMovimento: true, semDash: true, semPulo: true };       // sem cartas de andar: sobram dobro, moedas e escudo
+  registra(jogo);
+  try {
+    const p = criaPartida(semente(3), { n: 3, modo: 'vs' });
+    const oferta = i => p.jogadores[i].oferta ?? [];
+    p.jogadores[0].pontos = 4; p.jogadores[1].pontos = 2; p.jogadores[2].pontos = 0;
+    jogaRodada(p, jogo, 0); roda(p, 2.6);           // J1 vence: J2 e J3 escolhem carta
+    assert.ok(!oferta(1).includes('escudo'), 'J2 esta atras do J1, mas nao e o ultimo: sem escudo');
+    assert.ok(oferta(2).includes('escudo'), 'J3 e o ultimo: pode pegar o escudo');
+    entrada(p, 2, { x: 0, y: 0, op: oferta(2).indexOf('escudo'), nop: 1 }); entrada(p, 2, { x: 0, y: 0, op: oferta(2).indexOf('escudo'), nop: 2 });
+    p.jogadores[2].carta = 'escudo'; p.jogadores[2].escudos = 1; p.jogadores[2].oferta = null; p.jogadores[1].oferta = null;
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 0; passo(p, DT);          // J1 vence de novo, o escudo do J3 segura
+    assert.equal(p.jogadores[0].pontos, 5, 'o primeiro ponto valeu (5), o segundo o escudo segurou');
+    assert.equal(p.escudoSegurou, true);
+    roda(p, 2.6);
+    assert.ok(!oferta(1).includes('escudo') && !oferta(2).includes('escudo'), 'logo depois de um escudo segurar, ninguem recebe escudo');
+    for (const j of p.jogadores) j.oferta = null;
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 0; passo(p, DT); roda(p, 2.6);       // ponto normal: o freio da rodada solta
+    assert.equal(p.escudoSegurou, false);
+    assert.ok(!oferta(2).includes('escudo'), 'J3 ja usou o dele nesta partida');
+    reinicia(p);
+    assert.ok(p.jogadores.every(j => j.escudos === 0) && p.escudoSegurou === false, 'partida nova: cada um tem um escudo de novo');
+  } finally { volta(); }
+});
