@@ -66,6 +66,8 @@ function textos(p, r) {
 }
 
 export default {
+  // Na lua e com a Mola o pulo dura mais que o intervalo entre a barra baixa e a alta: pular a baixa vira levar a alta.
+  semMod: ['lua'], semCarta: ['pulo'],
   id: 'helice-festa', genero: 'equilibrio', nome: 'Hélice maluca', dica: 'Pule a barra baixa e não pule na alta, senão você é varrido para fora.',
   festa: { min: 2, max: 4, modos: ['vs', 'times'] },
   // sem empurrão, como na Hélice de 2: quem derruba é a barra

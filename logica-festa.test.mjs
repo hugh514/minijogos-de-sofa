@@ -641,3 +641,18 @@ test('cartas na festa: quem ficou de fora no revezamento nao recebe o Escudo dua
     assert.equal(p.jogadores[1].cartaAnterior, 'escudo', 'de fora de novo: a ultima carta dele segue sendo o escudo');
   } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });
+
+test('cartas: semCarta do minijogo tira a carta da oferta, e a Helice maluca nao sai Na lua nem oferece a Mola', async () => {
+  const volta = semClassicos();
+  const jogo = { ...falso('f-sc', { min: 2, max: 4, modos: ['vs'] }), semCarta: ['turbo', 'pulo'] };
+  registra(jogo);
+  try {
+    const p = criaPartida(semente(9), { n: 3, modo: 'vs' });
+    for (let k = 0; k < 25; k++) {
+      jogaRodada(p, jogo, 0); roda(p, 2.6);
+      for (const i of [1, 2]) assert.ok(!(p.jogadores[i].oferta ?? []).some(c => c === 'turbo' || c === 'pulo'), 'oferta: ' + p.jogadores[i].oferta);
+    }
+    const helice = (await import('./jogos/helice-festa.mjs')).default;
+    assert.ok(helice.semMod.includes('lua') && helice.semCarta.includes('pulo'));
+  } finally { volta(); }
+});

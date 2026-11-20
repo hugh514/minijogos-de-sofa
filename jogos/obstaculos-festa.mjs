@@ -48,6 +48,7 @@ function fechaComo(p, v) {
 }
 
 export default {
+  semCarta: ['turbo'],       // a corrida avanca sozinha: o Turbo so mexeria no desvio para os lados
   id: 'obstaculos-festa', genero: 'corrida', nome: 'Corrida de obstáculos',
   dica: 'Pule as barreiras com B e desvie dos pneus com o joystick para cruzar a chegada primeiro.',
   festa: { min: 2, max: 4, modos: ['vs', 'times'] },

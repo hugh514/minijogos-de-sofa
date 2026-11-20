@@ -75,7 +75,8 @@ export default {
       if (d.placar[d.dono] >= META) r = d.dono;
     }
     if (r === undefined && p.t >= TEMPO) {
-      const maior = Math.max(...d.placar), lideres = d.placar.flatMap((v, k) => (v === maior ? [k] : []));
+      const inteiros = d.placar.map(Math.floor);       // a TV mostra segundos inteiros: 7,9 contra 7,4 e empate, nao vitoria por fracao
+      const maior = Math.max(...inteiros), lideres = inteiros.flatMap((v, k) => (v === maior ? [k] : []));
       r = lideres.length === 1 ? lideres[0] : -1;
     }
     textos(p, r);

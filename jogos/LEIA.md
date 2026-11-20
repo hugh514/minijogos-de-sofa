@@ -27,6 +27,8 @@ export default {
   semDash: true,        // botão A não dá o empurrão padrão
   empurrao: 1.2,        // força do choque entre os dois bonecos (parâmetro k de colide; padrão 1.2, a batata quente usa 2.3)
   semPulo: true,        // botão B não pula
+  semMod: ['lua'],      // modificadores de rodada que não podem sair neste minijogo (ids: ouro, gelo, foguete, espelho, lua)
+  semCarta: ['pulo'],   // cartas de poder que não são oferecidas neste minijogo (ids: dobro, moedas, escudo, turbo, dash, pulo)
   rotulo: 'moedas',     // texto do placar da rodada, se você mantiver p.dados.placar = [a, b]
   duracao: 25,          // se a rodada tem tempo fixo, a tela mostra a contagem regressiva
   coop: true,           // cooperativo: os dois jogam juntos (ver "Minijogo cooperativo")

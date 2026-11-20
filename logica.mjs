@@ -121,7 +121,7 @@ function sorteiaCartas(p, i) {
   const rivais = p.jogadores.filter((_, k) => k !== i && (p.modo !== 'times' || timeDe(p, k) !== timeDe(p, i)));       // em Duplas o parceiro nao e rival
   const atras = rivais.some(r => eu.pontos < r.pontos);
   const servem = CARTAS.filter(c => (!c.anda || deJoystick(j)) && (!c.precisaDash || !j.semDash) && (!c.precisaPulo || !j.semPulo)
-    && (!c.atras || (atras && eu.cartaAnterior !== c.id)));
+    && (!c.atras || (atras && eu.cartaAnterior !== c.id)) && !j.semCarta?.includes(c.id));       // semCarta: cartas que atrapalham ou nao fazem nada neste minijogo
   return embaralha(servem, p.rng).slice(0, N_OFERTA).map(c => c.id);
 }
 
