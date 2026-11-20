@@ -390,14 +390,29 @@
 
 <script>
 // ---------- catalogo (a tela do PC usa os mesmos indices) ----------
+// @catalogo (o controle.test.mjs le este trecho: so dados e funcoes sem DOM)
 const CORES = [['#2f7df6', 0], ['#f0458f', 0], ['#35c26b', 15], ['#ffc531', 15], ['#9b5cf6', 15], ['#ff7a2f', 15], ['#22c7d6', 15], ['#e5383b', 15], ['#f2f2f2', 40], ['#30343f', 40],
   // novas (sempre no final): o terceiro item e o fundo da bolinha da loja
   ['#d4a017', 60, 'linear-gradient(135deg,#fff3b0,#e8b923 40%,#9a6a00 75%,#ffe27a)'],
   ['#ff4fa3', 80, 'conic-gradient(#ff4d5e,#ffc531,#35c26b,#22c7d6,#2f7df6,#9b5cf6,#ff4d5e)'],
   ['#5b3fd6', 70, 'radial-gradient(circle at 65% 35%,#ff5ac8 0 10%,#0000 35%),radial-gradient(circle at 25% 70%,#fff 0 4%,#0000 5%),radial-gradient(circle at 45% 25%,#fff 0 3%,#0000 4%),radial-gradient(circle at 75% 75%,#fff 0 3%,#0000 4%),radial-gradient(#6a35d0,#0d1a6b)'],
-  ['#39ff14', 50, 'radial-gradient(circle,#c9ffb8 0 20%,#39ff14 60%,#12a800)']];
-const NOMES_CORES = ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon'];
-const CHAPEUS = [['Nenhum', 0], ['Cartola', 20], ['Coroa', 50], ['Orelhas', 30], ['Chifres', 30], ['Hélice', 40], ['Cone', 20], ['Antenas', 25], ['Pirata', 40], ['Chef', 30], ['Auréola', 80], ['Viking', 45], ['Faixa ninja', 35]];
+  ['#39ff14', 50, 'radial-gradient(circle,#c9ffb8 0 20%,#39ff14 60%,#12a800)'],
+  // skins com textura, reflexo ou brilho proprio na TV (14 a 21)
+  ['#ff4a12', 90, 'linear-gradient(115deg,#0000 30%,#ffd24a 34% 38%,#0000 43%),linear-gradient(40deg,#0000 52%,#ffd24a 56% 60%,#0000 65%),linear-gradient(160deg,#0000 56%,#ff8a1a 61% 66%,#0000 71%),radial-gradient(circle,#ff5a12,#5a0f04 90%)'],
+  ['#9fdcff', 70, 'linear-gradient(115deg,#0000 42%,#ffffffd0 47%,#0000 52%),linear-gradient(55deg,#0000 60%,#ffffffa0 64%,#0000 68%),linear-gradient(160deg,#f4fcff,#a9dcff 55%,#5fa8e8)'],
+  ['#aab4c4', 100, 'linear-gradient(180deg,#eef6ff 0%,#8fb4e0 34%,#ffffff 47%,#465064 53%,#9aa6b8 74%,#6b7688 100%)'],
+  ['#e6e6e6', 60, 'repeating-linear-gradient(100deg,#f6f6f6 0 5px,#17181c 5px 9px)'],
+  ['#2438a8', 50, 'radial-gradient(circle,#fff 0 2.6px,#0000 3.2px) 1px 1px/12px 12px,#2438a8'],
+  ['#5f7a3a', 55, 'radial-gradient(circle at 25% 30%,#2f4420 0 17%,#0000 18%),radial-gradient(circle at 72% 24%,#7a5a36 0 15%,#0000 16%),radial-gradient(circle at 62% 72%,#2f4420 0 19%,#0000 20%),radial-gradient(circle at 24% 76%,#b5a97a 0 13%,#0000 14%),radial-gradient(circle at 48% 50%,#7a5a36 0 9%,#0000 10%),#5f7a3a'],
+  ['#d9ccff', 80, 'radial-gradient(circle,#ffffffd0 0 22%,#d9ccff90 58%,#a48cff50)'],
+  ['#ff4d5e', 65, 'radial-gradient(circle at 34% 30%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 62% 24%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 50% 44%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 74% 42%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 26% 46%,#1a1114 0 3.5%,#0000 4.5%),linear-gradient(180deg,#ff4d5e 0 62%,#f4ffe0 62% 68%,#2f9e44 68%)']];
+const NOMES_CORES = ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon',
+  'Lava', 'Gelo', 'Cromado', 'Zebra', 'Bolinhas', 'Camuflado', 'Fantasma', 'Melancia'];
+const CHAPEUS = [['Nenhum', 0], ['Cartola', 20], ['Coroa', 50], ['Orelhas', 30], ['Chifres', 30], ['Hélice', 40], ['Cone', 20], ['Antenas', 25], ['Pirata', 40], ['Chef', 30], ['Auréola', 80], ['Viking', 45], ['Faixa ninja', 35],
+  ['Boné', 20], ['Bruxo', 45], ['Cowboy', 40], ['Flor', 25], ['Gorro', 30], ['Fone', 40], ['Laço', 25], ['Cogumelo', 45], ['Festa', 30], ['Louros', 60]];
+// Indice salvo no celular: so inteiro que existe na lista vale (perfil antigo ou estragado volta ao padrao).
+const noCatalogo = (lista, i) => Number.isInteger(i) && i >= 0 && i < lista.length;
+// @fim-catalogo
 // Reacoes: a tela usa a mesma lista de emojis na mesma ordem (so o indice viaja pela rede). 0 a 5 sao de graca.
 const REACOES = [['\u{1F604}', 'Risada'], ['\u{1F602}', 'Choro de rir'], ['\u{1F621}', 'Raiva'], ['❤️', 'Coração'], ['\u{1F44D}', 'Joinha'], ['\u{1F631}', 'Susto'],
   ['\u{1F61B}', 'Língua'], ['\u{1F60E}', 'Óculos escuros'], ['\u{1F921}', 'Palhaço'], ['\u{1F634}', 'Dormindo'],
@@ -803,20 +818,104 @@ function chapeu2d(c, tipo, t) {
     for (const s of [-1, 1]) poli(c, [[s * 0.5, 0.58], [s * 0.92, 0.5 - s * 0.05], [s * 0.96, 0.32], [s * 0.6, 0.5]], '#1d2a6b', SOMBRA);
     poli(c, [[-0.64, 0.46], [0.64, 0.46], [0.5, 0.62], [-0.5, 0.62]], '#1d2a6b', SOMBRA);
     poli(c, [[-0.14, 0.48], [0.14, 0.48], [0.14, 0.6], [-0.14, 0.6]], '#c8ccd8', SOMBRA);
+  } else if (tipo === 13) {             // bone: calota vermelha, aba para a frente e botao
+    c.beginPath(); c.arc(0, 0.06, 0.84, Math.PI / 2 - 0.95, Math.PI / 2 + 0.95); c.closePath(); pinta(c, '#e5383b', SOMBRA);
+    elipse(c, 0, 0.52, 0.5, 0.11, '#a81f28', SOMBRA);
+    elipse(c, 0, 0.91, 0.08, 0.05, '#ffffff', SOMBRA);
+  } else if (tipo === 14) {             // bruxo: aba larga, cone alto roxo, faixa e fivela
+    elipse(c, 0, 0.7, 0.72, 0.72 * K, '#3b2170');
+    c.beginPath(); c.moveTo(0, 1.55); c.lineTo(0.42, 0.72); c.ellipse(0, 0.72, 0.42, 0.42 * K, 0, 0, Math.PI, true); c.closePath(); pinta(c, '#4b2a8a', SOMBRA);
+    tronco(c, 0.75, 0.88, 0.405, 0.345, '#1d1036', SOMBRA);
+    poli(c, [[-0.085, 0.69], [0.085, 0.69], [0.085, 0.82], [-0.085, 0.82]], '#ffc531', SOMBRA);
+  } else if (tipo === 15) {             // cowboy: aba virada nas bordas, copa alta e fita escura
+    c.beginPath(); c.moveTo(-0.9, 0.88); c.quadraticCurveTo(-0.7, 0.56, 0, 0.56); c.quadraticCurveTo(0.7, 0.56, 0.9, 0.88);
+    c.quadraticCurveTo(0.6, 0.76, 0, 0.76); c.quadraticCurveTo(-0.6, 0.76, -0.9, 0.88); pinta(c, '#9a6a36', SOMBRA);
+    tronco(c, 0.72, 1.12, 0.42, 0.34, '#9a6a36', SOMBRA);
+    elipse(c, 0, 1.12, 0.34, 0.34 * K, '#b07c44', SOMBRA);
+    tronco(c, 0.73, 0.83, 0.43, 0.415, '#3a2412', SOMBRA);
+  } else if (tipo === 16) {             // flor: seis petalas, miolo amarelo e uma folha
+    elipse(c, 0.12, 0.74, 0.2, 0.07, '#35c26b', SOMBRA);
+    for (let k = 0; k < 6; k++) elipse(c, 0.38 + Math.cos(k * Math.PI / 3 + 0.5) * 0.19, 0.86 + Math.sin(k * Math.PI / 3 + 0.5) * 0.19, 0.13, 0.13, '#ff7ab8', SOMBRA);
+    elipse(c, 0.38, 0.86, 0.11, 0.11, '#ffc531', SOMBRA);
+  } else if (tipo === 17) {             // gorro de inverno: calota vermelha, dobra branca e pompom
+    c.beginPath(); c.arc(0, 0.05, 0.85, Math.PI / 2 - 0.9, Math.PI / 2 + 0.9); c.closePath(); pinta(c, '#d92b3a', SOMBRA);
+    elipse(c, 0, 1.02, 0.2, 0.2, '#ffffff', SOMBRA);
+    c.beginPath(); c.moveTo(-0.68, 0.6); c.lineTo(0.68, 0.6); c.lineCap = 'round';
+    c.lineWidth = 0.24; c.strokeStyle = SOMBRA; c.stroke(); c.lineWidth = 0.2; c.strokeStyle = '#ffffff'; c.stroke();
+  } else if (tipo === 18) {             // fone de ouvido: arco por cima e uma concha de cada lado
+    c.beginPath(); c.ellipse(0, 0.3, 0.82, 0.58, 0, 0, Math.PI); c.lineCap = 'round';
+    c.lineWidth = 0.13; c.strokeStyle = LUZ; c.stroke(); c.lineWidth = 0.09; c.strokeStyle = '#22252e'; c.stroke();
+    for (const s of [-1, 1]) { elipse(c, s * 0.84, 0.3, 0.13, 0.25, '#22252e'); elipse(c, s * 0.9, 0.3, 0.05, 0.16, '#e5383b', null); }
+  } else if (tipo === 19) {             // laco: duas asas vermelhas e o no no meio
+    for (const s of [-1, 1]) poli(c, [[0, 0.92], [s * 0.48, 1.16], [s * 0.48, 0.68]], '#e5383b', SOMBRA);
+    elipse(c, 0, 0.92, 0.11, 0.11, '#b3262a', SOMBRA);
+  } else if (tipo === 20) {             // cogumelo: chapeu vermelho de pintas brancas
+    elipse(c, 0, 0.55, 0.8, 0.8 * K, '#fff4e6', SOMBRA);
+    c.beginPath(); c.ellipse(0, 0.55, 0.8, 0.56, 0, 0, Math.PI); c.ellipse(0, 0.55, 0.8, 0.8 * K, 0, Math.PI, 2 * Math.PI, false); c.closePath(); pinta(c, '#e5383b', SOMBRA);
+    for (const [px, py, r] of [[0, 0.98, 0.13], [-0.45, 0.74, 0.12], [0.45, 0.74, 0.12], [-0.12, 0.6, 0.1], [0.2, 0.68, 0.08]]) elipse(c, px, py, r, r * 0.8, '#ffffff', null);
+  } else if (tipo === 21) {             // chapeu de festa: cone listrado torto, com pompom
+    c.save(); c.rotate(-0.2);
+    for (let k = 0; k < 4; k++) tronco(c, 0.68 + k * 0.19, 0.87 + k * 0.19, 0.34 * (4 - k) / 4, 0.34 * (3 - k) / 4 + 0.001, k % 2 ? '#ffc531' : '#22c7d6', SOMBRA);
+    c.beginPath(); c.ellipse(0, 0.68, 0.34, 0.34 * K, 0, 0, Math.PI, true); c.lineCap = 'round'; c.lineWidth = 0.08; c.strokeStyle = '#f0458f'; c.stroke();
+    elipse(c, 0, 1.47, 0.11, 0.11, '#f0458f', SOMBRA);
+    c.restore();
+  } else if (tipo === 22) {             // coroa de louros: folhas verdes dos dois lados, aberta na frente
+    for (const s of [-1, 1]) for (let k = 7; k >= 0; k--) for (const sobe of [-1, 1]) {
+      const a = 0.35 + k * 0.37, px = s * Math.sin(a) * 0.6, py = 0.7 - Math.cos(a) * 0.6 * K + sobe * 0.07;
+      c.beginPath(); c.ellipse(px, py, 0.17, 0.065, s * (sobe * 0.55 + Math.cos(a) * 0.5), 0, 7); pinta(c, sobe > 0 ? '#4c9a3a' : '#3a7d2c', SOMBRA);
+    }
   }
 }
 function estiloCor(c, idx, t) {          // cor de preenchimento do corpo: lisa, ou gradiente nas cores especiais
   if (idx === 10) { const g = c.createLinearGradient(-0.6, 0.7, 0.6, -0.7); [[0, '#fff3b0'], [0.35, '#e8b923'], [0.7, '#b8860b'], [1, '#ffe27a']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
   if (idx === 11) return `hsl(${(t * 72) % 360},85%,56%)`;
   if (idx === 12) { const g = c.createRadialGradient(-0.2, 0.3, 0, 0, 0, 0.95); g.addColorStop(0, '#8a55ee'); g.addColorStop(1, '#14104a'); return g; }
+  if (idx === 14) { const g = c.createRadialGradient(0, 0, 0.1, 0, 0, 0.85); g.addColorStop(0, '#ff5a12'); g.addColorStop(1, '#4a0c03'); return g; }
+  if (idx === 15) { const g = c.createLinearGradient(-0.5, 0.8, 0.5, -0.8); [[0, '#f4fcff'], [0.55, '#a9dcff'], [1, '#5fa8e8']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
+  if (idx === 16) { const g = c.createLinearGradient(0, 0.8, 0, -0.8); [[0, '#eef6ff'], [0.34, '#8fb4e0'], [0.47, '#ffffff'], [0.53, '#465064'], [0.74, '#9aa6b8'], [1, '#6b7688']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
+  if (idx === 20) { const g = c.createRadialGradient(0, 0.1, 0.1, 0, 0, 0.8); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(200,184,255,.6)'); return g; }
   return CORES[idx][0];
+}
+// Desenho por cima da cor nas skins de textura (ja recortado no circulo do corpo); as mesmas ideias das texturas da tela.
+const RISCOS = [[-0.7, 0.3, -0.25, 0.1, 0.1, 0.35, 0.6, 0.15], [-0.5, -0.5, -0.1, -0.25, 0.3, -0.45, 0.7, -0.2], [-0.25, 0.1, -0.15, -0.3, 0.3, -0.45, 0.35, -0.8], [0.1, 0.35, 0.2, 0.75, 0.2, 0.75, 0.2, 0.75]];
+const MANCHAS = [[-0.45, 0.45, 0.3, 0.17, '#2f4420'], [0.4, 0.5, 0.26, 0.15, '#7a5a36'], [0.1, -0.05, 0.2, 0.12, '#b5a97a'], [-0.5, -0.25, 0.26, 0.16, '#7a5a36'], [0.45, -0.35, 0.32, 0.18, '#2f4420'], [-0.05, -0.6, 0.24, 0.12, '#2f4420'], [0, 0.7, 0.2, 0.1, '#b5a97a']];
+function pele2d(c, idx, t) {
+  if (idx === 14 || idx === 15) {        // lava: rachaduras de magma que pulsam; gelo: riscos brancos
+    c.lineCap = c.lineJoin = 'round';
+    for (const [larg, cor] of idx === 14 ? [[0.11, '#ff7a1a'], [0.045, `rgba(255,220,90,${0.75 + Math.sin(t * 3.2) * 0.25})`]] : [[0.035, 'rgba(255,255,255,.85)']]) {
+      c.lineWidth = larg; c.strokeStyle = cor;
+      for (const r of RISCOS) { c.beginPath(); c.moveTo(r[0], r[1]); for (let k = 2; k < 8; k += 2) c.lineTo(r[k], r[k + 1]); c.stroke(); }
+    }
+  } else if (idx === 17) {               // zebra
+    c.fillStyle = '#17181c';
+    for (let k = -3; k <= 3; k++) {
+      c.beginPath();
+      for (let y = -0.8; y <= 0.81; y += 0.1) c.lineTo(k * 0.27 + Math.sin(y * 5 + k * 1.7) * 0.06 - 0.03 - Math.cos(y * 1.9) * 0.035, y);
+      for (let y = 0.8; y >= -0.81; y -= 0.1) c.lineTo(k * 0.27 + Math.sin(y * 5 + k * 1.7) * 0.06 + 0.03 + Math.cos(y * 1.9) * 0.035, y);
+      c.fill();
+    }
+  } else if (idx === 18) {               // bolinhas
+    c.fillStyle = '#ffffff';
+    for (let l = -3; l <= 3; l++) for (let k = -3; k <= 3; k++) { c.beginPath(); c.arc(k * 0.34 + (l & 1) * 0.17, l * 0.26, 0.075, 0, 7); c.fill(); }
+  } else if (idx === 19) {               // camuflado
+    for (const [px, py, rx, ry, cor] of MANCHAS) { c.fillStyle = cor; c.beginPath(); c.ellipse(px, py, rx, ry, px * 2, 0, 7); c.ellipse(px + rx * 0.6, py - ry * 0.6, rx * 0.6, ry * 0.8, py * 3, 0, 7); c.fill(); }
+  } else if (idx === 21) {               // melancia: casca embaixo e sementes
+    c.fillStyle = '#f4ffe0'; c.fillRect(-1, -0.27, 2, 0.1);
+    c.fillStyle = '#2f9e44'; c.fillRect(-1, -1, 2, 0.75);
+    c.fillStyle = '#1b6e2c'; for (let k = -4; k <= 4; k++) c.fillRect(k * 0.2 - 0.03, -1, 0.06, 0.73);
+    c.fillStyle = '#1a1114';
+    for (const [px, py] of [[-0.55, 0.5], [0, 0.6], [0.55, 0.5], [-0.62, 0.02], [0.62, 0.02], [0, 0.42]]) { c.beginPath(); c.ellipse(px, py, 0.035, 0.06, px * 0.5, 0, 7); c.fill(); }
+  }
 }
 const ESTRELAS = [[-0.5, 0.45, 0.035], [0.35, 0.6, 0.03], [0.1, 0.2, 0.025], [-0.2, -0.3, 0.04], [0.5, -0.1, 0.03], [-0.6, -0.1, 0.025], [0.2, -0.55, 0.03], [0.6, 0.3, 0.02], [-0.05, 0.7, 0.025], [-0.4, -0.6, 0.02]];
 function boneco(c, idx, tipo, t, pisca) {
   if (ESPETADO.includes(tipo)) chapeu2d(c, tipo, t);
   c.beginPath(); c.arc(0, 0, 0.8, 0, 7);
   if (idx === 13) { c.shadowColor = '#39ff14'; c.shadowBlur = 14; }      // neon brilha
+  if (idx === 14) { c.shadowColor = '#ff5a12'; c.shadowBlur = 8 + Math.sin(t * 3.2) * 4; }      // lava pulsa
+  if (idx === 20) { c.shadowColor = '#c9b8ff'; c.shadowBlur = 16; }      // fantasma: meio transparente, com halo
   c.fillStyle = estiloCor(c, idx, t); c.fill(); c.shadowBlur = 0;
+  if (idx >= 14) { c.save(); c.clip(); pele2d(c, idx, t); c.restore(); c.beginPath(); c.arc(0, 0, 0.8, 0, 7); }
   if (idx === 12) {                                                       // galaxia: nuvem rosa e estrelas
     c.save(); c.clip();
     const n = c.createRadialGradient(0.35, 0.1, 0, 0.35, 0.1, 0.5); n.addColorStop(0, 'rgba(255,90,200,.6)'); n.addColorStop(1, 'rgba(255,90,200,0)');
@@ -1079,17 +1178,18 @@ $('menuGo').addEventListener('click', () => { if (!$('menuGo').disabled) { treme
 function comecar(num) {
   j = num; guarda('slot', j);
   // perfil salvo antigo ou estragado: o que faltar ou vier torto volta para o padrao
-  const salvo = le('perfil' + j), lista = v => Array.isArray(v) ? v.filter(Number.isInteger) : null;
+  const salvo = le('perfil' + j), lista = (v, cat) => Array.isArray(v) ? [...new Set(v.filter(i => cat ? noCatalogo(cat, i) : Number.isInteger(i)))] : null;      // sem repetido nem indice de fora: os trofeus contam o tamanho
   perfil = { nome: '', cor: j - 1, chapeu: 0, moedas: 0, cores: [0, 1], chapeus: [0], pacotes: [], premios: [], ...salvo };
   perfil.nome = String(perfil.nome ?? '').slice(0, 10);
   perfil.moedas = Math.max(0, perfil.moedas | 0);
-  perfil.cores = lista(perfil.cores) ?? [0, 1];
+  perfil.cores = lista(perfil.cores, CORES) ?? [0, 1];
   if (!perfil.cores.includes(j - 1)) perfil.cores.push(j - 1);       // a cor padrao do lugar (verde no 3, amarelo no 4) ja e do jogador
-  perfil.chapeus = lista(perfil.chapeus) ?? [0];
+  perfil.chapeus = lista(perfil.chapeus, CHAPEUS) ?? [0];
+  if (!perfil.chapeus.includes(0)) perfil.chapeus.unshift(0);
   perfil.pacotes = (lista(perfil.pacotes) ?? []).filter(i => PACOTES[i]);
   if (!Array.isArray(perfil.premios)) perfil.premios = [];
-  if (!Number.isInteger(perfil.cor) || !CORES[perfil.cor]) perfil.cor = j - 1;       // so indice: "length" e cia nao passam
-  if (!Number.isInteger(perfil.chapeu) || !CHAPEUS[perfil.chapeu]) perfil.chapeu = 0;
+  if (!noCatalogo(CORES, perfil.cor)) perfil.cor = j - 1;       // so indice: "length" e cia nao passam
+  if (!noCatalogo(CHAPEUS, perfil.chapeu)) perfil.chapeu = 0;
   perfil.est = { ...EST0, ganho: perfil.moedas, ...(salvo?.est && typeof salvo.est === 'object' ? salvo.est : null) };
   for (const k in EST0) if (k !== 'porJogo') perfil.est[k] = Math.max(0, perfil.est[k] | 0);
   if (!perfil.est.porJogo || typeof perfil.est.porJogo !== 'object') perfil.est.porJogo = {};

@@ -59,3 +59,50 @@ test('botaoNaPos: histerese, o dedo so troca de botao 18% da distancia dos centr
   // sem atual: o mais perto, como antes
   assert.equal(botaoNaPos(199, 100, ca, cb), 'B');
 });
+
+// ---------- catalogo da loja (cores e chapeus): o celular e a tela usam os mesmos indices ----------
+const catalogo = (arquivo, nomes) => {
+  const fonte = fs.readFileSync(new URL('./' + arquivo, import.meta.url), 'utf8');
+  return [fonte, new Function('THREE', `${fonte.split('// @catalogo')[1].split('// @fim-catalogo')[0].replace(/^[^\n]*\n/, '')}; return { ${nomes.join(', ')} };`)()];
+};
+const [fonteFone, loja] = catalogo('controle.html', ['CORES', 'NOMES_CORES', 'CHAPEUS', 'noCatalogo']);
+const [fonteTela, tv] = catalogo('tela.html', ['PALETA', 'N_CHAPEUS']);
+
+test('catalogo: celular e tela tem o mesmo tamanho e a mesma cor em cada indice', () => {
+  assert.equal(loja.CORES.length, tv.PALETA.length);
+  assert.equal(loja.NOMES_CORES.length, loja.CORES.length);
+  assert.equal(loja.CHAPEUS.length, tv.N_CHAPEUS);
+  loja.CORES.forEach(([cor], i) => assert.equal(parseInt(cor.slice(1), 16), tv.PALETA[i], 'cor ' + i));
+});
+
+test('catalogo: so se acrescenta no fim (o perfil salvo guarda o indice)', () => {
+  assert.deepEqual(loja.NOMES_CORES.slice(0, 14), ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon']);
+  assert.deepEqual(loja.CHAPEUS.slice(0, 13).map(c => c[0]), ['Nenhum', 'Cartola', 'Coroa', 'Orelhas', 'Chifres', 'Hélice', 'Cone', 'Antenas', 'Pirata', 'Chef', 'Auréola', 'Viking', 'Faixa ninja']);
+  assert.equal(loja.CORES.length, 22, '14 cores antigas e 8 skins novas');
+  assert.equal(loja.CHAPEUS.length, 23, 'nenhum, 12 antigos e 10 novos');
+  assert.equal(new Set(loja.NOMES_CORES).size, loja.NOMES_CORES.length);
+  assert.equal(new Set(loja.CHAPEUS.map(c => c[0])).size, loja.CHAPEUS.length);
+});
+
+test('catalogo: precos na faixa e toda skin especial tem amostra propria na loja', () => {
+  loja.CHAPEUS.slice(1).forEach(([nome, preco]) => assert.ok(Number.isInteger(preco) && preco >= 20 && preco <= 80, nome));
+  loja.CORES.slice(10).forEach(([, preco, amostra], k) => {
+    assert.ok(Number.isInteger(preco) && preco >= 50 && preco <= 100, loja.NOMES_CORES[k + 10]);
+    assert.ok(typeof amostra === 'string' && amostra.includes('gradient'), loja.NOMES_CORES[k + 10]);
+  });
+});
+
+test('catalogo: todo chapeu tem desenho no celular e na tela', () => {
+  const corpo = (fonte, nome) => fonte.split('function ' + nome + '(')[1].split('\nfunction ')[0];
+  for (let i = 1; i < loja.CHAPEUS.length; i++) {
+    assert.ok(corpo(fonteFone, 'chapeu2d').includes(`tipo === ${i})`), 'celular: ' + loja.CHAPEUS[i][0]);
+    assert.ok(corpo(fonteTela, 'chapeu').includes(`tipo === ${i})`), 'tela: ' + loja.CHAPEUS[i][0]);
+  }
+});
+
+test('noCatalogo: so indice inteiro que existe na lista passa (perfil salvo torto volta ao padrao)', () => {
+  const { noCatalogo, CHAPEUS } = loja;
+  assert.equal(noCatalogo(CHAPEUS, 0), true);
+  assert.equal(noCatalogo(CHAPEUS, CHAPEUS.length - 1), true);
+  for (const ruim of [CHAPEUS.length, -1, 1.5, '1', 'length', null, undefined, NaN, {}]) assert.equal(noCatalogo(CHAPEUS, ruim), false, String(ruim));
+});
