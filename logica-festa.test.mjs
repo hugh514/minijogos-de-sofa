@@ -55,7 +55,7 @@ test('festa: a rotacao filtra pelo modo e pelo numero de jogadores', () => {
   [vs, times, coop, dois].forEach(registra);
   try {
     const ids = (modo, n) => elegiveis(modo, n).map(j => j.id).sort();
-    assert.deepEqual(ids('vs', 3), ['f-vs', ...JOGOS.filter(j => !j.festa && !j.coop).map(j => j.id)].sort(), 'com 3 os de 2 tambem entram, em revezamento');
+    assert.deepEqual(ids('vs', 3), ['f-vs'], 'cada um por si com 3: so os que todos jogam juntos');
     const classicos = JOGOS.filter(j => !j.festa && !j.coop).map(j => j.id);
     assert.deepEqual(ids('vs', 2), ['f-dois', 'f-vs', ...classicos].sort(), 'todos contra todos com 2 usa tambem os do Classico');
     assert.deepEqual(ids('times', 4), ['f-times', 'f-vs', ...classicos].sort(), 'duplas com 4 usa tambem os do Classico, em revezamento');
@@ -64,7 +64,7 @@ test('festa: a rotacao filtra pelo modo e pelo numero de jogadores', () => {
     const p = criaPartida(sorte, { n: 3, modo: 'vs' });
     const vistos = new Set();
     for (let k = 0; k < 8; k++) { vistos.add(p.jogo.id); p.fase = 'resultado'; p.t = 0; roda(p, 2.6); }
-    assert.ok([...vistos].every(id => elegiveis('vs', 3).some(j => j.id === id) && id !== 'f-dois'), 'com 3 nao sai minijogo de festa feito so para 2');
+    assert.deepEqual([...vistos], ['f-vs']);
     const q = criaPartida(sorte);
     for (let k = 0; k < 40; k++) { assert.ok(!q.jogo.festa); q.fase = 'resultado'; q.t = 0; roda(q, 2.6); }
   } finally { limpa(); }
@@ -424,8 +424,7 @@ test('festa: todos contra todos com 2 pessoas sorteia tambem minijogos do Classi
     assert.ok([...vistos].some(id => JOGOS.find(j => j.id === id && !j.festa)), 'saiu algum do Classico');
     assert.ok(festa.every(j => vistos.has(j.id)), 'e os de festa continuam saindo');
     assert.ok(!vistos.has('q-coop'));
-    const deDois = JOGOS.filter(j => !j.festa && !j.coop).map(j => j.id);
-    assert.deepEqual(elegiveis('vs', 3).map(j => j.id).sort(), [...festa.map(j => j.id), ...deDois].sort(), 'com 3 os de festa e os de 2 (revezamento), sem coop');
+    assert.deepEqual(elegiveis('vs', 3).map(j => j.id).sort(), festa.map(j => j.id).sort(), 'com 3 so os de festa');
   } finally { limpa(); }
 });
 
@@ -533,25 +532,18 @@ test('duplas: so quem esta na vez se move no minijogo de 2', () => {
   } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });
 
-test('cada um por si com 3 ou 4: minijogo de 2 em revezamento, so o vencedor pontua', () => {
+test('cada um por si com 3 ou 4: so minijogos em que todos jogam juntos, sem revezamento', () => {
   const sozinhos = JOGOS.splice(0);
-  registra(classico('c-duelo', () => 1));
+  const festa = falso('f-vs', { min: 2, max: 4, modos: ['vs'] }, 2);
+  [classico('c-duelo', () => 1), festa].forEach(registra);
   try {
-    assert.equal(elegiveis('vs', 4).length, 1, 'os de 2 entram em Cada um por si com 4');
-    const p = criaPartida(sorte, { n: 4, modo: 'vs' });
-    const vistos = [];
-    for (let k = 0; k < 6; k++) { vistos.push(p.duelo.join('-')); pulaPara(p); }
-    assert.deepEqual(vistos, ['0-1', '2-3', '0-2', '1-3', '0-3', '1-2'], 'com 4 todo par joga uma vez');
-    while (p.fase !== 'jogando') passo(p, DT);
-    passo(p, DT);
-    const d = p.duelo;
-    assert.equal(p.vencedor, d[1], 'o vencedor e o lugar de verdade de quem venceu');
-    assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 1, 2, 3].map(i => (i === d[1] ? 1 : 0)), 'so quem venceu pontua');
-    assert.ok(venceu(p, d[1]) && !venceu(p, d[0]));
-    const t = criaPartida(sorte, { n: 3, modo: 'vs' });
-    const tres = [];
-    for (let k = 0; k < 3; k++) { tres.push(t.duelo.join('-')); pulaPara(t); }
-    assert.deepEqual(tres, ['0-1', '0-2', '1-2']);
+    for (const n of [3, 4]) {
+      assert.deepEqual(elegiveis('vs', n).map(j => j.id), ['f-vs'], 'os de 2 nao entram com ' + n);
+      const p = criaPartida(sorte, { n, modo: 'vs' });
+      assert.equal(p.duelo, null);
+      assert.equal(vista(p), p);
+    }
+    assert.deepEqual(elegiveis('vs', 2).map(j => j.id).sort(), ['c-duelo', 'f-vs'], 'com 2 os de 2 continuam valendo');
   } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });
 

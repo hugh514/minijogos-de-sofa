@@ -33,22 +33,20 @@ export function venceu(p, i) {
 export function elegiveis(modo, n) {
   if (modo === 'classico') return JOGOS.filter(j => !j.festa);
   const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && n <= j.festa.max && j.festa.modos.includes(modo));
-  const deDois = modo === 'vs' || modo === 'times';       // com 3 ou 4 (e em Duplas) os de 2 entram em revezamento: dois jogam, os outros torcem
+  const deDois = (modo === 'vs' && n === 2) || modo === 'times';       // Duplas: os de 2 entram em revezamento (um de cada dupla por rodada). Cada um por si com 3 ou 4: so os que todos jogam juntos
   return deDois ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
 }
 
-// ---------- Minijogo de 2 com 3 ou 4 no sofa: dois jogam e os outros torcem; a cada rodada de 2 a vez passa ----------
-// Duplas: um de cada dupla, todo mundo enfrenta todo mundo (J1 x J2, J3 x J4, J1 x J4, J3 x J2); o indice 0 e sempre do time laranja (par).
-// Cada um por si: todo par joga uma vez.
-const DUELOS = { times: [[0, 1], [2, 3], [0, 3], [2, 1]], 3: [[0, 1], [0, 2], [1, 2]], 4: [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]] };
+// ---------- Duplas com minijogo de 2: joga um de cada dupla e o parceiro torce; a cada rodada de 2 a vez passa ----------
+// A ordem faz todo mundo enfrentar todo mundo: J1 x J2, J3 x J4, J1 x J4, J3 x J2. O indice 0 e sempre do time laranja (par).
+const DUELOS = [[0, 1], [2, 3], [0, 3], [2, 1]];
 const FORA = [[-11, -12], [11, -12], [-11, 12], [11, 12]];       // onde fica quem assiste: fora da arena, para torcida e confete nao cairem no meio da disputa
 // O minijogo de 2 recebe a vista: a mesma partida, mas jogadores, celular e nomes so dos dois da vez.
 // Fora de duelo a vista e a propria partida. O motor e a tela usam p (os 4) para placar, pontos e celulares.
 export function vista(p) { return p.duelo ? p.vistaDuelo : p; }
 function montaDuelo(p) {
-  const lista = p.modo === 'times' ? DUELOS.times : p.modo === 'vs' ? DUELOS[p.n] : null;
-  if (!lista || p.jogo.festa) { p.duelo = null; p.vistaDuelo = null; return; }
-  const par = lista[p.duelos % lista.length];
+  if (p.modo !== 'times' || p.jogo.festa) { p.duelo = null; p.vistaDuelo = null; return; }
+  const par = DUELOS[p.duelos % DUELOS.length];
   p.duelo = par;
   p.jogadores.forEach((j, i) => { if (!par.includes(i)) [j.x, j.z] = FORA[i]; });
   const proprio = { jogadores: par.map(i => p.jogadores[i]), celular: par.map(i => p.celular[i]), n: 2, nomes: undefined };
@@ -843,7 +841,6 @@ function coopCabe(p, vale = 1) {
 
 // vencedor: 0 ou 1, -1 (empate ou fracasso cooperativo) ou 2 (vitoria em equipe, so em minijogo coop).
 function termina(p, vencedor) {
-  if (p.duelo && p.modo === 'vs' && vencedor >= 0) vencedor = p.duelo[vencedor];       // revezamento: o minijogo diz 0 ou 1, o ponto e do lugar de verdade
   p.vencedor = vencedor; p.t = 0; p.fase = 'resultado';
   if (p.modo !== 'classico') return terminaFesta(p);
   const js = p.jogadores, antes = js.map(j => j.pontos), vale = p.mod?.pontos ?? 1;
