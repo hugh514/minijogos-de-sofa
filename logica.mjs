@@ -930,7 +930,10 @@ function tocouBotao(j, m, estado, contador) {
 const limpaHistorico = h => (Array.isArray(h) ? h.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id)) : []).slice(-HISTORICO_MAX);
 
 // Alvo de pontos da partida: 10, ou 6 quando ha menos de 6 minijogos elegiveis no modo (a tela mostra p.alvo).
-const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : PONTOS_VITORIA);
+// Em Cada um por si so um pontua por rodada: com mais gente no sofa a partida a 10 pontos passava de 25 rodadas.
+// O alvo encolhe com o numero de jogadores para a partida durar perto do Duelo (umas 15 rodadas).
+export const ALVO_VS = { 2: PONTOS_VITORIA, 3: 8, 4: 6, 5: 6 };
+const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : p.modo === 'vs' ? ALVO_VS[p.n] ?? PONTOS_VITORIA : PONTOS_VITORIA);
 
 export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', historico = [] } = {}) {
   confereModo(n, modo);

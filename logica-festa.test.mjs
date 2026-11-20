@@ -406,9 +406,9 @@ test('festa: alvo de pontos (p.alvo) e 6 com menos de 6 elegiveis e 10 com 6 ou 
       assert.deepEqual(p.campeoes, [1]);
       assert.equal(p.jogadores[1].pontos, 6);
       ['pe', 'pf'].forEach(x => registra(falso(x, { min: 2, max: 4, modos: ['vs'] })));
-      assert.equal(criaPartida(sorte, { n: 3, modo: 'vs' }).alvo, PONTOS_VITORIA, 'com 6 elegiveis volta aos 10');
+      assert.equal(criaPartida(sorte, { n: 3, modo: 'vs' }).alvo, 8, 'com 6 elegiveis e 3 no sofa o alvo e 8');
       reinicia(p);
-      assert.equal(p.alvo, PONTOS_VITORIA, 'reinicia confere de novo');
+      assert.equal(p.alvo, 8, 'reinicia confere de novo');
     } finally { limpa(); }
   } finally { volta(); }
 });
@@ -769,5 +769,22 @@ test('escudo com freio: so para quem esta em ultimo, uma vez por jogador na part
     assert.ok(!oferta(2).includes('escudo'), 'J3 ja usou o dele nesta partida');
     reinicia(p);
     assert.ok(p.jogadores.every(j => j.escudos === 0) && p.escudoSegurou === false, 'partida nova: cada um tem um escudo de novo');
+  } finally { volta(); }
+});
+
+test('alvo da partida: em Cada um por si encolhe com mais gente no sofa (2: 10, 3: 8, 4 e 5: 6); Duplas e Duelo seguem em 10', () => {
+  const volta = semClassicos();
+  [0, 1, 2, 3, 4, 5].forEach(k => registra(falso('f-a' + k, { min: 2, max: 4, modos: ['vs', 'times'] })));
+  try {
+    assert.deepEqual([2, 3, 4, 5].map(n => criaPartida(sorte, { n, modo: 'vs' }).alvo), [10, 8, 6, 6]);
+    assert.equal(criaPartida(sorte, { n: 4, modo: 'times' }).alvo, 10, 'em Duplas o ponto e do time: segue em 10');
+    const p = criaPartida(sorte, { n: 4, modo: 'vs' });
+    p.jogadores[2].pontos = 5;
+    const jogo = JOGOS.find(j => j.id === 'f-a0');
+    jogaRodada(p, jogo, 2);
+    assert.equal(p.fase, 'fim', 'com 4, o sexto ponto fecha a partida');
+    assert.deepEqual(p.campeoes, [2]);
+    configura(p, { n: 2, modo: 'vs' });
+    assert.equal(p.alvo, 10, 'trocou para 2 jogadores: o alvo acompanha');
   } finally { volta(); }
 });
