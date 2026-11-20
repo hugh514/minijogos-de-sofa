@@ -1359,6 +1359,18 @@ function chiado(dur, vol, quando, tipoFiltro, f, destino, fAte) {      // ruido 
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   fonte.connect(filtro).connect(g).connect(destino ?? busFx); fonte.start(t, Math.random() * 0.5); fonte.stop(t + dur + 0.03);
 }
+// Voz de boca: onda aspera passando por dois filtros nas frequencias da vogal (a, e, i, o, u). E o que faz "ha ha", "po po poc" e "uuuh" parecerem voz e nao bip.
+const VOGAIS = { a: [800, 1250], e: [480, 1900], i: [300, 2300], o: [450, 850], u: [330, 720] };
+function fala(f0, f0Fim, dur, vol, quando, vogal) {
+  if (!audio) return;
+  f0 = Math.min(2000, Math.max(40, +f0 || 200)); dur = Math.min(2, Math.max(0.03, +dur || 0.1)); vol = Math.min(0.4, Math.max(0.0002, +vol || 0));
+  const t = Math.max(audio.currentTime, +quando || 0), o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t);
+  if (f0Fim) o.frequency.exponentialRampToValueAtTime(Math.min(2000, Math.max(40, f0Fim)), t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(0.02, dur / 3)); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  for (const fq of VOGAIS[vogal] ?? VOGAIS.a) { const b = audio.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = fq; b.Q.value = 5; o.connect(b).connect(g); }
+  g.connect(busFx); o.start(t); o.stop(t + dur + 0.03);
+}
 const nota = (freq, dur = 0.1, tipo = 'square', vol = 0.08, quando = 0) => voz(freq, dur, tipo, vol, quando);     // bip avulso (c.som dos minijogos)
 const hz = midi => 440 * 2 ** ((midi - 69) / 12);
 function vinheta(tipo) {
@@ -2460,32 +2472,32 @@ function torce(i) {       // confete saindo do cartao do jogador (lado dele) e d
 }
 // Som de cada reacao, na mesma ordem de REACOES. v: notas [freq, duracao, onda, volume, atraso, freq final]; c: ruido.
 const SOM_REA = [
-  { v: [[520, 0.07, 'square', 0.07, 0, 400], [560, 0.07, 'square', 0.07, 0.1, 420], [600, 0.09, 'square', 0.07, 0.2, 440]] },   // risada
-  { v: [[700, 0.12, 'square', 0.06, 0, 500], [650, 0.12, 'square', 0.06, 0.13, 450], [600, 0.2, 'square', 0.06, 0.26, 380]] },   // choro de rir
-  { v: [[110, 0.4, 'sawtooth', 0.12, 0, 70]], c: [[0.3, 0.05, 0, 'lowpass', 500]] },                                          // raiva
-  { v: [[660, 0.14, 'sine', 0.12, 0, 660], [880, 0.22, 'sine', 0.12, 0.14, 880]] },                                            // coracao
-  { v: [[880, 0.1, 'triangle', 0.12, 0, 880], [1320, 0.2, 'triangle', 0.12, 0.09, 1320]] },                                    // joinha
-  { v: [[300, 0.3, 'sine', 0.12, 0, 1500]] },                                                                                  // susto
-  { v: [[90, 0.35, 'sawtooth', 0.1, 0, 75]], c: [[0.35, 0.06, 0, 'lowpass', 900]] },                                           // lingua
-  { v: [[300, 0.15, 'triangle', 0.1, 0, 600], [900, 0.25, 'triangle', 0.1, 0.15, 900]] },                                      // oculos
-  { v: [[260, 0.16, 'square', 0.09, 0, 250], [260, 0.22, 'square', 0.09, 0.22, 240]] },                                        // palhaco
-  { v: [[120, 0.6, 'sine', 0.14, 0, 90]], c: [[0.6, 0.03, 0, 'lowpass', 400]] },                                               // dormindo
-  { c: [[0.6, 0.08, 0, 'lowpass', 1800], [0.4, 0.05, 0.15, 'highpass', 2500]] },                                               // fogo
-  { v: [[1568, 0.1, 'sine', 0.08, 0, 1568], [2093, 0.1, 'sine', 0.08, 0.08, 2093], [2637, 0.18, 'sine', 0.08, 0.16, 2637]] }, // estrelas
-  { v: [[523, 0.1, 'triangle', 0.1, 0, 523], [659, 0.1, 'triangle', 0.1, 0.1, 659], [784, 0.1, 'triangle', 0.1, 0.2, 784], [1047, 0.3, 'triangle', 0.1, 0.3, 1047]] }, // trofeu
-  { v: [[392, 0.15, 'square', 0.06, 0, 392], [523, 0.15, 'square', 0.06, 0.15, 523], [659, 0.3, 'square', 0.06, 0.3, 659]] }, // coroa
-  { v: [[700, 0.06, 'square', 0.08, 0, 500], [720, 0.06, 'square', 0.08, 0.1, 520], [900, 0.12, 'square', 0.08, 0.22, 600]] }, // galinha
-  { c: [[0.6, 0.07, 0, 'highpass', 4000]] },                                                                                   // cobra
-  { v: [[200, 0.35, 'sine', 0.14, 0, 140]] },                                                                                  // tartaruga
-  { v: [[600, 0.6, 'sine', 0.1, 0, 280]] },                                                                                    // caracol
-  { v: [[330, 0.1, 'triangle', 0.1, 0, 330], [440, 0.1, 'triangle', 0.1, 0.1, 440], [550, 0.2, 'triangle', 0.1, 0.2, 550]] },   // pizza
-  { c: [[0.04, 0.09, 0, 'highpass', 3000], [0.04, 0.09, 0.09, 'highpass', 3500], [0.04, 0.09, 0.15, 'highpass', 2800], [0.05, 0.1, 0.26, 'highpass', 3200]] },   // pipoca
-  { v: [[1200, 0.25, 'sine', 0.1, 0, 800], [1000, 0.3, 'sine', 0.08, 0.2, 600]] },                                             // sorvete
-  { v: [[392, 0.12, 'sine', 0.12, 0, 392], [494, 0.12, 'sine', 0.12, 0.12, 494], [392, 0.2, 'sine', 0.12, 0.24, 587]] },       // rosquinha
-  { v: [[500, 0.7, 'sine', 0.1, 0, 900], [520, 0.7, 'sine', 0.06, 0.05, 700]] },                                               // fantasma
-  { v: [[900, 0.12, 'sine', 0.1, 0, 1800], [1800, 0.12, 'sine', 0.1, 0.12, 900], [900, 0.2, 'sine', 0.1, 0.24, 2200]] },       // alienigena
-  { v: [[220, 0.08, 'square', 0.07, 0, 220], [440, 0.08, 'square', 0.07, 0.1, 440], [330, 0.08, 'square', 0.07, 0.2, 330], [660, 0.14, 'square', 0.07, 0.3, 660]] },   // robo
-  { v: [[180, 0.12, 'sawtooth', 0.09, 0, 150], [150, 0.12, 'sawtooth', 0.09, 0.14, 120], [120, 0.3, 'sawtooth', 0.09, 0.28, 70]] },   // caveira
+  { f: [[330, 300, 0.1, 0.2, 0, 'a'], [310, 280, 0.1, 0.2, 0.15, 'a'], [290, 260, 0.1, 0.2, 0.3, 'a'], [270, 230, 0.16, 0.2, 0.45, 'a']] },   // risada: ha ha ha haa
+  { f: [[520, 560, 0.07, 0.17, 0, 'i'], [540, 580, 0.07, 0.17, 0.1, 'i'], [560, 600, 0.07, 0.17, 0.2, 'i'], [540, 500, 0.07, 0.17, 0.3, 'i'], [500, 380, 0.22, 0.17, 0.4, 'a']] },   // choro de rir: hi hi hi hi haa
+  { f: [[120, 85, 0.55, 0.22, 0, 'o']], v: [[70, 0.55, 'sawtooth', 0.1, 0, 55]], c: [[0.55, 0.05, 0, 'lowpass', 450]] },   // raiva: rosnado grave
+  { c: [[0.07, 0.12, 0, 'bandpass', 2600, 5200]], v: [[1500, 0.08, 'sine', 0.1, 0.02, 2600], [62, 0.14, 'sine', 0.18, 0.28, 48], [62, 0.16, 'sine', 0.15, 0.5, 46]] },   // coracao: beijo e duas batidas
+  { v: [[1319, 0.4, 'sine', 0.14, 0, 1319], [1976, 0.35, 'sine', 0.07, 0, 1976], [2637, 0.25, 'sine', 0.04, 0.01, 2637]] },   // joinha: plim de sino
+  { f: [[520, 950, 0.18, 0.2, 0, 'a'], [950, 780, 0.38, 0.2, 0.16, 'a']] },   // susto: grito aaah
+  { v: [[78, 0.6, 'sawtooth', 0.16, 0, 52]], c: Array.from({ length: 16 }, (_, k) => [0.022, 0.09, k * 0.036, 'bandpass', 380]) },   // lingua: pum de lingua tremido
+  { f: [[190, 210, 0.16, 0.2, 0, 'u'], [230, 260, 0.14, 0.2, 0.14, 'a'], [250, 170, 0.3, 0.2, 0.26, 'u']] },   // oculos escuros: uaau
+  { f: [[466, 440, 0.16, 0.14, 0, 'o'], [466, 430, 0.24, 0.14, 0.24, 'o']], v: [[466, 0.16, 'square', 0.08, 0, 440], [554, 0.16, 'square', 0.05, 0, 523], [466, 0.24, 'square', 0.08, 0.24, 430], [554, 0.24, 'square', 0.05, 0.24, 512]] },   // palhaco: fom fom de buzina
+  { c: [[0.55, 0.12, 0, 'bandpass', 260, 620], [0.5, 0.03, 0.7, 'bandpass', 1800, 900]], v: [[1100, 0.5, 'sine', 0.06, 0.7, 620]] },   // dormindo: ronco e assobio
+  { c: [[0.9, 0.09, 0, 'lowpass', 900, 350], ...[0.05, 0.16, 0.22, 0.31, 0.43, 0.5, 0.62, 0.74].map((t, k) => [0.018, 0.12, t, 'highpass', 2200 + (k % 3) * 900])] },   // fogo: labareda e estalos
+  { v: [[2093, 0.12, 'sine', 0.08, 0, 2093], [2637, 0.12, 'sine', 0.08, 0.09, 2637], [3136, 0.12, 'sine', 0.08, 0.18, 3136], [4186, 0.3, 'sine', 0.07, 0.27, 4186], [2637, 0.3, 'sine', 0.03, 0.3, 2637]] },   // estrelas: brilho subindo
+  { v: [[523, 0.1, 'sawtooth', 0.09, 0, 523], [523, 0.1, 'sawtooth', 0.09, 0.12, 523], [523, 0.1, 'sawtooth', 0.09, 0.24, 523], [784, 0.5, 'sawtooth', 0.1, 0.36, 784], [1047, 0.5, 'triangle', 0.06, 0.36, 1047]] },   // trofeu: ta ta ta taaa
+  { v: [[392, 0.14, 'sawtooth', 0.08, 0, 392], [523, 0.14, 'sawtooth', 0.08, 0.15, 523], [659, 0.14, 'sawtooth', 0.08, 0.3, 659], [784, 0.45, 'sawtooth', 0.09, 0.45, 784], [587, 0.45, 'triangle', 0.05, 0.45, 587]] },   // coroa: fanfarra real
+  { f: [[520, 400, 0.06, 0.2, 0, 'o'], [520, 400, 0.06, 0.2, 0.13, 'o'], [520, 400, 0.06, 0.2, 0.26, 'o'], [560, 400, 0.05, 0.2, 0.38, 'o'], [650, 1050, 0.1, 0.22, 0.46, 'a'], [1050, 700, 0.26, 0.22, 0.55, 'a']] },   // galinha: po po po po-poooc
+  { c: [[0.25, 0.02, 0, 'highpass', 5000], [0.7, 0.1, 0.2, 'highpass', 5500, 7000], ...Array.from({ length: 9 }, (_, k) => [0.012, 0.07, 0.9 + k * 0.035, 'bandpass', 3200])] },   // cobra: sssss e chocalho
+  { v: [[170, 0.22, 'sine', 0.13, 0, 110], [150, 0.26, 'sine', 0.13, 0.5, 95]] },   // tartaruga: dois passos lentos e graves
+  { v: [[260, 0.9, 'sine', 0.1, 0, 520]], c: [[0.9, 0.025, 0, 'bandpass', 700, 1400]] },   // caracol: deslizando devagar
+  { f: [[210, 190, 0.14, 0.2, 0, 'a'], [190, 180, 0.1, 0.16, 0.12, 'u'], [220, 200, 0.14, 0.2, 0.32, 'a'], [200, 180, 0.12, 0.16, 0.44, 'u']] },   // pizza: nham nham
+  { v: [0, 0.11, 0.17, 0.3, 0.36, 0.5, 0.58].map((t, k) => [500 + (k * 137) % 400, 0.04, 'sine', 0.16, t, 1500 + (k * 211) % 700]), c: [0, 0.11, 0.17, 0.3, 0.36, 0.5, 0.58].map(t => [0.03, 0.1, t, 'highpass', 3000]) },   // pipoca: estouros
+  { v: [[1319, 0.16, 'sine', 0.1, 0, 1319], [1047, 0.16, 'sine', 0.1, 0.16, 1047], [1175, 0.16, 'sine', 0.1, 0.32, 1175], [784, 0.3, 'sine', 0.1, 0.48, 784], [2637, 0.1, 'sine', 0.03, 0, 2637], [1568, 0.25, 'sine', 0.03, 0.48, 1568]] },   // sorvete: musiquinha do carrinho
+  { f: [[170, 215, 0.3, 0.2, 0, 'u'], [215, 160, 0.35, 0.2, 0.28, 'u']] },   // rosquinha: hmmm de gostoso
+  { f: [[300, 470, 0.5, 0.18, 0, 'u'], [470, 260, 0.6, 0.18, 0.48, 'u']], v: [[600, 1.0, 'sine', 0.03, 0, 520]] },   // fantasma: uuuuuh
+  { v: Array.from({ length: 10 }, (_, k) => [k % 2 ? 1500 : 900, 0.07, 'sine', 0.1, k * 0.07, k % 2 ? 900 : 1700 + k * 60]) },   // alienigena: gorjeio de disco voador
+  { v: [[880, 0.09, 'square', 0.08, 0, 880], [440, 0.09, 'square', 0.08, 0.12, 440], [660, 0.09, 'square', 0.08, 0.24, 660], [330, 0.2, 'square', 0.08, 0.36, 220]] },   // robo: bip bup bip buuu
+  { v: [[900, 0.05, 'triangle', 0.16, 0, 880], [700, 0.05, 'triangle', 0.16, 0.09, 690], [1050, 0.05, 'triangle', 0.16, 0.16, 1030], [620, 0.05, 'triangle', 0.16, 0.27, 610], [820, 0.05, 'triangle', 0.16, 0.33, 800], [500, 0.09, 'triangle', 0.16, 0.44, 480]] },   // caveira: ossos batendo
 ];
 function mostraReacao(i, k) {
   const lista = reaSprites[i], vaga = lista.find(r => r.idade >= VIDA_REA) ?? lista.reduce((a, b) => a.idade > b.idade ? a : b);
@@ -2493,10 +2505,11 @@ function mostraReacao(i, k) {
   const el = $('reaHud' + i);
   el.textContent = REACOES[k]; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   el.onanimationend = () => el.classList.remove('on');
-  voz(420, 0.08, 'sine', 0.12, 0, undefined, 950);      // pop
+  voz(420, 0.06, 'sine', 0.05, 0, undefined, 950);      // pop baixinho: quem fala e o som do emoji
   const t0 = (audio?.currentTime ?? 0) + 0.06;            // voz e chiado recebem o horario absoluto do audio
   for (const [f, dur, tipo, vol, atraso, fim] of SOM_REA[k]?.v ?? []) voz(f, dur, tipo, vol, t0 + atraso, undefined, fim);
-  for (const [dur, vol, atraso, filtro, f] of SOM_REA[k]?.c ?? []) chiado(dur, vol, t0 + atraso, filtro, f);
+  for (const [dur, vol, atraso, filtro, f, fAte] of SOM_REA[k]?.c ?? []) chiado(dur, vol, t0 + atraso, filtro, f, undefined, fAte);
+  for (const [f0, f0Fim, dur, vol, atraso, vogal] of SOM_REA[k]?.f ?? []) fala(f0, f0Fim, dur, vol, t0 + atraso, vogal);
   window.__reacoes[i]++;
 }
 const cartaoEl = i => document.querySelector('#placar .cartao[data-i="' + i + '"]');       // o cartao do jogador i no placar (J1 e J3 ficam juntos a esquerda)
