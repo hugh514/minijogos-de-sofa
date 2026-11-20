@@ -119,9 +119,11 @@ const CARTA = Object.fromEntries(CARTAS.map(c => [c.id, c]));
 const N_OFERTA = 3, ESPERA_CARTA = 0.35;     // segundos em que o toque na carta, se chegar atrasado, nao vale como escolha do minijogo
 
 function sorteiaCartas(p, i) {
-  const j = p.jogo, eu = p.jogadores[i], outro = p.jogadores[1 - i];
+  const j = p.jogo, eu = p.jogadores[i];
+  const rivais = p.jogadores.filter((_, k) => k !== i && (p.modo !== 'times' || timeDe(p, k) !== timeDe(p, i)));       // em Duplas o parceiro nao e rival
+  const atras = rivais.some(r => eu.pontos < r.pontos);
   const servem = CARTAS.filter(c => (!c.anda || deJoystick(j)) && (!c.precisaDash || !j.semDash) && (!c.precisaPulo || !j.semPulo)
-    && (!c.atras || (eu.pontos < outro.pontos && eu.cartaAnterior !== c.id)));
+    && (!c.atras || (atras && eu.cartaAnterior !== c.id)));
   return embaralha(servem, p.rng).slice(0, N_OFERTA).map(c => c.id);
 }
 
@@ -825,8 +827,9 @@ function proximaRodada(p, forcado) {
       p.jogo.inicia(vista(p)); devolveCelular(p); p.mod = sorteiaModificador(p);
       if (p.duelo) p.duelos++;       // so conta a vez de quem de fato jogou (minijogo que quebra no inicia nao pula ninguem)
       p.historico.push(p.jogo.id); p.historico.splice(0, p.historico.length - HISTORICO_MAX); p.noitesVistas.push(p.jogo.id);
-      if (!p.jogo.coop)             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima
-        for (const [i, j] of p.jogadores.entries()) if (j.direito) { j.oferta = sorteiaCartas(p, i); j.direito = false; }
+      if (!ehCoop(p))             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima
+        for (const [i, j] of p.jogadores.entries())       // no revezamento, quem esta de fora guarda o direito para quando voltar a jogar
+          if (j.direito && (!p.duelo || p.duelo.includes(i))) { j.oferta = sorteiaCartas(p, i); j.direito = false; }
       return;
     } catch (e) { descarta(p, p.jogo, e); }
   }
@@ -876,13 +879,22 @@ function termina(p, vencedor) {
   p.eventos.push('ponto');
 }
 
-// Festa: quem venceu (ele, o time ou todos, pelo modo) ganha o ponto; sem cartas de poder nem anuncios nesta versao.
+// Festa: quem venceu (ele, o time ou todos, pelo modo) ganha o ponto.
+// Cartas de poder em Cada um por si e Duplas: Vale dobro de quem venceu soma 1 (em Duplas, para o time inteiro);
+// Escudo de quem jogou e perdeu segura o ponto; quem jogou e perdeu escolhe uma carta na proxima rodada em que jogar.
 function terminaFesta(p) {
-  const vale = p.mod?.pontos ?? 1;
+  const vale = p.mod?.pontos ?? 1, js = p.jogadores;
   p.anuncios = [];
-  p.jogadores.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale); });
-  p.campeoes = p.jogadores.flatMap((j, i) => j.pontos >= p.alvo ? [i] : []);
-  if (p.campeoes.length) p.fase = 'fim';
+  if (p.modo !== 'coop' && p.vencedor >= 0) {
+    const perdeu = (p.duelo ?? [...js.keys()]).filter(i => !venceu(p, i));
+    const escudo = perdeu.find(i => js[i].carta === 'escudo');
+    const dobro = js.some((j, i) => venceu(p, i) && j.carta === 'dobro') ? 1 : 0;
+    if (escudo !== undefined) p.anuncios.push({ tipo: 'escudo', quem: escudo });
+    else js.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale + dobro); });
+    for (const i of perdeu) js[i].direito = true;
+  } else js.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale); });
+  p.campeoes = js.flatMap((j, i) => j.pontos >= p.alvo ? [i] : []);
+  if (p.campeoes.length) { p.fase = 'fim'; for (const j of js) j.direito = false; }
   if (p.modo === 'coop' && p.fase !== 'fim') {       // cooperativo: a partida dura NOITES_COOP rodadas
     p.noites.jogadas++;
     if (p.vencedor === 2) p.noites.vencidas++;

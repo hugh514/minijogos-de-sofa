@@ -554,3 +554,83 @@ test('cada um por si com 3 ou 4: minijogo de 2 em revezamento, so o vencedor pon
     assert.deepEqual(tres, ['0-1', '0-2', '1-2']);
   } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });
+
+// ---------- cartas de poder na Festa (Cada um por si e Duplas): quem jogou e perdeu escolhe uma carta na rodada seguinte ----------
+test('cartas na festa: quem perdeu em Cada um por si ganha oferta de carta na rodada seguinte, e o vencedor nao', () => {
+  const volta = semClassicos();
+  const jogo = falso('f-vs', { min: 2, max: 4, modos: ['vs'] });
+  registra(jogo);
+  try {
+    const p = criaPartida(sorte, { n: 3, modo: 'vs' });
+    assert.ok(p.jogadores.every(j => !j.oferta), 'primeira rodada sem cartas');
+    jogaRodada(p, jogo, 1);
+    roda(p, 2.6);
+    assert.equal(p.fase, 'intro');
+    assert.equal(p.jogadores[1].oferta, null, 'quem venceu nao escolhe carta');
+    for (const i of [0, 2]) assert.ok(Array.isArray(p.jogadores[i].oferta) && p.jogadores[i].oferta.length > 0, 'quem perdeu escolhe: J' + (i + 1));
+  } finally { volta(); }
+});
+
+test('cartas na festa: Vale dobro da 2 pontos (ao time inteiro em Duplas) e Escudo de quem perdeu segura o ponto', () => {
+  const volta = semClassicos();
+  const jogo = falso('f-t', { min: 2, max: 4, modos: ['vs', 'times'] });
+  registra(jogo);
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    p.jogadores[2].carta = 'dobro';
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 0; passo(p, DT);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [2, 0, 2, 0], 'dobro de um da dupla vale para o time');
+    assert.deepEqual(p.jogadores.map(j => j.direito), [false, true, false, true], 'o time que perdeu ganha direito a carta');
+    roda(p, 2.6);
+    assert.ok(p.jogadores[1].oferta && p.jogadores[3].oferta);
+    p.jogadores[3].carta = 'escudo'; p.jogadores[1].oferta = p.jogadores[3].oferta = null;
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 0; passo(p, DT);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [2, 0, 2, 0], 'escudo segurou o ponto');
+    assert.deepEqual(p.anuncios, [{ tipo: 'escudo', quem: 3 }]);
+    const v = criaPartida(sorte, { n: 3, modo: 'vs' });
+    v.jogadores[1].carta = 'dobro';
+    while (v.fase !== 'jogando') passo(v, DT);
+    jogo.atualiza = () => 1; passo(v, DT);
+    assert.deepEqual(v.jogadores.map(j => j.pontos), [0, 2, 0]);
+    assert.equal(moedasDaRodada(v, 1), 10);
+  } finally { volta(); }
+});
+
+test('cartas na festa: escudo so para quem esta atras de algum rival; coop nunca tem carta', () => {
+  const volta = semClassicos();
+  const jogo = falso('f-t', { min: 2, max: 4, modos: ['vs', 'times', 'coop'] });
+  registra(jogo);
+  try {
+    const p = criaPartida(semente(5), { n: 4, modo: 'vs' });
+    p.jogadores[0].pontos = 3;
+    const vistas = new Set();
+    for (let k = 0; k < 30; k++) { jogaRodada(p, jogo, 0); p.jogadores[0].pontos = 3; roda(p, 2.6); for (const i of [1, 2, 3]) for (const c of p.jogadores[i].oferta ?? []) vistas.add(c); assert.ok(!(p.jogadores[0].oferta ?? []).includes('escudo')); }
+    assert.ok(vistas.has('escudo'), 'quem esta atras ve o escudo: ' + [...vistas]);
+    const c = criaPartida(sorte, { n: 3, modo: 'coop' });
+    jogaRodada(c, jogo, -1); roda(c, 2.6);
+    assert.ok(c.jogadores.every(j => !j.oferta && !j.direito), 'cooperativo sem cartas');
+  } finally { volta(); }
+});
+
+test('cartas na festa: no revezamento so quem jogou e perdeu ganha a carta, e so recebe a oferta quando voltar a jogar', () => {
+  const sozinhos = JOGOS.splice(0);
+  registra(classico('c-duelo', () => 0));
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'times' });
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT);                                   // duelo 0-1, J1 vence
+    assert.deepEqual(p.jogadores.map(j => j.direito), [false, true, false, false], 'so o J2 jogou e perdeu');
+    roda(p, 2.6);                                   // duelo 2-3: J2 esta de fora
+    assert.deepEqual(p.duelo, [2, 3]);
+    assert.equal(p.jogadores[1].oferta, null, 'de fora nao escolhe carta');
+    assert.equal(p.jogadores[1].direito, true, 'o direito espera a vez dele');
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT); roda(p, 2.6);                     // duelo 0-3
+    while (p.fase !== 'jogando') passo(p, DT);
+    passo(p, DT); roda(p, 2.6);                     // duelo 2-1: agora o J2 joga
+    assert.deepEqual(p.duelo, [2, 1]);
+    assert.ok(Array.isArray(p.jogadores[1].oferta), 'voltou a jogar: escolhe a carta');
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
+});

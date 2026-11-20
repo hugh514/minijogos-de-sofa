@@ -2356,7 +2356,7 @@ function fraseDoFim(i) {       // o que o celular de cada um diz quando a rodada
   if (p.vencedor === undefined) return '';
   if (ehCoop(p)) return 'Não foi dessa vez';
   if (p.vencedor < 0) return 'Empatou!';
-  return p.modo === 'classico' && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';
+  return p.jogadores[i].direito && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';       // direito: jogou e perdeu (quem so assistiu nao ganha carta)
 }
 function celularDoPodio(i) {
   const falta = 'Revanche em ' + faltaRevanche();
@@ -2618,6 +2618,7 @@ function hud(agora) {
   if (p.fase === 'resultado') res = (v >= 0 && ehCoop(p) ? `<div class="faixa tit equipe"${gradEquipe}>Deu certo!</div><small>Ponto e 10 moedas para todo mundo</small>`
     : v < 0 && ehCoop(p) ? '<div class="faixa tit">Não foi dessa vez</div><small>3 moedas de consolo para cada um</small>'
     : v < 0 ? '<div class="faixa tit">Empatou!</div><small>5 para cada um</small>'
+    : times && escudo ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">${NOME_TIME[v]} venceu, mas o escudo segurou!</div><small>Ponto bloqueado, 10 moedas para cada um da dupla</small>`
     : times ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">Ponto do ${NOME_TIME[v]}!</div><small>+10 para cada um da dupla</small>`
     : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu, mas o escudo segurou!</div><small>Ponto bloqueado, 10 moedas para ${limpa(nome(v))}</small>`
     : `<div class="faixa tit" style="--cor:${css(v)}">Ponto de ${limpa(nome(v))}!</div><small>+10 para ${limpa(nome(v))}, +3 de consolo</small>`) + anuncios();
