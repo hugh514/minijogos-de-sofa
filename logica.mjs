@@ -829,6 +829,7 @@ function proximaRodada(p, forcado) {
     try {
       montaDuelo(p);
       p.jogo.inicia(vista(p)); devolveCelular(p); p.mod = sorteiaModificador(p);
+      if (p.duelo) p.jogadores.forEach((j, i) => { if (!p.duelo.includes(i)) j.pronto = true; });       // quem esta de fora nao segura a rodada esperando o "Entendi" dele
       if (p.duelo) p.duelos++;       // so conta a vez de quem de fato jogou (minijogo que quebra no inicia nao pula ninguem)
       p.historico.push(p.jogo.id); p.historico.splice(0, p.historico.length - HISTORICO_MAX); p.noitesVistas.push(p.jogo.id);
       if (!ehCoop(p))             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima

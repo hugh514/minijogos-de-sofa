@@ -668,6 +668,7 @@ test('cinco jogadores: em Cada um por si quatro jogam e um descansa, em rodizio,
     assert.equal(p.jogadores.length, 5);
     assert.equal(p.celular.length, 5);
     assert.deepEqual(p.duelo, [0, 1, 2, 3], 'primeira rodada: o Jogador 5 descansa');
+    assert.deepEqual(p.jogadores.map(j => j.pronto), [false, false, false, false, true], 'quem descansa ja conta como pronto: a rodada nao espera por ele');
     assert.equal(p.dados.n, 4, 'o minijogo so enxerga os 4 da vez');
     assert.equal(p.dados.quem, 4);
     assert.equal(vista(p).jogadores[3], p.jogadores[3]);

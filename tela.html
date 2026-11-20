@@ -86,6 +86,10 @@
   .cx.mini h2{font-size:2.4em}
   .cx p{font-size:1.6em;margin:0 0 .6em;font-weight:700;line-height:1.2}
   .cx.mini p{font-size:1.2em;margin:0}
+  .cx .folga{display:inline-block;margin:.35em 0 .05em;padding:.2em 1.1em .25em;border-radius:99em;background:var(--cor);color:#fff;font-size:1.3em;font-weight:900;text-shadow:0 .08em .12em #0009;box-shadow:0 .2em 0 #0005}
+  .cx .folga small{font-size:.72em;font-weight:800;opacity:.95;margin-left:.5em}
+  .jg.fora{opacity:.45}
+  .cartao.fora{opacity:.45}
   .cx .mp{display:inline-block;margin-bottom:.5em;padding:.2em 1em;border-radius:.5em;background:#e5383b;font-size:1.25em;animation:pulsa .45s ease-in-out infinite alternate}
   .como{display:flex;align-items:center;justify-content:center;gap:1.4em;margin:.2em 0 .7em;padding:.8em 1em;border-radius:1em;background:#ffffff12}
   .ctl{display:flex;flex-direction:column;align-items:flex-start;gap:.45em}
@@ -2772,6 +2776,7 @@ function celularDoPodio(i) {
   if (i === 0) return { modo: 'opcoes', texto: falta, opcoes: ['Revanche', 'Trocar de brincadeira'] };
   return { modo: 'opcoes', texto: querRevanche[i] ? 'Pedido feito. ' + falta : falta, opcoes: ['Quero revanche'] };
 }
+const deFora = i => !!p.duelo && !p.duelo.includes(i) && p.fase !== 'fim';       // nesta rodada este jogador so assiste
 function mandaCelulares(agora) {
   const ctl = p.jogo.controle ?? {};
   const explica = iniciou && aguardando(p);      // na explicacao o celular mostra o minijogo e o botao Entendi
@@ -2791,8 +2796,8 @@ function mandaCelulares(agora) {
     : todos().map(i => ({ jogo: nomeJogo, modo: ctl.modo ?? 'padrao', a: ctl.a === undefined ? undefined : rotulo(ctl.a), b: ctl.b === undefined ? undefined : rotulo(ctl.b), joy: ctl.joystick !== false, jg: p.fase === 'jogando', ...doMinijogo(i), premio: premios[i] ?? undefined }));
   if (iniciou) for (let i = p.jogadores.length; i < SLOTS; i++)      // celular de quem nao esta nesta partida (Classico so tem 2)
     estado.push({ jogo: nomeJogo, modo: 'espera', texto: 'Essa é de ' + p.jogadores.length + '. Daqui você torce' });
-  if (iniciou && p.duelo && !explica) for (const i of todos())      // minijogo de 2 em revezamento: quem esta de fora torce
-    if (!p.duelo.includes(i)) estado[i] = { jogo: nomeJogo, modo: 'espera', texto: (p.modo === 'times' ? 'Vez de ' + nome(p.duelo[timeDe(p, i)]) : 'Você descansa nesta e volta na próxima') + '. Daqui você torce', premio: premios[i] ?? undefined };
+  if (iniciou && p.duelo) for (const i of todos())      // quem esta de fora (parceiro nas Duplas, ou quem descansa com 5 no sofa) ja sabe na explicacao e torce
+    if (!p.duelo.includes(i)) estado[i] = { jogo: nomeJogo, modo: 'espera', texto: (p.modo === 'times' ? 'Vez de ' + nome(p.duelo[timeDe(p, i)]) : 'Você descansa nesta rodada e volta na próxima') + '. Daqui você torce', premio: premios[i] ?? undefined };
   const fimRodada = p.fase === 'resultado' || p.fase === 'fim';
   if (p.fase === 'jogando') provocador = -1;
   estado.forEach((e, i) => {
@@ -2853,8 +2858,8 @@ function cartaoJogo(j, quase, completo) {       // apresentacao do minijogo; com
   const nomeJ = limpa(textoSeguro(j.nome, 40)), dica = limpa(doJogo(j.dica, 200));
   if (!completo) return `<div class="cx mini">${coop}<h2 class="tit">${nomeJ}</h2><p>${dica}</p>${tempero}</div>`;
   const st = i => {
-    const jg = p.jogadores[i], ok = jg.pronto, escolhe = !!jg.oferta;
-    return `<div class="jg${ok ? ' ok' : ''}" style="--cor:${css(i)}"><div class="rosto"><b></b><b></b></div>${nomeHtml(i)}<em>${escolhe ? 'escolhendo carta' : ok ? 'pronto' : 'lendo'}</em>${chipCarta(jg.carta)}</div>`;
+    const jg = p.jogadores[i], ok = jg.pronto, escolhe = !!jg.oferta, fora = deFora(i);
+    return `<div class="jg${fora ? ' fora' : ok ? ' ok' : ''}" style="--cor:${css(i)}"><div class="rosto"><b></b><b></b></div>${nomeHtml(i)}<em>${fora ? (p.modo === 'times' ? 'torce' : 'descansa') : escolhe ? 'escolhendo carta' : ok ? 'pronto' : 'lendo'}</em>${chipCarta(jg.carta)}</div>`;
   };
   const quemEscolhe = todos().filter(i => p.jogadores[i].oferta);
   const oferta = quemEscolhe.length ? `<div class="oferta">${quemEscolhe.map(i => nomeHtml(i)).join(' e ')} ${quemEscolhe.length > 1 ? 'estão escolhendo' : 'está escolhendo'} uma carta</div>` : '';
@@ -2862,7 +2867,7 @@ function cartaoJogo(j, quase, completo) {       // apresentacao do minijogo; com
   const obs = (j.duracao > 0 ? `${Math.round(j.duracao)} segundos. ` : '') + (ehCoop(p) ? (p.mod?.pontos > 1 ? `Venceram juntos, ${p.mod.pontos} pontos para cada um. Falharam, ninguém leva` : 'Venceram juntos, ponto para todos. Falharam, ninguém leva')
     : p.modo === 'times' ? `${p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos para o time.' : 'Ponto para o time.'} ${p.alvo} e a dupla leva` : p.mod?.pontos > 1 ? vale : `${vale} ${p.alvo} e acabou`);
   const descansa = todos().filter(i => p.duelo && !p.duelo.includes(i));
-  const times = p.duelo && p.modo !== 'times' ? `<div class="obs vez">Nesta rodada ${descansa.map(nomeHtml).join(' e ')} descansa e torce. Na próxima volta</div>`
+  const times = p.duelo && p.modo !== 'times' ? descansa.map(i => `<div class="folga" style="--cor:${css(i)}">${limpa(nome(i))} descansa nesta rodada<small>volta na próxima</small></div>`).join('')
     : p.duelo ? `<div class="obs vez">Nesta rodada: ${nomeHtml(p.duelo[0])} contra ${nomeHtml(p.duelo[1])}. Os parceiros torcem</div>`
     : p.modo === 'times' ? `<div class="obs"><b style="color:${hex(TIMES[0])}">Laranja</b>: ${limpa(nome(0))} e ${limpa(nome(2))} &nbsp;contra&nbsp; <b style="color:${hex(TIMES[1])}">Roxo</b>: ${limpa(nome(1))} e ${limpa(nome(3))}</div>` : '';
   const mini = p.jogadores.length > 2, chama = '<div class="chama">Leu? Toque em <b>Entendi</b><br>no celular</div>';
@@ -2975,7 +2980,7 @@ function hud(agora) {
 
   // placar: um cartao por jogador, com as estrelas da partida (o primeiro span e sempre o nome do jogador 1)
   const mini = p.jogadores.length > 2, times = p.modo === 'times';
-  const cartao = i => `<div class="cartao ${i % 2 ? 'dir' : 'esq'}${mini ? ' mini' : ''}${times ? ' time' : ''}${quase[i] ? ' quase' : ''}" data-i="${i}" style="--cor:${css(i)}${times ? ';--time:' + hex(TIMES[timeDe(p, i)]) : ''}"><div class="rosto"><b></b><b></b></div>` +
+  const cartao = i => `<div class="cartao ${i % 2 ? 'dir' : 'esq'}${deFora(i) && !fimRodada ? ' fora' : ''}${mini ? ' mini' : ''}${times ? ' time' : ''}${quase[i] ? ' quase' : ''}" data-i="${i}" style="--cor:${css(i)}${times ? ';--time:' + hex(TIMES[timeDe(p, i)]) : ''}"><div class="rosto"><b></b><b></b></div>` +
     `<div class="info">${nomeHtml(i)}<div class="pips">${Array.from({ length: alvo }, (_, k) => `<i class="${k < pts[i] ? 'on' : ''}${k === pts[i] - 1 && pts[i] > pontosVistos[i] ? ' novo' : ''}"></i>`).join('')}</div></div>` +
     `<div class="num tit">${pts[i]}</div>${extras(i)}</div>`;
   poe('placar', mini ? `<div class="lado">${todos().filter(i => i % 2 === 0).map(cartao).join('')}</div><div class="lado">${todos().filter(i => i % 2).map(cartao).join('')}</div>` : cartao(0) + cartao(1));
@@ -3051,6 +3056,7 @@ function hud(agora) {
 
   // transicoes
   if (p.rodada !== rodadaVista) {
+    if (iniciou) for (const i of todos()) if (deFora(i)) vibra(i, [180, 90, 180]);       // o celular de quem fica de fora avisa na mao
     if (iniciou && rodadaVista >= 0) cortina();
     rodadaVista = p.rodada;
     if (iniciou && quase.some(Boolean)) vinheta('alerta');

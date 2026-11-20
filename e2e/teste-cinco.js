@@ -62,13 +62,16 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await tela.waitForFunction(x => window.__bonecos.every((b, i) => b.visible === x.includes(i)), d, { timeout: 5000 });
     assert.equal(await tela.locator('#placar .cartao').count(), 5, 'o placar mostra os 5');
     await espera(1000); await foto(`${k + 2}-${id}-1-explicacao`);
-    assert.ok((await tela.locator('#msg').innerText()).includes('descansa'), 'a explicacao diz quem descansa');
-    for (const f of fones) {
+    assert.ok((await tela.locator('#msg .folga').innerText()).includes(`Jogador ${fora + 1} descansa nesta rodada`), 'a explicacao diz quem descansa, em destaque');
+    assert.equal(await tela.locator('#placar .cartao.fora').getAttribute('data-i'), String(fora), 'o cartao de quem descansa fica apagado no placar');
+    await fones[fora].waitForFunction(() => document.body.innerText.includes('Você descansa nesta rodada'), null, { timeout: 5000 });       // ja na explicacao, sem botao Entendi
+    await foto(`${k + 2}-${id}-1b-celular-de-quem-descansa-na-explicacao`, fones[fora]);
+    for (const f of fones.filter((_, i) => i !== fora)) {
       await f.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
       await f.locator('#btG').tap(); await frente();
     }
     await tela.waitForFunction(() => window.__p.fase === 'jogando', null, { timeout: 20000 });
-    await fones[fora].waitForFunction(() => document.body.innerText.includes('Você descansa nesta'), null, { timeout: 5000 });
+    await fones[fora].waitForFunction(() => document.body.innerText.includes('Você descansa nesta rodada'), null, { timeout: 5000 });
     const p0 = await ev(() => window.__p.jogadores.map(j => [j.x, j.z]));
     await Promise.all(fones.map(f => toque(f, 'touchStart', 150, 220)));
     for (let q = 0; q < 25; q++) { await Promise.all(fones.map((f, i) => toque(f, 'touchMove', 150 + Math.cos(q * 0.2 + i * 1.3) * 60, 220 + Math.sin(q * 0.2 + i * 1.3) * 60))); await espera(90); }
