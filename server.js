@@ -30,7 +30,7 @@ const FONTE = /^\/fontes\/([a-z0-9_-]+)\.woff2$/;    // so fontes/<nome>.woff2; 
 const COMANDOS = ['pula', 'reinicia', 'menu', 'continua'];      // o que o Jogador 1 pode pedir pela pausa do celular
 
 let telas = [];
-const SLOTS = 4;                                // de 1 a 4 jogadores (o Classico usa so os dois primeiros)
+const SLOTS = 5;                                // de 1 a 5 jogadores (o Classico usa so os dois primeiros)
 const celulares = Array.from({ length: SLOTS }, () => new Set());       // conexoes SSE de cada jogador
 const perfis = Array(SLOTS).fill(null);         // ultimo perfil (nome e skin) de cada jogador, ja em JSON
 const estado = Array(SLOTS).fill('{}');         // ultimo estado de controle mandado pela tela, por jogador
@@ -65,7 +65,7 @@ function leCorpo(req, limite, usa) {
 }
 
 function inteiro(v) { return Number.isInteger(v) ? v : undefined; }
-function slot(v) { return Number.isInteger(v) && v >= 1 && v <= SLOTS ? v : undefined; }       // numero do jogador, de 1 a 4
+function slot(v) { return Number.isInteger(v) && v >= 1 && v <= SLOTS ? v : undefined; }       // numero do jogador, de 1 a 5
 function reacao(v) { return Number.isInteger(v) && v >= 0 && v <= 63 ? v : undefined; }   // indice na lista fixa de emojis da tela
 function contador(v) { return Number.isInteger(v) && v >= 0 && v <= 1e9 ? v : undefined; }    // contador que so cresce (torcida)
 

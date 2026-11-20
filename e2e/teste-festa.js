@@ -104,8 +104,8 @@ async function celular(browser, n) {
   await fones[0].locator('#menuLista button[data-m=times][aria-disabled=false]').waitFor({ timeout: 4000 });
   const chips = await tela.locator('#espera .chip b.ok').count();
   assert.equal(chips, 4, 'os 4 conectados aparecem na espera');
-  assert.deepEqual(await ev(() => window.__cores.slice()), [0, 1, 2, 3], 'cores padrao: azul, rosa, verde, amarelo');
-  assert.equal(await ev(() => [0, 1, 2, 3].some(a => [0, 1, 2, 3].some(b => a < b && window.__mesmaCor(a, b)))), false, 'nenhuma cor padrao e parecida com outra (par PARECIDAS)');
+  assert.deepEqual(await ev(() => window.__cores.slice()), [0, 1, 2, 3, 4], 'cores padrao: azul, rosa, verde, amarelo, roxo');
+  assert.equal(await ev(() => [0, 1, 2, 3, 4].some(a => [0, 1, 2, 3, 4].some(b => a < b && window.__mesmaCor(a, b)))), false, 'nenhuma cor padrao e parecida com outra (par PARECIDAS)');
   assert.equal(await ev(() => window.__sala().iniciou), false, 'com 4 conectados nada comeca sozinho');
   await espera(1200);
   await foto('01-espera-4-conectados');

@@ -277,7 +277,7 @@ test('festa: posicionaCantos e posicionaRoda espalham os jogadores sem sobrepor'
 test('festa: registra recusa o contrato festa torto', () => {
   const torto = festa => () => registra(falso('f-torto', festa));
   assert.throws(torto({ min: 1, max: 4, modos: ['vs'] }), /festa/);
-  assert.throws(torto({ min: 2, max: 5, modos: ['vs'] }), /festa/);
+  assert.throws(torto({ min: 2, max: 6, modos: ['vs'] }), /festa/);
   assert.throws(torto({ min: 4, max: 2, modos: ['vs'] }), /festa/);
   assert.throws(torto({ min: 2, max: 4, modos: [] }), /festa/);
   assert.throws(torto({ min: 2, max: 4, modos: ['classico'] }), /festa/);
@@ -654,5 +654,90 @@ test('cartas: semCarta do minijogo tira a carta da oferta, e a Helice maluca nao
     }
     const helice = (await import('./jogos/helice-festa.mjs')).default;
     assert.ok(helice.semMod.includes('lua') && helice.semCarta.includes('pulo'));
+  } finally { volta(); }
+});
+
+// ---------- 5 no sofa: os minijogos sao para ate 4, entao a cada rodada um descansa (rodizio) e os outros 4 jogam ----------
+test('cinco jogadores: em Cada um por si quatro jogam e um descansa, em rodizio, e o ponto vai para o lugar de verdade', () => {
+  const volta = semClassicos();
+  const jogo = { ...falso('f-5', { min: 2, max: 4, modos: ['vs', 'coop'] }), inicia(p) { p.dados = { n: p.jogadores.length, quem: p.n }; p.celular[3].texto = 'oi'; } };
+  registra(jogo);
+  try {
+    assert.deepEqual(elegiveis('vs', 5).map(j => j.id), ['f-5'], 'minijogo de ate 4 vale com 5 no sofa');
+    const p = criaPartida(sorte, { n: 5, modo: 'vs' });
+    assert.equal(p.jogadores.length, 5);
+    assert.equal(p.celular.length, 5);
+    assert.deepEqual(p.duelo, [0, 1, 2, 3], 'primeira rodada: o Jogador 5 descansa');
+    assert.equal(p.dados.n, 4, 'o minijogo so enxerga os 4 da vez');
+    assert.equal(p.dados.quem, 4);
+    assert.equal(vista(p).jogadores[3], p.jogadores[3]);
+    const fora = [];
+    for (let k = 0; k < 5; k++) { fora.push([0, 1, 2, 3, 4].find(i => !p.duelo.includes(i))); pulaPara(p); }
+    assert.deepEqual(fora, [4, 3, 2, 1, 0], 'cada um descansa uma vez a cada 5 rodadas');
+    assert.deepEqual(p.duelo, [0, 1, 2, 3]);
+    pulaPara(p);                                    // agora descansa o lugar 4 (indice 3): jogam 0, 1, 2 e 4
+    assert.deepEqual(p.duelo, [0, 1, 2, 4]);
+    assert.equal(p.celular[4].texto, 'oi', 'o quarto da vez e o Jogador 5: o celular dele recebe o texto');
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 3; passo(p, DT);          // o minijogo diz "venceu o quarto"
+    assert.equal(p.vencedor, 4, 'o vencedor e o lugar de verdade (Jogador 5)');
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 0, 0, 0, 1]);
+    assert.ok(venceu(p, 4) && !venceu(p, 3));
+    assert.deepEqual(p.jogadores.map(j => j.direito), [true, true, true, false, false], 'quem descansou nao perdeu: sem carta');
+  } finally { volta(); }
+});
+
+test('cinco jogadores: resultado fora dos 4 da vez tira o minijogo da rotacao, e no cooperativo todos os 5 pontuam', () => {
+  const volta = semClassicos();
+  const jogo = falso('f-5', { min: 2, max: 4, modos: ['vs', 'coop'] });
+  const outro = falso('f-6', { min: 2, max: 4, modos: ['vs'] });
+  [jogo, outro].forEach(registra);
+  try {
+    const p = criaPartida(sorte, { n: 5, modo: 'vs' });
+    jogaRodada(p, jogo, 4);                         // indice 4 nao existe entre os 4 da vez
+    assert.equal(p.vencedor, -1);
+    assert.equal(p.erros.length, 1);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 0, 0, 0, 0]);
+    const junto = falso('f-c', { min: 2, max: 4, modos: ['coop'] });
+    registra(junto);
+    const c = criaPartida(sorte, { n: 5, modo: 'coop' });
+    jogaRodada(c, junto, 2);
+    assert.deepEqual(c.jogadores.map(j => j.pontos), [1, 1, 1, 1, 1], 'vitoria da equipe vale para quem descansou tambem');
+  } finally { volta(); }
+});
+
+test('cinco jogadores: minijogo que aceita 5 (festa.max 5) roda com todos, e 6 jogadores ou Duplas com 5 viram erro claro', () => {
+  const volta = semClassicos();
+  const todos = falso('f-todos', { min: 2, max: 5, modos: ['vs'] });
+  registra(todos);
+  try {
+    const p = criaPartida(sorte, { n: 5, modo: 'vs' });
+    assert.equal(p.duelo, null);
+    assert.equal(vista(p), p);
+    assert.equal(vista(p).jogadores.length, 5);
+    jogaRodada(p, todos, 4);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 0, 0, 0, 1]);
+    assert.throws(() => criaPartida(sorte, { n: 6, modo: 'vs' }), /jogadores/);
+    assert.throws(() => criaPartida(sorte, { n: 5, modo: 'times' }), /jogadores/);
+    assert.throws(() => registra(falso('f-x', { min: 2, max: 6, modos: ['vs'] })), /festa torto/);
+    assert.deepEqual(elegiveis('vs', 3).map(j => j.id), ['f-todos'], 'com 3 nada muda');
+  } finally { volta(); }
+});
+
+test('cinco jogadores: quem descansa fica parado fora da arena e minijogo so para 2 ou 3 nao entra', () => {
+  const volta = semClassicos();
+  const jogo = { ...falso('f-5', { min: 2, max: 4, modos: ['vs'] }), atualiza: () => undefined };
+  const tres = falso('f-3', { min: 2, max: 3, modos: ['vs'] });
+  [jogo, tres].forEach(registra);
+  try {
+    assert.deepEqual(elegiveis('vs', 5).map(j => j.id), ['f-5']);
+    const p = criaPartida(sorte, { n: 5, modo: 'vs' });
+    while (p.fase !== 'jogando') passo(p, DT);
+    for (const i of [0, 1, 2, 3, 4]) entrada(p, i, { x: 1, y: 0, d: false, b: false });
+    const antes = [p.jogadores[4].x, p.jogadores[4].z];
+    roda(p, 0.5);
+    assert.ok(p.jogadores[0].x > 1, 'quem joga anda');
+    assert.deepEqual([p.jogadores[4].x, p.jogadores[4].z], antes, 'quem descansa nao se move');
+    assert.ok(Math.hypot(...antes) > 10, 'e fica fora da arena');
   } finally { volta(); }
 });

@@ -17,6 +17,7 @@ const ELEGIVEIS_ALVO_CURTO = 6, PONTOS_CURTO = 6;     // com menos de 6 elegivei
 // Festa: 'vs' (todos contra todos), 'times' (A = J1+J3, B = J2+J4) e 'coop' (todos juntos). Cada minijogo de festa declara
 // festa: { min, max, modos } e devolve de atualiza: vs = indice do vencedor, times = 0 ou 1 (o time), coop = 2 (todos vencem); -1 = empate ou fracasso.
 export const MODOS = ['classico', 'vs', 'times', 'coop'];
+export const MAX_JOGADORES = 5;       // lugares no sofa; a maioria dos minijogos de festa e para ate 4 (com 5, um descansa por rodada)
 export const timeDe = (p, i) => i % 2;
 // Nome de quem joga, para texto de minijogo: o do perfil (a tela poe em p.nomes) ou "Jogador N".
 export const quem = (p, i) => (typeof p.nomes?.[i] === 'string' && p.nomes[i]) || 'Jogador ' + (i + 1);
@@ -32,7 +33,8 @@ export function venceu(p, i) {
 // "Todos contra todos" com 2 pessoas usa tambem os do Classico (sem os cooperativos): os minijogos de festa sao poucos.
 export function elegiveis(modo, n) {
   if (modo === 'classico') return JOGOS.filter(j => !j.festa);
-  const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && n <= j.festa.max && j.festa.modos.includes(modo));
+  // Com 5 no sofa, minijogo feito para ate 4 tambem vale: um descansa por rodada (rodizio)
+  const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && (n <= j.festa.max || (n === MAX_JOGADORES && j.festa.max === MAX_JOGADORES - 1)) && j.festa.modos.includes(modo));
   const deDois = (modo === 'vs' && n === 2) || modo === 'times';       // Duplas: os de 2 entram em revezamento (um de cada dupla por rodada). Cada um por si com 3 ou 4: so os que todos jogam juntos
   return deDois ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
 }
@@ -40,16 +42,19 @@ export function elegiveis(modo, n) {
 // ---------- Duplas com minijogo de 2: joga um de cada dupla e o parceiro torce; a cada rodada de 2 a vez passa ----------
 // A ordem faz todo mundo enfrentar todo mundo: J1 x J2, J3 x J4, J1 x J4, J3 x J2. O indice 0 e sempre do time laranja (par).
 const DUELOS = [[0, 1], [2, 3], [0, 3], [2, 1]];
-const FORA = [[-11, -12], [11, -12], [-11, 12], [11, 12]];       // onde fica quem assiste: fora da arena, para torcida e confete nao cairem no meio da disputa
-// O minijogo de 2 recebe a vista: a mesma partida, mas jogadores, celular e nomes so dos dois da vez.
-// Fora de duelo a vista e a propria partida. O motor e a tela usam p (os 4) para placar, pontos e celulares.
+const FORA = [[-11, -12], [11, -12], [-11, 12], [11, 12], [0, -14]];       // onde fica quem assiste: fora da arena, para torcida e confete nao cairem no meio da disputa
+// O minijogo recebe a vista: a mesma partida, mas jogadores, celular e nomes so de quem joga a rodada (p.duelo, indices de verdade).
+// Sem revezamento a vista e a propria partida. O motor e a tela usam p (todos) para placar, pontos e celulares.
+// Dois casos: Duplas com minijogo de 2 (um de cada dupla) e 5 no sofa com minijogo para ate 4 (um descansa, em rodizio: J5, J4, J3, J2, J1).
 export function vista(p) { return p.duelo ? p.vistaDuelo : p; }
 function montaDuelo(p) {
-  if (p.modo !== 'times' || p.jogo.festa) { p.duelo = null; p.vistaDuelo = null; return; }
-  const par = DUELOS[p.duelos % DUELOS.length];
+  const deDois = p.modo === 'times' && !p.jogo.festa, rodizio = p.n === MAX_JOGADORES && !!p.jogo.festa && p.jogo.festa.max < MAX_JOGADORES;
+  if (!deDois && !rodizio) { p.duelo = null; p.vistaDuelo = null; return; }
+  const descansa = MAX_JOGADORES - 1 - p.duelos % MAX_JOGADORES;
+  const par = deDois ? DUELOS[p.duelos % DUELOS.length] : [...p.jogadores.keys()].filter(i => i !== descansa);
   p.duelo = par;
   p.jogadores.forEach((j, i) => { if (!par.includes(i)) [j.x, j.z] = FORA[i]; });
-  const proprio = { jogadores: par.map(i => p.jogadores[i]), celular: par.map(i => p.celular[i]), n: 2, nomes: undefined };
+  const proprio = { jogadores: par.map(i => p.jogadores[i]), celular: par.map(i => p.celular[i]), n: par.length, nomes: undefined };
   Object.defineProperty(proprio, 'nomes', { get: () => p.nomes && par.map(i => p.nomes[i]), set: () => {}, enumerable: true });
   p.vistaDuelo = new Proxy(p, {
     get: (alvo, k) => (k in proprio ? proprio[k] : Reflect.get(alvo, k)),
@@ -66,7 +71,7 @@ const QUEBRADOS = new Set();
 export const jogavel = (modo, n) => elegiveis(modo, n).some(j => !QUEBRADOS.has(j));
 function confereModo(n, modo) {
   if (!MODOS.includes(modo)) throw new Error('modo invalido: ' + modo);
-  if (!Number.isInteger(n) || n < 2 || n > 4 || (modo === 'classico' && n !== 2) || (modo === 'times' && n !== 4)) throw new Error(`${n} jogadores nao servem para o modo ${modo}`);
+  if (!Number.isInteger(n) || n < 2 || n > MAX_JOGADORES || (modo === 'classico' && n !== 2) || (modo === 'times' && n !== 4)) throw new Error(`${n} jogadores nao servem para o modo ${modo}`);
 }
 const novoJogador = () => ({ pontos: 0, direito: false, ent: { x: 0, y: 0, d: false, b: false } });
 
@@ -843,6 +848,8 @@ function coopCabe(p, vale = 1) {
 // vencedor: 0 ou 1, -1 (empate ou fracasso cooperativo) ou 2 (vitoria em equipe, so em minijogo coop).
 function termina(p, vencedor) {
   p.vencedor = vencedor; p.t = 0; p.fase = 'resultado';
+  if (p.duelo && p.modo === 'vs' && vencedor >= 0) vencedor = p.duelo[vencedor];       // rodizio: o minijogo aponta um dos da vez, o ponto e do lugar de verdade
+  p.vencedor = vencedor;
   if (p.modo !== 'classico') return terminaFesta(p);
   const js = p.jogadores, antes = js.map(j => j.pontos), vale = p.mod?.pontos ?? 1;
   const anuncios = p.anuncios = [];
@@ -956,7 +963,7 @@ export function configura(p, { n = p.n, modo = p.modo } = {}) {
 export function registra(jogo) {
   for (const campo of ['id', 'nome', 'dica', 'inicia', 'atualiza']) if (!jogo?.[campo]) throw new Error('minijogo sem ' + campo);
   if (jogo.festa !== undefined) {
-    const f = jogo.festa, ok = n => Number.isInteger(n) && n >= 2 && n <= 4;
+    const f = jogo.festa, ok = n => Number.isInteger(n) && n >= 2 && n <= MAX_JOGADORES;
     if (!f || !ok(f.min) || !ok(f.max) || f.min > f.max || !Array.isArray(f.modos) || !f.modos.length || !f.modos.every(m => m === 'vs' || m === 'times' || m === 'coop'))
       throw new Error('festa torto em ' + jogo.id);
   }
@@ -1013,7 +1020,7 @@ export function tempoIntro(p) { return p.fase === 'intro' ? T_INTRO - (aguardand
 function resultadosValidos(p) {
   if (ehCoop(p)) return [undefined, -1, 2];
   if (p.modo === 'times') return [undefined, -1, 0, 1];
-  return [undefined, -1, ...p.jogadores.keys()];
+  return [undefined, -1, ...vista(p).jogadores.keys()];       // no rodizio o minijogo so pode apontar um dos que jogaram
 }
 
 export function passo(p, dt) {

@@ -1,4 +1,4 @@
-// Servidor: slots de 1 a 4, validacao do jogador (j) e a rota /modo do anfitriao. Sobe uma copia na porta 8158.
+// Servidor: slots de 1 a 5, validacao do jogador (j) e a rota /modo do anfitriao. Sobe uma copia na porta 8158.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -32,33 +32,33 @@ test.before(async () => {
 });
 test.after(() => proc?.kill());
 
-test('servidor: /eventos-c aceita j de 1 a 4 e recusa o resto', async () => {
-  for (const j of [1, 2, 3, 4]) {
+test('servidor: /eventos-c aceita j de 1 a 5 e recusa o resto', async () => {
+  for (const j of [1, 2, 3, 4, 5]) {
     const s = escuta('/eventos-c?j=' + j);
     await espera(80);
     assert.ok(s.msgs.length >= 1, 'o slot ' + j + ' recebeu o estado inicial');
     s.fecha();
   }
-  for (const j of ['0', '5', 'x', '2.5', '-1', '']) assert.equal(await pede('GET', '/eventos-c?j=' + j), 400, 'j=' + j);
+  for (const j of ['0', '6', 'x', '2.5', '-1', '']) assert.equal(await pede('GET', '/eventos-c?j=' + j), 400, 'j=' + j);
   assert.equal(await pede('GET', '/eventos-c'), 400);
 });
 
-test('servidor: /in repassa os slots 1 a 4 e ignora j invalido', async () => {
+test('servidor: /in repassa os slots 1 a 5 e ignora j invalido', async () => {
   const tela = escuta('/eventos');
   await espera(80);
-  for (const j of [1, 2, 3, 4, 0, 5, '3', null, 2.5]) await pede('POST', '/in', JSON.stringify({ j, x: 0.5, y: 0, d: true }));
+  for (const j of [1, 2, 3, 4, 5, 0, 6, '3', null, 2.5]) await pede('POST', '/in', JSON.stringify({ j, x: 0.5, y: 0, d: true }));
   await espera(150);
-  assert.deepEqual(tela.msgs.filter(m => m.j).map(m => m.j), [1, 2, 3, 4]);
+  assert.deepEqual(tela.msgs.filter(m => m.j).map(m => m.j), [1, 2, 3, 4, 5]);
   tela.fecha();
 });
 
 test('servidor: /perfil guarda o perfil de cada slot e ignora j invalido', async () => {
   const quem = [];
-  for (const j of [1, 3, 4, 5, 0]) await pede('POST', '/perfil', JSON.stringify({ j, nome: 'N' + j, cor: j, chapeu: 0 }));
+  for (const j of [1, 3, 4, 5, 6, 0]) await pede('POST', '/perfil', JSON.stringify({ j, nome: 'N' + j, cor: j, chapeu: 0 }));
   const tela = escuta('/eventos');
   await espera(120);
   quem.push(...tela.msgs.filter(m => m.perfil).map(m => m.perfil.j));
-  assert.deepEqual(quem, [1, 3, 4], 'a tela nova recebe os perfis guardados, so dos slots validos');
+  assert.deepEqual(quem, [1, 3, 4, 5], 'a tela nova recebe os perfis guardados, so dos slots validos');
   tela.fecha();
 });
 
@@ -128,10 +128,10 @@ test('servidor: corpo de /modo acima do limite e descartado', async () => {
   tela.fecha();
 });
 
-test('servidor: /tela entrega o estado ao celular de cada um dos 4 slots', async () => {
-  const cels = [1, 2, 3, 4].map(j => escuta('/eventos-c?j=' + j));
+test('servidor: /tela entrega o estado ao celular de cada um dos 5 slots', async () => {
+  const cels = [1, 2, 3, 4, 5].map(j => escuta('/eventos-c?j=' + j));
   await espera(100);
-  await pede('POST', '/tela', JSON.stringify({ c: [1, 2, 3, 4].map(k => ({ jogo: 'j' + k, modo: 'espera' })) }));
+  await pede('POST', '/tela', JSON.stringify({ c: [1, 2, 3, 4, 5].map(k => ({ jogo: 'j' + k, modo: 'espera' })) }));
   await espera(150);
   cels.forEach((c, k) => assert.ok(c.msgs.some(m => m.jogo === 'j' + (k + 1)), 'slot ' + (k + 1)));
   cels.forEach(c => c.fecha());
@@ -188,13 +188,13 @@ test('servidor: /lugares diz quais lugares tem celular conectado, so leitura', a
   const vazio = await baixa('/lugares');
   assert.equal(vazio.status, 200);
   assert.match(vazio.tipo, /application\/json/);
-  assert.deepEqual(JSON.parse(vazio.corpo), [false, false, false, false]);
+  assert.deepEqual(JSON.parse(vazio.corpo), [false, false, false, false, false]);
   const c2 = escuta('/eventos-c?j=2'), c4 = escuta('/eventos-c?j=4');
   await espera(100);
-  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, true, false, true]);
+  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, true, false, true, false]);
   c2.fecha(); c4.fecha();
   await espera(100);
-  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, false, false, false], 'quem saiu libera o lugar');
+  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, false, false, false, false], 'quem saiu libera o lugar');
   assert.equal(await pede('POST', '/lugares', '{}'), 404, 'nada se escreve em /lugares');
 });
 

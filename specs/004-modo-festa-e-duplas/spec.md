@@ -36,6 +36,7 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 - RF-12. O menu do Jogador 1 mostra as quatro brincadeiras. Duplas aparece desabilitada, com o motivo, enquanto não houver 4 celulares conectados. Só o celular do Jogador 1 tem o menu.
 - RF-13. Com os Jogadores 1 e 2 conectados e ninguém mexendo no menu, o Duelo começa sozinho depois de 6 s, com contagem na TV e no celular. Com um modo da Festa escolhido, nada começa sozinho.
 - RF-14. O Jogador 1 é quem se declara Jogador 1 ao abrir o controle. Não há autenticação (ver `specs/002-servidor-carteiro`).
+- RF-18. O sofá tem 5 lugares (`MAX_JOGADORES`). Cada um por si e Todos juntos aceitam de 2 a 5; Duplas continua com 4 (com 5 no sofá o quinto torce) e o Duelo com 2. O minijogo de festa declara `max` de 2 a 5. Com 5 no sofá, minijogo feito para até 4 também entra: a cada rodada um descansa, em rodízio (J5, J4, J3, J2, J1), e os outros quatro jogam pela `vista(p)` (`p.duelo` traz os índices de quem joga). O resultado do minijogo aponta um dos quatro da vez e o ponto vai para o lugar de verdade; no cooperativo todos os 5 pontuam. Quem descansa fica fora da arena, vê no celular que volta na próxima e não ganha carta de poder por essa rodada.
 - RF-17. Em Duplas o Jogador 1 escolhe quem joga com ele: no menu do celular, com Duplas marcada, ele toca na pílula de um dos outros três (`par` no `POST /modo`, lugar 2, 3 ou 4; sem escolha vale o lugar 3). Por dentro o time A segue sendo os índices 0 e 2: ao começar a partida a tela troca de índice a pessoa escolhida com quem está no índice 2 (`sentaDupla`, `lugar`), levando junto nome, cor, chapéu e os contadores do celular, e desfaz a troca na volta ao menu. Quem não tem nome continua aparecendo como "Jogador N" do lugar em que se sentou.
 - RF-16. Cartas de poder em Cada um por si e em Duplas (nunca em Todos juntos): quem jogou e perdeu a rodada escolhe uma carta na próxima rodada em que jogar (no revezamento, quem está de fora guarda o direito). Vale dobro de quem venceu soma 1 ponto, para o time inteiro em Duplas. Escudo de quem jogou e perdeu segura o ponto e só é oferecido a quem está atrás de algum rival (o parceiro não é rival), nunca duas vezes seguidas.
 - RF-15. Em Duplas a rotação também usa os minijogos do Duelo, menos os cooperativos. Numa rodada dessas joga um de cada dupla (`p.duelo`, o primeiro sempre do time A), na ordem J1 x J2, J3 x J4, J1 x J4, J3 x J2, que recomeça a cada partida. O minijogo recebe `vista(p)`: a mesma partida com `jogadores`, `celular` e `nomes` só dos dois da vez e `n` igual a 2. O placar, os pontos e os celulares seguem com os 4: o resultado `0` ou `1` é o time, os dois da dupla pontuam, só os dois da vez aparecem na arena e o celular do parceiro diz de quem é a vez e que ele torce.
@@ -60,6 +61,7 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 - CA-16. O Duelo com 2 jogadores segue com o placar de sempre e nenhum minijogo de festa entra na rotação (RF-1).
 - CA-17. O Duelo começa sozinho depois de 6 s com os Jogadores 1 e 2 conectados (RF-13). Sem teste automatizado.
 - CA-18. Valor de moedas em empate no Duelo e em Cada um por si: o teste cobre 5 moedas só para o Duelo, não para os modos da Festa (RF-5).
+- CA-23. Com 5 celulares, o sofá, o menu do Jogador 1, o placar e o pódio mostram os 5; em cada rodada quatro jogam e um descansa (outra pessoa a cada rodada), só os quatro aparecem e se movem na arena, o celular de quem descansa avisa que ele volta na próxima, e só um dos que jogaram pode vencer (RF-18).
 - CA-22. O Jogador 1 toca em quem joga com ele; a TV mostra as duplas escolhidas, o placar põe a dupla dele do lado laranja, cada celular controla o próprio boneco e recebe o resultado da sua dupla, e no menu cada um volta ao seu lugar (RF-17).
 - CA-21. Em Cada um por si e em Duplas, quem jogou e perdeu escolhe uma carta na próxima rodada em que jogar; Vale dobro e Escudo mudam o ponto como no Duelo, com os pontos da dupla sempre iguais; no cooperativo não há cartas (RF-16).
 - CA-19. Em Duplas entram os minijogos do Duelo sem os cooperativos; numa rodada deles só os dois da vez jogam e se movem, um de cada dupla, na ordem J1 x J2, J3 x J4, J1 x J4, J3 x J2, e os dois da dupla vencedora pontuam. Minijogo da Festa continua com os 4 (RF-15).
@@ -67,7 +69,7 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 
 ## Fora do escopo
 
-- Mais de 4 jogadores.
+- Mais de 5 jogadores.
 - Jogadores com times de tamanhos desiguais (Duplas é sempre 2 contra 2).
 - Revezamento em Cada um por si com 3 ou 4 jogadores (lá só entram os minijogos feitos para a Festa).
 - Cartas de poder em Todos juntos e anúncios de arcade (sequência, virada) na Festa.
@@ -100,6 +102,11 @@ O jogo nasceu para duas pessoas. Em casa quase sempre há mais gente querendo jo
 | CA-15 | `e2e/teste-festa.js` | `ok partida de 2 em cooperativo: zumbis, vitoria de todos` |
 | CA-16 | `e2e/teste-festa.js` | `ok Classico com 2: partida, ponto, placar de sempre e nenhum minijogo de festa na rotacao` |
 | CA-17 | sem teste automatizado | |
+| CA-23 | `logica-festa.test.mjs` | `cinco jogadores: em Cada um por si quatro jogam e um descansa, em rodizio, e o ponto vai para o lugar de verdade` |
+| CA-23 | `logica-festa.test.mjs` | `cinco jogadores: resultado fora dos 4 da vez tira o minijogo da rotacao, e no cooperativo todos os 5 pontuam` |
+| CA-23 | `logica-festa.test.mjs` | `cinco jogadores: minijogo que aceita 5 (festa.max 5) roda com todos, e 6 jogadores ou Duplas com 5 viram erro claro` |
+| CA-23 | `logica-festa.test.mjs` | `cinco jogadores: quem descansa fica parado fora da arena e minijogo so para 2 ou 3 nao entra` |
+| CA-23 | `e2e/teste-cinco.js` | `ok tinta-festa com 5: ...`, `ok sumo-vidas com 5: ...` e `ok galinhas-festa com 5: ...` |
 | CA-22 | `server.test.mjs` | `servidor: /modo repassa a dupla escolhida pelo anfitriao (par: lugar 2, 3 ou 4) e ignora valor torto` |
 | CA-22 | `e2e/teste-duplas.js` | `ok dupla J1 + J2: ...`, `ok dupla J1 + J4` e `ok dupla J1 + J3 (a de sempre)` |
 | CA-21 | `logica-festa.test.mjs` | `cartas na festa: quem perdeu em Cada um por si ganha oferta de carta na rodada seguinte, e o vencedor nao` |

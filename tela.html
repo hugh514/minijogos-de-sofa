@@ -41,6 +41,7 @@
   .dir .num{margin-left:0;margin-right:auto}
   /* Festa: 3 ou 4 jogadores, dois cartoes menores de cada lado (esquerda J1 e J3, direita J2 e J4). Em times o fundo do cartao e a cor do time. */
   #placar .lado{display:flex;gap:.55em;align-items:flex-start}
+  #placar.cinco .cartao.mini{font-size:.72em}       /* 5 no sofa: tres cartoes de um lado, menores para nao entrar embaixo do nome do minijogo */
   .cartao.mini{min-width:0;gap:.45em;padding:.32em .7em .5em .4em;border-radius:.9em}
   .cartao.mini.dir{padding:.32em .4em .5em .7em}
   .cartao.mini .rosto{width:2.3em;height:2.3em}
@@ -286,7 +287,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="reaHud" id="reaHud0"></div><div class="reaHud" id="reaHud1"></div><div class="reaHud" id="reaHud2"></div><div class="reaHud" id="reaHud3"></div>
+<div class="reaHud" id="reaHud0"></div><div class="reaHud" id="reaHud1"></div><div class="reaHud" id="reaHud2"></div><div class="reaHud" id="reaHud3"></div><div class="reaHud" id="reaHud4"></div>
 <div id="hud">
   <div id="clima"></div>
   <div id="placar"></div>
@@ -339,6 +340,7 @@
   <div class="chip" id="chip1"><span id="n1"></span><b id="st1"></b></div>
   <div class="chip" id="chip2"><span id="n2"></span><b id="st2"></b></div>
   <div class="chip" id="chip3"><span id="n3"></span><b id="st3"></b></div>
+  <div class="chip" id="chip4"><span id="n4"></span><b id="st4"></b></div>
   <div id="pe"><button id="ligar">Ligar som e tela cheia</button><br><span id="peTx"></span></div>
 </div>
 <script type="importmap">{ "imports": { "three": "/three/three.module.js", "three/addons/": "/three/addons/" } }</script>
@@ -386,9 +388,10 @@ function semRepetir(pedidas) {
 // Perfil que chega do celular pelo servidor: perfil antigo nao tem pet nem rastro, e indice de fora do catalogo cai em "nenhum".
 const perfilDaRede = (m, i) => ({ nome: String(m.nome ?? '').slice(0, 10), cor: indice(m.cor, PALETA.length, i), chapeu: indice(m.chapeu, N_CHAPEUS, 0), pet: indice(m.pet, N_PETS, 0), rastro: indice(m.rastro, RASTROS.length, 0) });
 // @fim-catalogo
-const SLOTS = 4;                             // o servidor tem 4 lugares; a partida usa os primeiros p.jogadores.length
-const perfis = [0, 1, 2, 3].map(i => ({ nome: '', cor: i, chapeu: 0, pet: 0, rastro: 0 }));      // cor padrao: azul, rosa, verde, amarelo
-const idxCor = [0, 1, 2, 3];                  // indice de cor de cada jogador (depois de resolver cor repetida)
+const SLOTS = 5;                             // o servidor tem 5 lugares; a partida usa os primeiros p.jogadores.length
+const LUGARES = [...Array(SLOTS).keys()];
+const perfis = LUGARES.map(i => ({ nome: '', cor: i, chapeu: 0, pet: 0, rastro: 0 }));      // cor padrao: azul, rosa, verde, amarelo, roxo
+const idxCor = [...LUGARES];                  // indice de cor de cada jogador (depois de resolver cor repetida)
 const TIMES = [0xff7a1a, 0x9a4dff], NOME_TIME = ['Time Laranja', 'Time Roxo'];      // laranja (J1 + J3) e roxo (J2 + J4): fora das 4 cores padrao dos jogadores
 // Mesma lista de emojis e na mesma ordem do controle.html (o celular so manda o indice).
 const REACOES = ['\u{1F604}', '\u{1F602}', '\u{1F621}', '❤️', '\u{1F44D}', '\u{1F631}',   // gratis: risada, choro de rir, raiva, coracao, polegar, susto
@@ -397,7 +400,7 @@ const REACOES = ['\u{1F604}', '\u{1F602}', '\u{1F621}', '❤️', '\u{1F44D}', '
   '\u{1F414}', '\u{1F40D}', '\u{1F422}', '\u{1F40C}',                                                // Bichos: galinha, cobra, tartaruga, caracol
   '\u{1F355}', '\u{1F37F}', '\u{1F366}', '\u{1F369}',                                                 // Lanche: pizza, pipoca, sorvete, rosquinha
   '\u{1F47B}', '\u{1F47D}', '\u{1F916}', '\u{1F480}'];                                               // Monstros: fantasma, alienigena, robo, caveira
-const cores = [PALETA[0], PALETA[1], PALETA[2], PALETA[3]];        // cor atual de cada jogador (os minijogos leem daqui)
+const cores = LUGARES.map(i => PALETA[i]);        // cor atual de cada jogador (os minijogos leem daqui)
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const css = i => hex(cores[i]);
 // Duplas escolhidas: o Jogador 1 escolhe quem joga com ele. Por dentro o time A e sempre os indices 0 e 2 e o B, 1 e 3
@@ -930,8 +933,8 @@ function etiqueta(texto, cor, escura) {
   return s;
 }
 
-const bonecos = [0, 1, 2, 3].map(() => new THREE.Group());      // os da arena (os minijogos mexem neles); sobram escondidos os que a partida nao usa
-const atores = [0, 1, 2, 3].map(() => new THREE.Group());       // copias para a tela de espera e o podio
+const bonecos = LUGARES.map(() => new THREE.Group());      // os da arena (os minijogos mexem neles); sobram escondidos os que a partida nao usa
+const atores = LUGARES.map(() => new THREE.Group());       // copias para a tela de espera e o podio
 bonecos.forEach(b => mundo.add(b));
 atores.forEach(b => palco.add(b));
 function montaBoneco(g, i) {
@@ -1063,9 +1066,9 @@ function pet(tipo) {       // de frente para +z, pes no chao (y = 0)
   });
   return g;
 }
-const pets = [0, 1, 2, 3].map(() => new THREE.Group());       // um por lugar, soltos na cena: seguem o boneco da arena ou o ator do palco
+const pets = LUGARES.map(() => new THREE.Group());       // um por lugar, soltos na cena: seguem o boneco da arena ou o ator do palco
 pets.forEach(g => { g.visible = false; g.rotation.order = 'YXZ'; cena.add(g); });
-const segue = [0, 1, 2, 3].map(() => ({ ok: false, palco: false, x: 0, z: 0, dx: 0, dz: -1, acum: 0 }));       // por onde o dono andou (dx, dz: ultima direcao)
+const segue = LUGARES.map(() => ({ ok: false, palco: false, x: 0, z: 0, dx: 0, dz: -1, acum: 0 }));       // por onde o dono andou (dx, dz: ultima direcao)
 function fazPets() {       // so refaz o de quem trocou de pet: os outros continuam onde estavam
   pets.forEach((g, i) => {
     if (g.userData.tipo === perfis[i].pet) return;
@@ -1534,14 +1537,14 @@ window.__bonecos = bonecos;
 window.__pets = pets;
 window.__cores = idxCor;
 window.__mesmaCor = mesmaCor;
-const visto = [0, 0, 0, 0], conectado = [false, false, false, false];
+const visto = Array(SLOTS).fill(0), conectado = Array(SLOTS).fill(false);
 let iniciou = false;
 
 // ---------- menu de modos: o Jogador 1 escolhe no celular, a espera mostra, e COMECAR (ou Enter) comeca ----------
 // Os ids (classico, vs, times, coop) sao os mesmos do servidor e do motor; so o texto mudou.
 const MODOS_TXT = {
   classico: ['Duelo', 'Dois no sofá. Quem fizer 10 primeiro leva'],
-  vs: ['Cada um por si', 'De 2 a 4. Ponto só para quem vencer'],
+  vs: ['Cada um por si', 'De 2 a 5. Ponto só para quem vencer'],
   times: ['Duplas', ''],
   coop: ['Todos juntos', 'Vocês contra o jogo por 5 noites'],
 };
@@ -1580,7 +1583,7 @@ function quebrado(modo, n) {       // o unico minijogo do modo quebrou: nao deix
 }
 function comecaPartida(teclado = false) {
   if (iniciou) return;
-  const modo = escolhaModo, seg = seguidos(), n = modo === 'classico' ? 2 : seg;
+  const modo = escolhaModo, seg = seguidos(), n = modo === 'classico' ? 2 : modo === 'times' ? 4 : seg;       // Duplas e sempre de 4: com 5 no sofa o quinto torce
   const falta = teclado && modo === 'classico' ? quebrado(modo, 2) : faltaPara(modo);
   if (falta) return avisa(falta);
   if (modo !== 'classico' && !elegiveis(modo, n).length) return avisa('Ainda carregando os minijogos. Tente em 5 segundos');
@@ -1591,10 +1594,10 @@ function comecaPartida(teclado = false) {
   limpaEscolha();
 }
 // Revanche no podio: o Jogador 1 escolhe no celular; os outros pedem (acende o boneco); sem toque em T_REVANCHE s, vale revanche.
-const T_REVANCHE = 20, querRevanche = [false, false, false, false];
+const T_REVANCHE = 20, querRevanche = Array(SLOTS).fill(false);
 // Medalhas da noite (o podio mostra): maior sequencia, viradas e quem mais torceu, contadas so nesta partida.
 let noite;
-function zeraNoite() { noite = { seq: [0, 0, 0, 0], viradas: [0, 0, 0, 0], torcidas: [0, 0, 0, 0] }; querRevanche.fill(false); }
+function zeraNoite() { noite = { seq: Array(SLOTS).fill(0), viradas: Array(SLOTS).fill(0), torcidas: Array(SLOTS).fill(0) }; querRevanche.fill(false); }
 zeraNoite();
 function recomeca() { reinicia(p); zeraNoite(); premios.fill(null); }
 function medalhas() {       // ate 3 medalhas da noite no podio: so aparece quem fez alguma coisa
@@ -2304,7 +2307,7 @@ function almofada(x, y, z, cor) {
   palcoPecas.add(m);
 }
 MOVEIS.forEach(carregaModelo);
-const SOFA_LARG = 15, ASSENTOS = [-5.1, -1.7, 1.7, 5.1];
+const SOFA_LARG = 15, ASSENTOS = [-4.9, -2.45, 0, 2.45, 4.9];
 const moveisProntos = () => !!c && MOVEIS.every(n => modelos.get(n)?.estado === 'pronto');
 function moveis() {       // monta a sala e devolve a altura do assento e o z de quem senta
   const com = moveisProntos(), sofa = com ? modelo(MOVEIS[0]) : null;
@@ -2357,7 +2360,7 @@ function arrumaPalco(podio) {
   ordem.forEach((i, k) => {
     const ant = ordem[k - 1];
     if (k && (camp.includes(i) !== camp.includes(ant) || pts[i] !== pts[ant])) lugar++;
-    const h = [2.3, 1.2, 0.8, 0.5][lugar], x = (k - (n - 1) / 2) * 3.4;
+    const h = [2.3, 1.2, 0.8, 0.5, 0.35][lugar], x = (k - (n - 1) / 2) * 3.4;
     const bloco = malha(new THREE.BoxGeometry(3.3, h, 3.2), 0xf2f4fa, { roughness: 0.5 }); bloco.position.set(x, h / 2, 0);
     const tampo = malha(new THREE.BoxGeometry(3.4, 0.2, 3.3), cores[i], { roughness: 0.4 }); tampo.position.set(x, h + 0.1, 0);
     const num = numero(lugar + 1); num.position.set(x, h / 2, 1.61); num.scale.setScalar(lugar ? 0.6 : 1);
@@ -2390,7 +2393,7 @@ function desenhaPalco(dt, t, podio) {
   }
   if (podio) {
     if (Math.random() < dt * 45) solta((Math.random() - 0.5) * 16, 9 + Math.random() * 2, (Math.random() - 0.5) * 6, CONFETE[Math.floor(Math.random() * CONFETE.length)], true, 2);
-    camera.position.set(Math.sin(t * 0.35) * 2.2, 4.4, 12.6 + (p.jogadores.length > 2 ? 2.5 : 0)); camera.lookAt(0, 3.1, 0);
+    camera.position.set(Math.sin(t * 0.35) * 2.2, 4.4, 12.6 + [0, 0, 0, 2.5, 2.5, 5][p.jogadores.length]); camera.lookAt(0, 3.1, 0);
   } else {
     // a sala fica na esquerda (60% da tela): a camera olha um pouco para a direita do sofa
     camera.position.set(5.4 + Math.sin(t * 0.2) * 0.5, 4.6 + Math.sin(t * 0.33) * 0.15, 17.5); camera.lookAt(5.4, 2.2, 0);
@@ -2415,17 +2418,17 @@ function texturaRea(k) {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.userData.fixo = true;
   return texRea[k] = t;
 }
-const reaSprites = [0, 1, 2, 3].map(() => Array.from({ length: 4 }, () => {
+const reaSprites = LUGARES.map(() => Array.from({ length: 4 }, () => {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, fog: false, toneMapped: false, transparent: true }));
   s.visible = false; s.renderOrder = 11; cena.add(s);
   return { s, idade: VIDA_REA };
 }));
 const nrVisto = Array(SLOTS).fill(undefined), ultimaRea = Array(SLOTS).fill(-1e9), sessaoVista = Array(SLOTS).fill(undefined), qVisto = Array(SLOTS).fill(undefined);
-window.__reacoes = [0, 0, 0, 0];      // quantas reacoes foram mostradas (para o teste automatico)
+window.__reacoes = Array(SLOTS).fill(0);      // quantas reacoes foram mostradas (para o teste automatico)
 window.__nrVisto = nrVisto;
 // Torcida: botao "Torcer" do celular em espera. Mesmo esquema da reacao (contador nt que so cresce).
 const ESPERA_TORCIDA = 0.45, ntVisto = Array(SLOTS).fill(undefined), ultimaTorcida = Array(SLOTS).fill(-1e9);
-window.__torcidas = [0, 0, 0, 0];
+window.__torcidas = Array(SLOTS).fill(0);
 // Contador novo maior que o visto = toque. Primeira leitura ou contador que diminuiu (celular recarregou): so acerta o passo.
 function novoToque(vistos, i, v) {
   if (!Number.isInteger(v) || v < 0) return false;
@@ -2542,10 +2545,10 @@ function animaReacoes(dt) {
 }
 
 // ---------- vibracao dos celulares: a tela decide pelo que acontece na arena, vale para todo minijogo ----------
-const vib = [0, 1, 2, 3].map(() => ({ n: 0 }));
+const vib = LUGARES.map(() => ({ n: 0 }));
 function vibra(i, padrao, forte = false) { vib[i] = { n: vib[i].n + 1, p: padrao, forte }; }
 const VIB_EVENTO = { batida: [45], explosao: [80, 40, 80], queda: [60] };
-let vivoAntes = [true, true, true, true], faseAntes = '', vibraVisto = [undefined, undefined, undefined, undefined];
+let vivoAntes = Array(SLOTS).fill(true), faseAntes = '', vibraVisto = Array(SLOTS).fill(undefined);
 function vibracoes(eventos) {
   // minijogo que ja mandou o proprio vibra neste quadro: a tela nao vibra por cima (nao corta nem dobra)
   const jogoVibrou = todos().map(i => (p.celular[i]?.vibra ?? 0) !== (vibraVisto[i] ?? 0));
@@ -2691,7 +2694,7 @@ const sessao = Date.now().toString(36);
 const premios = Array(SLOTS).fill(null);
 let rodadaPremiada = 0;
 // partidas ganhas: o Classico e a Festa tem cada um o seu placar (chaves diferentes no localStorage)
-const leVitorias = chave => { try { const v = JSON.parse(localStorage.getItem(chave)); return [0, 1, 2, 3].map(i => Number(v?.[i]) || 0); } catch { return [0, 0, 0, 0]; } };
+const leVitorias = chave => { try { const v = JSON.parse(localStorage.getItem(chave)); return LUGARES.map(i => Number(v?.[i]) || 0); } catch { return Array(SLOTS).fill(0); } };
 const vitoriasPor = { vitorias: leVitorias('vitorias'), vitoriasFesta: leVitorias('vitoriasFesta') };
 const chaveVitorias = () => p.modo === 'classico' ? 'vitorias' : 'vitoriasFesta';
 const vitoriasDoModo = () => vitoriasPor[chaveVitorias()];
@@ -2741,7 +2744,7 @@ function celularDaEspera(i) {
   const auto = autoSeg() || null, seg = seguidos();
   // qtd: quantos minijogos cada brincadeira tem com quem esta no sofa agora; nomes e cores: para as pilulas de quem esta conectado
   const qtd = { classico: elegiveis('classico', 2).length, vs: elegiveis('vs', Math.max(2, seg)).length, times: elegiveis('times', 4).length, coop: elegiveis('coop', Math.max(2, seg)).length };
-  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, par: parceiro + 1, on: conectado.slice(), seg, auto, qtd, nomes: [0, 1, 2, 3].map(nome), cores: [0, 1, 2, 3].map(css),
+  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, par: parceiro + 1, on: conectado.slice(), seg, auto, qtd, nomes: LUGARES.map(nome), cores: LUGARES.map(css),
     faltas: Object.fromEntries(Object.keys(MODOS_TXT).map(m => [m, faltaPara(m)])) } };
 }
 // Gancho da Lanchonete (frente C): campos extras do estado de cada celular. Vazio por enquanto.
@@ -2781,7 +2784,7 @@ function mandaCelulares(agora) {
     if ('b' in c) e.b = rotulo(c.b, 20);
     return e;
   };
-  const estado = !iniciou ? [0, 1, 2, 3].map(celularDaEspera)
+  const estado = !iniciou ? LUGARES.map(celularDaEspera)
     : explica ? todos().map(i => p.jogadores[i].pronto
       ? { jogo: nomeJogo, modo: 'espera', texto: faltaEntender(), pronto: true, premio: premios[i] ?? undefined }
       : { jogo: nomeJogo, modo: 'botao', a: 'Entendi', texto: '', explica: { nome: nomeJogo, dica, ctl: ctlCelular(p.jogo) }, premio: premios[i] ?? undefined })
@@ -2789,7 +2792,7 @@ function mandaCelulares(agora) {
   if (iniciou) for (let i = p.jogadores.length; i < SLOTS; i++)      // celular de quem nao esta nesta partida (Classico so tem 2)
     estado.push({ jogo: nomeJogo, modo: 'espera', texto: 'Essa é de ' + p.jogadores.length + '. Daqui você torce' });
   if (iniciou && p.duelo && !explica) for (const i of todos())      // minijogo de 2 em revezamento: quem esta de fora torce
-    if (!p.duelo.includes(i)) estado[i] = { jogo: nomeJogo, modo: 'espera', texto: 'Vez de ' + nome(p.duelo[timeDe(p, i)]) + '. Daqui você torce', premio: premios[i] ?? undefined };
+    if (!p.duelo.includes(i)) estado[i] = { jogo: nomeJogo, modo: 'espera', texto: (p.modo === 'times' ? 'Vez de ' + nome(p.duelo[timeDe(p, i)]) : 'Você descansa nesta e volta na próxima') + '. Daqui você torce', premio: premios[i] ?? undefined };
   const fimRodada = p.fase === 'resultado' || p.fase === 'fim';
   if (p.fase === 'jogando') provocador = -1;
   estado.forEach((e, i) => {
@@ -2858,7 +2861,9 @@ function cartaoJogo(j, quase, completo) {       // apresentacao do minijogo; com
   const vale = p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos!' : 'Vale 1 ponto.';
   const obs = (j.duracao > 0 ? `${Math.round(j.duracao)} segundos. ` : '') + (ehCoop(p) ? (p.mod?.pontos > 1 ? `Venceram juntos, ${p.mod.pontos} pontos para cada um. Falharam, ninguém leva` : 'Venceram juntos, ponto para todos. Falharam, ninguém leva')
     : p.modo === 'times' ? `${p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos para o time.' : 'Ponto para o time.'} ${p.alvo} e a dupla leva` : p.mod?.pontos > 1 ? vale : `${vale} ${p.alvo} e acabou`);
-  const times = p.duelo ? `<div class="obs vez">Nesta rodada: ${nomeHtml(p.duelo[0])} contra ${nomeHtml(p.duelo[1])}. Os parceiros torcem</div>`
+  const descansa = todos().filter(i => p.duelo && !p.duelo.includes(i));
+  const times = p.duelo && p.modo !== 'times' ? `<div class="obs vez">Nesta rodada ${descansa.map(nomeHtml).join(' e ')} descansa e torce. Na próxima volta</div>`
+    : p.duelo ? `<div class="obs vez">Nesta rodada: ${nomeHtml(p.duelo[0])} contra ${nomeHtml(p.duelo[1])}. Os parceiros torcem</div>`
     : p.modo === 'times' ? `<div class="obs"><b style="color:${hex(TIMES[0])}">Laranja</b>: ${limpa(nome(0))} e ${limpa(nome(2))} &nbsp;contra&nbsp; <b style="color:${hex(TIMES[1])}">Roxo</b>: ${limpa(nome(1))} e ${limpa(nome(3))}</div>` : '';
   const mini = p.jogadores.length > 2, chama = '<div class="chama">Leu? Toque em <b>Entendi</b><br>no celular</div>';
   return `<div class="cx${p.jogadores.length > 2 ? ' varios' : ''}">${tempero}${faixaMp}${coop}<div class="rot">Agora é</div><h2 class="tit">${nomeJ}</h2><p>${dica}</p>${oferta}` +
@@ -2974,13 +2979,14 @@ function hud(agora) {
     `<div class="info">${nomeHtml(i)}<div class="pips">${Array.from({ length: alvo }, (_, k) => `<i class="${k < pts[i] ? 'on' : ''}${k === pts[i] - 1 && pts[i] > pontosVistos[i] ? ' novo' : ''}"></i>`).join('')}</div></div>` +
     `<div class="num tit">${pts[i]}</div>${extras(i)}</div>`;
   poe('placar', mini ? `<div class="lado">${todos().filter(i => i % 2 === 0).map(cartao).join('')}</div><div class="lado">${todos().filter(i => i % 2).map(cartao).join('')}</div>` : cartao(0) + cartao(1));
+  $('placar').classList.toggle('cinco', p.jogadores.length > 4);
   pontosVistos = pts;
 
   poe('selo', naRodada() ? limpa(textoSeguro(j.nome, 40)) : '');
   poe('modChip', p.mod && !podio ? limpa(textoSeguro(p.mod.nome, 20)) : '');
   $('clima').className = p.mod && !podio ? String(p.mod.id).replace(/\W/g, '') : '';
   const pl = p.dados.placar;
-  const corPl = k => (p.modo === 'times' ? hex(TIMES[k]) : p.modo === 'coop' ? '#ffffff' : css(k)), suf = limpa(j.sufixo ?? '');       // em times o placar da rodada tem as cores dos times, e em coop e branco (nao e de ninguem)
+  const corPl = k => (p.modo === 'times' ? hex(TIMES[k]) : p.modo === 'coop' ? '#ffffff' : css(p.duelo?.[k] ?? k)), suf = limpa(j.sufixo ?? '');       // em times o placar da rodada tem as cores dos times, e em coop e branco (nao e de ninguem)
   // placar da rodada so aparece com numeros de verdade (minijogo com placar torto nao mostra NaN nem undefined); "pontos" nao e escrito a toa
   const plOk = Array.isArray(pl) && pl.length > 0 && pl.length <= 4 && pl.every(Number.isFinite), rot = limpa(textoSeguro(j.rotulo, 24));
   poe('rodadaPl', plOk && naRodada() ? `<div class="pl">${rot ? `<em>${rot}</em>` : ''}${pl.map((v, k) => `<b style="color:${corPl(k)}">${Math.floor(v).toLocaleString('pt-BR')}${suf}</b>`).join('<i>x</i>')}</div>` : '');

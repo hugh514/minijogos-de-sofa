@@ -1260,7 +1260,7 @@ function mandaModo(modo, comeca) {
 // Se a sala passa a trazer outro modo (outro aparelho do J1, a tela), a escolha local acompanha.
 let escolhaLocal = 'classico', modoDaSala = null, salaAtual = {}, autoVisto = null, onVisto = [];
 let parLocal = 3, parDaSala = null;       // Duplas: lugar (2, 3 ou 4) de quem joga com o Jogador 1; vale o toque local, e acompanha a sala quando ela muda
-const LINHA_MODO = { classico: '2 jogadores', vs: '2 a 4', times: 'precisa de 4', coop: '2 a 4' };
+const LINHA_MODO = { classico: '2 jogadores', vs: '2 a 5', times: 'precisa de 4', coop: '2 a 5' };
 const objeto = v => v && typeof v === 'object' ? v : {};
 function pintaMenu() {
   const faltas = objeto(salaAtual.faltas), qtd = objeto(salaAtual.qtd);       // o que impede cada modo agora e quantos minijogos tem (a tela decide)
@@ -1301,7 +1301,7 @@ function mostraMenu(sa) {
   // pilulas com o nome e a cor de quem esta no sofa; quem acabou de chegar entra com um pulinho
   const nomes = Array.isArray(sa.nomes) ? sa.nomes : [], cores = Array.isArray(sa.cores) ? sa.cores : [];
   $('menuConectados').textContent = '';
-  for (let n = 0; n < 4; n++) {
+  for (let n = 0; n < LUGARES.length; n++) {
     if (!on[n]) continue;
     const i = document.createElement('i'), cor = COR_OK.test(cores[n]) ? cores[n] : '#3d4780';
     i.textContent = textoSeguro(nomes[n], 10) || 'Jogador ' + (n + 1);
@@ -1312,7 +1312,7 @@ function mostraMenu(sa) {
     if (onVisto.length && !onVisto[n]) i.className = 'pula';
     $('menuConectados').append(i);
   }
-  onVisto = on.slice(0, 4);
+  onVisto = on.slice(0, LUGARES.length);
   pintaMenu();
 }
 for (const bt of $('menuLista').children) bt.addEventListener('click', () => {
@@ -1523,7 +1523,7 @@ document.addEventListener('touchend', () => {
 
 // ---------- escolha do lugar: nome salvo neste celular, a cor do lugar e se alguem ja esta nele ----------
 let pedeNome = false;
-const LUGARES = [['#2f7df6', 'azul'], ['#f0458f', 'rosa'], ['#35c26b', 'verde'], ['#ffc531', 'amarelo']];
+const LUGARES = [['#2f7df6', 'azul'], ['#f0458f', 'rosa'], ['#35c26b', 'verde'], ['#ffc531', 'amarelo'], ['#9b5cf6', 'roxo']];
 function montaEscolha(ocupado = []) {
   const caixa = $('lugares');
   caixa.textContent = '';
@@ -1548,7 +1548,7 @@ $('nomeNovo').addEventListener('keydown', e => { if (e.key === 'Enter') guardaNo
 $('depois').onclick = () => guardaNome('');
 
 const salvo = le('slot');
-if (Number.isInteger(salvo) && salvo >= 1 && salvo <= 4) comecar(salvo);
+if (Number.isInteger(salvo) && salvo >= 1 && salvo <= LUGARES.length) comecar(salvo);
 </script>
 </body>
 </html>

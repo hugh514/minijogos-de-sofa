@@ -187,7 +187,9 @@ do movimento padrão, e só são oferecidas em minijogo de joystick (`controle.m
 Elas não mexem em `j.turbo`, então minijogo que usa `j.turbo` continua igual. Durante a explicação a escolha das cartas usa o mesmo `op/nop`
 do celular, mas `j.escolha` do minijogo só recebe toques na fase `'jogando'`, como antes (para quem tinha carta, a partir de 0,35 s de rodada: um toque atrasado na carta não vira resposta). Evento novo de som: `'carta'` (o motor emite).
 
-## Modo Festa (2 a 4 jogadores)
+## Modo Festa (2 a 5 jogadores)
+
+O sofá tem 5 lugares. Minijogo com `festa.max: 4` também sai com 5 no sofá: a cada rodada um descansa (rodízio) e o minijogo recebe só os quatro da vez, como se fossem os únicos (`p.jogadores`, `p.celular` e `p.nomes` já vêm com quatro). Se o seu minijogo aguenta os 5 ao mesmo tempo, declare `max: 5`: aí ninguém descansa.
 
 Um minijogo de festa é um arquivo `jogos/<id>.mjs` como os outros, com o campo novo `festa`, e só entra na rotação da Festa. Os minijogos sem `festa` entram no Clássico, em Cada um por si com 2 pessoas e, em revezamento, em Duplas (os cooperativos, não). Exemplos prontos: `tinta-festa`, `sumo-vidas`, `futebol-times` e `zumbis-coop`.
 
