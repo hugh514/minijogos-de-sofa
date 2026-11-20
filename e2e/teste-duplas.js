@@ -24,7 +24,9 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
   const frente = () => tela.bringToFront();
   const foto = async (nome, alvo = tela) => { if (alvo === tela) await frente(); await alvo.screenshot({ path: path.join(FOTOS, nome + '.png') }); await frente(); console.log('  print ' + nome); };
   const fones = [];
-  for (let n = 1; n <= 4; n++) {
+  // Os celulares abrem fora de ordem (o 3 antes do 2): a sessao de cada aba e a hora em que abriu, e a troca de lugares
+  // tem que levar junto os contadores de cada celular, senao a entrada do que abriu antes e descartada como "aba velha".
+  for (const n of [1, 3, 4, 2]) {
     const ctx = await browser.newContext({ viewport: { width: 760, height: 360 }, hasTouch: true, isMobile: true });
     const f = await ctx.newPage();
     f.on('pageerror', e => erros.push(`celular ${n}: ${e}`));
@@ -32,7 +34,8 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
     await f.goto(URL + '/c', { timeout: 90000 });
     await f.getByRole('button', { name: 'Jogador ' + n }).tap();
     f.cdp = await ctx.newCDPSession(f);
-    fones.push(f);
+    fones[n - 1] = f;
+    await espera(60);
   }
   await frente();
   await tela.waitForFunction(() => window.__sala().seguidos === 4, null, { timeout: 10000 });
@@ -86,6 +89,14 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
   const depois = await ev(() => window.__p.jogadores.map(j => [j.x, j.z]));
   const andou = depois.map((d, i) => Math.hypot(d[0] - antes[i][0], d[1] - antes[i][1]));
   assert.ok(andou[2] > 1 && andou[0] < 0.2 && andou[1] < 0.2 && andou[3] < 0.2, 'so o boneco da dupla andou: ' + andou.map(v => v.toFixed(2)));
+  // e o celular do lugar 3 (que abriu antes do 2) controla o boneco do indice 1
+  const a2 = await ev(() => window.__p.jogadores.map(j => [j.x, j.z]));
+  await toque(fones[2], 'touchStart', 150, 220);
+  for (let k = 0; k < 12; k++) { await toque(fones[2], 'touchMove', 150, 160); await espera(80); }
+  await toque(fones[2], 'touchEnd');
+  const d2 = await ev(() => window.__p.jogadores.map(j => [j.x, j.z]));
+  const andou2 = d2.map((d, i) => Math.hypot(d[0] - a2[i][0], d[1] - a2[i][1]));
+  assert.ok(andou2[1] > 1 && andou2[0] < 0.2 && andou2[3] < 0.2, 'o celular do lugar 3 mexe o boneco dele (indice 1): ' + andou2.map(v => v.toFixed(2)));
   await foto('j2-4-meio-tv');
   await ev(() => { const p = window.__p; p.t = p.jogo.duracao - 0.4; });
   await tela.waitForFunction(() => ['resultado', 'fim'].includes(window.__p.fase), null, { timeout: 30000 });

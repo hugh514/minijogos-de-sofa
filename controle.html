@@ -1173,7 +1173,7 @@ function mostraMenu(sa) {
     if (!on[n]) continue;
     const i = document.createElement('i'), cor = COR_OK.test(cores[n]) ? cores[n] : '#3d4780';
     i.textContent = textoSeguro(nomes[n], 10) || 'Jogador ' + (n + 1);
-    i.dataset.n = n;
+    i.dataset.n = n; i.setAttribute('role', 'button');
     i.style.setProperty('--pc', cor);
     const [r, g, az] = [1, 3, 5].map(k => parseInt(cor.slice(k, k + 2), 16));
     if (r * 299 + g * 587 + az * 114 > 160000) i.style.setProperty('--pt', '#141a36');

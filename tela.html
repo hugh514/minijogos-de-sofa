@@ -1329,7 +1329,8 @@ let parceiro = 2;       // quem joga com o Jogador 1 nas Duplas (indice do lugar
 const rivais = () => [1, 2, 3].filter(i => i !== parceiro);
 const dicaModo = m => m === 'times' ? `${nome(0)} e ${nome(parceiro)} contra ${rivais().map(nome).join(' e ')}` : MODOS_TXT[m][1];
 function trocaLugares(a, b) {       // tudo que e de cada pessoa (e de cada celular) muda de indice junto
-  for (const v of [perfis, visto, conectado, premios, vib, nrVisto, ultimaRea, sessaoVista, qVisto, ntVisto, ultimaTorcida, querRevanche, vibraVisto]) [v[a], v[b]] = [v[b], v[a]];
+  for (const v of [perfis, visto, conectado, premios, vib, nrVisto, ultimaRea, sessaoVista, qVisto, ntVisto, ultimaTorcida, querRevanche]) [v[a], v[b]] = [v[b], v[a]];
+  if (robo.lugar === a) robo.lugar = b; else if (robo.lugar === b) robo.lugar = a;       // o robo de treino vai junto com o lugar dele
   const ja = p.jogadores[a], jb = p.jogadores[b];
   if (ja && jb) for (const k of ['n', 'nb', 'nop', 's', 'q', 'ent']) [ja[k], jb[k]] = [jb[k], ja[k]];       // contadores de toque sao do celular: sem isso a troca viraria toque fantasma
   semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
@@ -1363,8 +1364,9 @@ function comecaPartida(teclado = false) {
   const falta = teclado && modo === 'classico' ? quebrado(modo, 2) : faltaPara(modo);
   if (falta) return avisa(falta);
   if (modo !== 'classico' && !elegiveis(modo, n).length) return avisa('Ainda carregando os minijogos. Tente em 5 segundos');
-  sentaDupla(modo === 'times' ? parceiro : 2);
+  sentaDupla(2);       // desfaz a troca da partida anterior enquanto os jogadores dela ainda existem
   if (modo !== p.modo || n !== p.n) configura(p, { n, modo });
+  if (modo === 'times') sentaDupla(parceiro);       // so depois do configura: os 4 jogadores ja existem e os contadores de cada celular trocam junto
   iniciou = true; zeraNoite();
   limpaEscolha();
 }
@@ -2481,7 +2483,7 @@ function premia() {
   todos().forEach(i => { noite.seq[i] = Math.max(noite.seq[i], p.seq?.[i] ?? 0); });       // medalhas do podio
   for (const a of p.anuncios ?? []) if (a.tipo === 'virada' && Number.isInteger(a.quem)) noite.viradas[a.quem]++;
   if (p.fase === 'fim') {
-    for (const i of campeoes) vitoriasDoModo()[i]++;
+    for (const i of campeoes) vitoriasDoModo()[lugar(i)]++;       // o historico da casa e do lugar da pessoa, nao do indice na partida
     try { localStorage.setItem(chaveVitorias(), JSON.stringify(vitoriasDoModo())); } catch {}
     lento = 1.3;       // ponto decisivo: um instante em camera lenta
   }
@@ -2804,7 +2806,7 @@ function hud(agora) {
   const linha = (f, sep) => todos().map(f).join(sep), dois = p.jogadores.length === 2;
   if (podio) poe('fim', `<div><div class="t1 tit">${t1}</div><div class="t2 tit" style="color:${cc}">${titulo}</div>${medalhas()}</div>` +
     `<div><div class="final">${dois ? `${nomeHtml(0)}<b class="tit">${pts[0]}</b><i>x</i><b class="tit">${pts[1]}</b>${nomeHtml(1)}` : linha(i => `${nomeHtml(i)}<b class="tit">${pts[i]}</b>`, '<i>x</i>')}</div>` +
-    `<div class="hist">No histórico da casa: ${linha(i => `${nomeHtml(i)} <em>${vitoriasDoModo()[i]}</em>`, ', ')}.${camp.length ? ' +30 moedas para quem levou' : ''}</div>` +
+    `<div class="hist">No histórico da casa: ${linha(i => `${nomeHtml(i)} <em>${vitoriasDoModo()[lugar(i)]}</em>`, ', ')}.${camp.length ? ' +30 moedas para quem levou' : ''}</div>` +
     `<div class="revanche">Revanche em ${faltaRevanche()}</div></div>`);
   if (pausado && $('qrPausa')._ok !== enderecoCelular && $('qr').width > 1) {       // pausa e quando alguem chega: o QR aparece pequeno
     const q = $('qrPausa'); q.width = $('qr').width; q.height = $('qr').height; q.getContext('2d').drawImage($('qr'), 0, 0); q._ok = enderecoCelular;
