@@ -1156,6 +1156,7 @@ function pintaMenu() {
     const n = Number(i.dataset.n);
     i.classList.toggle('toca', duplas && n > 0 && n + 1 !== parLocal);
     i.classList.toggle('par', duplas && (n === 0 || n + 1 === parLocal));
+    if (duplas && n > 0) i.setAttribute('aria-pressed', String(n + 1 === parLocal)); else i.removeAttribute('aria-pressed');
   }
 }
 function mostraMenu(sa) {

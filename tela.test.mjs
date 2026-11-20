@@ -8,7 +8,14 @@ function puras(arquivo, nomes) {
   const trecho = html.split('// @puras-texto')[1].split('// @fim-puras-texto')[0].replace(/^[^\n]*\n/, '');
   return new Function(`${trecho}; return { ${nomes.join(', ')} };`)();
 }
-const tela = puras('tela.html', ['textoSeguro', 'trocaNomes', 'milhar']);
+const tela = puras('tela.html', ['textoSeguro', 'trocaNomes', 'milhar', 'lugarDe']);
+
+test('lugarDe: a dupla escolhida troca dois lugares, vale nos dois sentidos e nunca mexe no Jogador 1', () => {
+  assert.deepEqual([0, 1, 2, 3].map(s => tela.lugarDe(null, s)), [0, 1, 2, 3], 'sem troca cada um no seu lugar');
+  assert.deepEqual([0, 1, 2, 3].map(s => tela.lugarDe([1, 2], s)), [0, 2, 1, 3], 'J2 de dupla: o lugar 2 joga no indice 2 e o lugar 3 no indice 1');
+  assert.deepEqual([0, 1, 2, 3].map(s => tela.lugarDe([3, 2], s)), [0, 1, 3, 2], 'J4 de dupla');
+  for (const t of [[1, 2], [3, 2]]) for (const s of [0, 1, 2, 3]) assert.equal(tela.lugarDe(t, tela.lugarDe(t, s)), s, 'ida e volta');
+});
 const fone = puras('controle.html', ['textoSeguro', 'milhar', 'pareceId']);
 
 for (const [onde, { textoSeguro }] of [['tela', tela], ['celular', fone]]) {

@@ -390,7 +390,7 @@ const css = i => hex(cores[i]);
 // (os minijogos contam com isso), entao a pessoa escolhida troca de indice com quem esta no 2 enquanto a partida de Duplas dura.
 // troca = [a, b]: o celular do lugar a fala pelo indice b e vice-versa. Nome, cor, chapeu e contadores vao junto com a pessoa.
 let troca = null;
-const lugar = s => (!troca ? s : s === troca[0] ? troca[1] : s === troca[1] ? troca[0] : s);       // lugar do celular <-> indice na partida (a mesma conta nos dois sentidos)
+const lugar = s => lugarDe(troca, s);       // lugar do celular <-> indice na partida (a mesma conta nos dois sentidos)
 const nome = i => perfis[i].nome || 'Jogador ' + (lugar(i) + 1);
 const limpa = s => String(s).replace(/[<>&]/g, '');
 // @puras-texto (funcoes sem DOM: o tela.test.mjs le este trecho do html)
@@ -411,6 +411,8 @@ function trocaNomes(texto, nomes) {
 const milhar = n => (Number.isInteger(n) ? n : 0).toLocaleString('pt-BR');
 // rotulo de botao vindo do minijogo: tudo em caixa alta ("ENCHE!") vira caixa normal ("Enche!"); o resto passa como veio
 function rotulo(s, max = 20) { const t = textoSeguro(s, max); return t.length > 1 && t === t.toLocaleUpperCase('pt-BR') && t !== t.toLocaleLowerCase('pt-BR') ? t[0] + t.slice(1).toLocaleLowerCase('pt-BR') : t; }
+// Com troca = [a, b], a vira b e b vira a; o resto fica. Vale nos dois sentidos (lugar do celular -> indice e indice -> lugar).
+function lugarDe(troca, s) { return !troca ? s : s === troca[0] ? troca[1] : s === troca[1] ? troca[0] : s; }
 // @fim-puras-texto
 const nomesPerfis = () => perfis.map((pf, i) => pf.nome || (troca ? nome(i) : ''));       // com lugares trocados, "Jogador 3" no texto do minijogo vira o lugar de verdade de quem esta ali
 // Minijogo de 2 em revezamento fala de "Jogador 1" e "Jogador 2": sao os dois da vez, nao os lugares 1 e 2.
@@ -1467,7 +1469,7 @@ function roboLevanta(agora) {       // o robo larga o lugar; so solta o controle
   if (l < 0) return;
   robo.lugar = -1;
   if (perfis[l].nome === NOME_ROBO) perfis[l].nome = '';
-  if (!temCelular(l, agora)) { visto[l] = 0; entrada(p, l, { x: 0, y: 0, d: false, b: false }); }
+  if (!temCelular(lugar(l), agora)) { visto[l] = 0; entrada(p, l, { x: 0, y: 0, d: false, b: false }); }
 }
 function trocaRobo() {
   roboLigado = !roboLigado;
@@ -1481,7 +1483,7 @@ function roboJoga(agora) {
     const quer = real[0] && real[1] ? -1 : real[1] ? 0 : 1;
     if (quer !== robo.lugar) { roboLevanta(agora); robo.lugar = quer; }
   }
-  if (robo.lugar >= 0 && real[robo.lugar]) roboLevanta(agora);       // chegou um celular de verdade no lugar dele: o lugar e da pessoa ate o fim da partida, mesmo que o celular suma
+  if (robo.lugar >= 0 && temCelular(lugar(robo.lugar), agora)) roboLevanta(agora);       // chegou um celular de verdade no lugar dele: o lugar e da pessoa ate o fim da partida, mesmo que o celular suma
   const i = robo.lugar;
   if (i < 0) return;
   visto[i] = agora;
