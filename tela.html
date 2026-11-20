@@ -349,15 +349,35 @@ import { clone as clonaModelo } from 'three/addons/utils/SkeletonUtils.js';
 import { vista, criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, comMinimo, NOITES_COOP, CARTAS, JOGOS, RAIO } from '/logica.mjs';
 
 const $ = id => document.getElementById(id);
-// Mesmo catalogo do controle.html (indices de cor e de chapeu).
+// @catalogo (o tela.test.mjs e o controle.test.mjs leem este trecho: so dados e funcoes sem DOM nem THREE)
+// Mesmo catalogo do controle.html (indices de cor e de chapeu). So se acrescenta no fim: o perfil salvo no celular guarda o indice.
 const PALETA = [0x2f7df6, 0xf0458f, 0x35c26b, 0xffc531, 0x9b5cf6, 0xff7a2f, 0x22c7d6, 0xe5383b, 0xf2f2f2, 0x30343f,
-  0xd4a017, 0xff4fa3, 0x5b3fd6, 0x39ff14];      // dourado, arco-iris (anima), galaxia (textura), neon
-const SLOTS = 4;                              // o servidor tem 4 lugares; a partida usa os primeiros p.jogadores.length
+  0xd4a017, 0xff4fa3, 0x5b3fd6, 0x39ff14,       // dourado, arco-iris (anima), galaxia (textura), neon
+  0xff4a12, 0x9fdcff, 0xaab4c4, 0xe6e6e6, 0x2438a8, 0x5f7a3a, 0xd9ccff, 0xff4d5e];      // lava, gelo, cromado, zebra, bolinhas, camuflado, fantasma, melancia
+const N_CHAPEUS = 23;                         // 0 e sem chapeu; cada indice tem um ramo em chapeu()
+// Acabamento do corpo por indice de cor: 10 dourado metalico, 11 arco-iris (matiz anda no quadro), 12 galaxia (textura), 13 neon.
+// De 14 em diante a textura, o reflexo e o brilho vem de PELES (mais abaixo, depois das texturas).
+const ACABAMENTO = { 10: { metalness: 0.55, roughness: 0.28, emissive: 0x4a3500 }, 12: { roughness: 0.4 }, 13: { roughness: 0.3, emissive: 0x39ff14, emissiveIntensity: 0.55 },
+  14: { roughness: 0.75, emissive: 0xff7a1a, emissiveIntensity: 0.9 }, 15: { roughness: 0.08, metalness: 0.35, emissive: 0x1d5f9a, emissiveIntensity: 0.3 },
+  16: { roughness: 0.06, metalness: 1 }, 17: { roughness: 0.5 }, 18: { roughness: 0.45 }, 19: { roughness: 0.85 },
+  20: { roughness: 0.25, emissive: 0xa48cff, emissiveIntensity: 0.55, transparent: true, opacity: 0.5 }, 21: { roughness: 0.4 } };
+const corEscura = n => (n >> 16) * 0.3 + (n >> 8 & 255) * 0.59 + (n & 255) * 0.11 < 80;
+// Pares que no placar e nas arenas ninguem distingue: rosa x arco-iris, amarelo e laranja x dourado, e as skins novas contra a cor de base delas.
+const PARECIDAS = [[1, 11], [3, 10], [5, 10], [5, 14], [7, 14], [6, 15], [8, 15], [8, 16], [15, 16], [8, 17], [16, 17], [0, 18], [2, 19], [8, 20], [15, 20], [16, 20], [17, 20], [7, 21], [14, 21], [1, 21]];
+function mesmaCor(a, b) { return a === b || PARECIDAS.some(([x, y]) => (a === x && b === y) || (a === y && b === x)); }
+// Indice que chega pela rede: so inteiro dentro do catalogo passa, o resto vira o padrao.
+const indice = (v, n, padrao) => Number.isInteger(v) && v >= 0 && v < n ? v : padrao;
+// Cor igual ou quase igual a de quem veio antes: cai no padrao do lugar e, se esse tambem repete, na primeira cor livre.
+function semRepetir(pedidas) {
+  const r = [];
+  pedidas.forEach((c, k) => r.push(r.some(o => mesmaCor(o, c)) ? [k, ...PALETA.keys()].find(x => !r.some(o => mesmaCor(o, x))) : c));
+  return r;
+}
+// @fim-catalogo
+const SLOTS = 4;                             // o servidor tem 4 lugares; a partida usa os primeiros p.jogadores.length
 const perfis = [0, 1, 2, 3].map(i => ({ nome: '', cor: i, chapeu: 0 }));      // cor padrao: azul, rosa, verde, amarelo
 const idxCor = [0, 1, 2, 3];                  // indice de cor de cada jogador (depois de resolver cor repetida)
 const TIMES = [0xff7a1a, 0x9a4dff], NOME_TIME = ['Time Laranja', 'Time Roxo'];      // laranja (J1 + J3) e roxo (J2 + J4): fora das 4 cores padrao dos jogadores
-// Acabamento do corpo por indice de cor: 10 dourado metalico, 11 arco-iris (matiz anda no quadro), 12 galaxia (textura), 13 neon.
-const ACABAMENTO = { 10: { metalness: 0.55, roughness: 0.28, emissive: 0x4a3500 }, 12: { roughness: 0.4 }, 13: { roughness: 0.3, emissive: 0x39ff14, emissiveIntensity: 0.55 } };
 // Mesma lista de emojis e na mesma ordem do controle.html (o celular so manda o indice).
 const REACOES = ['\u{1F604}', '\u{1F602}', '\u{1F621}', '❤️', '\u{1F44D}', '\u{1F631}',   // gratis: risada, choro de rir, raiva, coracao, polegar, susto
   '\u{1F61B}', '\u{1F60E}', '\u{1F921}', '\u{1F634}',                                                 // Provocacao: lingua, oculos escuros, palhaco, dormindo
@@ -391,7 +411,6 @@ const nomesPerfis = () => perfis.map(pf => pf.nome);
 // Minijogo de 2 em revezamento fala de "Jogador 1" e "Jogador 2": sao os dois da vez, nao os lugares 1 e 2.
 const nomesDoJogo = () => (p.duelo ? p.duelo.map(nome) : nomesPerfis());
 const doJogo = (s, max = 120) => textoSeguro(trocaNomes(s, nomesDoJogo()), max);       // texto de minijogo pronto para a tela
-const corEscura = n => (n >> 16) * 0.3 + (n >> 8 & 255) * 0.59 + (n & 255) * 0.11 < 80;
 const nomeHtml = i => `<span class="nm${corEscura(cores[i]) ? ' escuro' : ''}" style="color:${css(i)}">${limpa(nome(i))}</span>`;
 
 function sorteioDe(texto) {       // gerador fixo por texto: cada minijogo tem sempre a mesma musica e o mesmo lugar
@@ -481,8 +500,75 @@ function galaxia() {
     for (let k = 0; k < 160; k++) { x.fillStyle = `rgba(255,255,255,${0.5 + sorte() * 0.5})`; x.beginPath(); x.arc(sorte() * w, sorte() * h, 0.8 + sorte() * 1.8, 0, 7); x.fill(); }
   });
 }
+// Pele do boneco: 512 x 256 enrolada na esfera (o rosto fica em 1/4 da largura). "emenda" repete o desenho nas laterais para nao aparecer costura.
+function emenda(x, w, desenha) { for (const dx of [-w, 0, w]) { x.save(); x.translate(dx, 0); desenha(); x.restore(); } }
+function pele(fundo, desenha) {
+  let s = 11;
+  const sorte = () => (s = (s * 16807) % 2147483647) / 2147483647;      // sempre o mesmo desenho
+  return textura(512, 256, (x, w, h) => { x.fillStyle = fundo; x.fillRect(0, 0, w, h); desenha(x, w, h, sorte); });
+}
+const bolha = (x, px, py, rx, ry, cor, gira = 0) => { x.fillStyle = cor; x.beginPath(); x.ellipse(px, py, rx, ry, gira, 0, 7); x.fill(); };
 const TX = {
   galaxia: galaxia(),
+  peleLava: pele('#2a0703', (x, w, h, r) => {       // crosta escura rachada, com magma claro nas rachaduras (o mesmo mapa acende no emissivo)
+    x.lineCap = x.lineJoin = 'round';
+    const veios = Array.from({ length: 26 }, () => { let px = r() * w, py = r() * h; return [[px, py], ...Array.from({ length: 5 }, () => [px += (r() - 0.5) * 110, py += (r() - 0.5) * 90])]; });
+    for (const [larg, cor] of [[26, '#a81c02'], [15, '#ff5a12'], [6, '#ffd24a']]) emenda(x, w, () => {
+      x.strokeStyle = cor; x.lineWidth = larg;
+      for (const v of veios) { x.beginPath(); v.forEach(([px, py], k) => k ? x.lineTo(px, py) : x.moveTo(px, py)); x.stroke(); }
+    });
+  }),
+  peleGelo: pele('#bfe6ff', (x, w, h, r) => {       // gelo: azul claro com facetas e riscos brancos
+    const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f4fcff'); g.addColorStop(0.55, '#a9dcff'); g.addColorStop(1, '#5fa8e8');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    for (let k = 0; k < 22; k++) {
+      const px = r() * w, py = r() * h, a = r() * 6.3, c = 30 + r() * 60;
+      emenda(x, w, () => {
+        x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * c, py + Math.sin(a) * c); x.lineTo(px + Math.cos(a + 1.1) * c * 0.7, py + Math.sin(a + 1.1) * c * 0.7); x.closePath();
+        x.fillStyle = k % 2 ? 'rgba(255,255,255,.5)' : 'rgba(60,140,220,.3)'; x.fill();
+        x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 2.5; x.stroke();
+      });
+    }
+  }),
+  peleZebra: pele('#f6f6f6', (x, w, h) => {         // listras pretas onduladas, mais gordas no meio
+    x.fillStyle = '#17181c';
+    for (let k = 0; k < 12; k++) {
+      const cx = (k + 0.5) * w / 12, meio = y => cx + Math.sin(y * 0.045 + k * 1.7) * 11, gordura = y => 5 + Math.sin(y / h * Math.PI) * 5;
+      x.beginPath();
+      for (let y = 0; y <= h; y += 8) x.lineTo(meio(y) - gordura(y), y);
+      for (let y = h; y >= 0; y -= 8) x.lineTo(meio(y) + gordura(y), y);
+      x.fill();
+    }
+  }),
+  peleBolinhas: pele('#2438a8', (x, w, h) => {      // bolinhas brancas em fileiras desencontradas (mais largas perto dos polos para nao afinar)
+    for (let l = 0; l < 5; l++) {
+      const py = 38 + l * 45, estica = 1 / Math.max(0.45, Math.sin(py / h * Math.PI));
+      for (let k = 0; k < 10; k++) emenda(x, w, () => bolha(x, (k + (l % 2) / 2) * w / 10 + 12, py, 14 * estica, 14, '#ffffff'));
+    }
+  }),
+  peleCamuflado: pele('#5f7a3a', (x, w, h, r) => {  // manchas grandes em verde escuro, marrom e areia
+    for (let k = 0; k < 46; k++) {
+      const px = r() * w, py = r() * h, rx = 24 + r() * 40, ry = 14 + r() * 22, g = r() * 3, cor = ['#2f4420', '#7a5a36', '#2f4420', '#b5a97a'][k % 4];
+      emenda(x, w, () => { bolha(x, px, py, rx, ry, cor, g); bolha(x, px + rx * 0.7, py + ry * 0.5, rx * 0.6, ry * 0.8, cor, g + 1); });
+    }
+  }),
+  peleMelancia: pele('#ff4d5e', (x, w, h) => {      // fatia: polpa vermelha com sementes, faixa clara e casca verde embaixo
+    x.fillStyle = '#f4ffe0'; x.fillRect(0, h * 0.56, w, h * 0.06);
+    x.fillStyle = '#2f9e44'; x.fillRect(0, h * 0.61, w, h);
+    x.fillStyle = '#1b6e2c'; for (let k = 0; k < 16; k++) x.fillRect(k * w / 16, h * 0.63, w / 40, h);
+    for (let l = 0; l < 3; l++) for (let k = 0; k < 9; k++) bolha(x, (k + (l % 2) / 2 + 0.25) * w / 9, 46 + l * 36, 5, 9, '#1a1114', 0.2 - (l % 2) * 0.4);
+  }),
+  // Reflexo do cromado e do gelo: ceu claro, horizonte branco e chao escuro, lido como ambiente (so esses materiais usam).
+  reflexo: (() => {
+    const t = textura(256, 128, (x, w, h) => {
+      const g = x.createLinearGradient(0, 0, 0, h);
+      [[0, '#dff1ff'], [0.3, '#7fb8f0'], [0.47, '#ffffff'], [0.53, '#465064'], [0.72, '#9aa6b8'], [1, '#6b7688']].forEach(([p, c]) => g.addColorStop(p, c));
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      for (const [px, cor] of [[40, '#ffffff'], [150, '#fff2c0'], [215, '#ffffff']]) bolha(x, px, 34, 16, 10, cor);       // janelas de luz
+    });
+    t.mapping = THREE.EquirectangularReflectionMapping;
+    return t;
+  })(),
   brilho: textura(128, 128, (x, w) => {
     const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
     g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -541,6 +627,9 @@ const TX = {
     manchas(x, w, ['rgba(255,190,60,.5)', 'rgba(110,14,0,.6)', 'rgba(255,120,30,.5)'], 16, 90);
   }, true),
 };
+// Textura, reflexo e mapa de brilho de cada skin (o resto do acabamento esta em ACABAMENTO, la em cima).
+const PELES = { 12: { map: TX.galaxia }, 14: { map: TX.peleLava, emissiveMap: TX.peleLava }, 15: { map: TX.peleGelo, envMap: TX.reflexo, envMapIntensity: 0.9 },
+  16: { envMap: TX.reflexo, envMapIntensity: 1.25 }, 17: { map: TX.peleZebra }, 18: { map: TX.peleBolinhas }, 19: { map: TX.peleCamuflado }, 21: { map: TX.peleMelancia } };
 function brilho(cor, tam, opacidade = 0.6) {      // halo barato para coisas que brilham
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.brilho, color: cor, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: opacidade }));
   s.scale.setScalar(tam);
@@ -735,6 +824,75 @@ function chapeu(tipo) {
     const fita = malha(new THREE.CylinderGeometry(0.6, 0.6, 0.14, 28, 1, true), 0x1d2a6b, { side: THREE.DoubleSide }); fita.position.y = 0.55; g.add(fita);
     const placa = malha(new THREE.BoxGeometry(0.3, 0.12, 0.04), 0xc8ccd8, { metalness: 0.5, roughness: 0.3 }); placa.position.set(0, 0.55, 0.6); g.add(placa);
     for (const s of [-1, 1]) { const ponta = malha(new THREE.BoxGeometry(0.1, 0.4, 0.04), 0x1d2a6b); ponta.position.set(s * 0.12, 0.38, -0.66); ponta.rotation.set(0.3, 0, s * 0.35); g.add(ponta); }
+  } else if (tipo === 13) { // bone: calota vermelha, aba para a frente e botao em cima
+    const calota = malha(new THREE.SphereGeometry(0.84, 24, 12, 0, Math.PI * 2, 0, 0.95), 0xe5383b); calota.position.y = 0.06;
+    const aba = malha(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 24), 0xa81f28); aba.position.set(0, 0.55, 0.58); aba.rotation.x = 0.32;
+    const botao = malha(new THREE.SphereGeometry(0.08, 10, 8), 0xffffff); botao.position.y = 0.9;
+    g.add(calota, aba, botao);
+  } else if (tipo === 14) { // chapeu de bruxo: aba larga, cone alto roxo, faixa e fivela
+    const aba = malha(new THREE.CylinderGeometry(0.72, 0.72, 0.06, 28), 0x4b2a8a); aba.position.y = 0.7;
+    const cone = malha(new THREE.ConeGeometry(0.42, 0.85, 24), 0x4b2a8a); cone.position.y = 1.13;
+    const faixa = malha(new THREE.CylinderGeometry(0.345, 0.405, 0.13, 24), 0x1d1036); faixa.position.y = 0.81;
+    const fivela = malha(new THREE.BoxGeometry(0.17, 0.13, 0.05), 0xffc531, { metalness: 0.6, roughness: 0.3, emissive: 0x4a3000 }); fivela.position.set(0, 0.81, 0.375);
+    g.add(aba, cone, faixa, fivela);
+  } else if (tipo === 15) { // cowboy: aba virada para cima nas bordas, copa alta e fita escura
+    const aba = malha(new THREE.LatheGeometry([[0.3, 0], [0.62, 0], [0.8, 0.07], [0.88, 0.2]].map(([r, y]) => new THREE.Vector2(r, y)), 28), 0x9a6a36, { side: THREE.DoubleSide });
+    aba.position.y = 0.68; aba.scale.z = 0.8;
+    const copa = malha(new THREE.CylinderGeometry(0.34, 0.42, 0.42, 24), 0x9a6a36); copa.position.y = 0.91; copa.scale.z = 0.85;
+    const topo = malha(new THREE.SphereGeometry(0.34, 20, 10), 0x9a6a36); topo.position.y = 1.12; topo.scale.set(1, 0.3, 0.85);
+    const fita = malha(new THREE.CylinderGeometry(0.415, 0.43, 0.1, 24), 0x3a2412); fita.position.y = 0.76; fita.scale.z = 0.85;
+    g.add(aba, copa, topo, fita);
+  } else if (tipo === 16) { // flor: miolo amarelo, seis petalas e uma folha, de lado na cabeca
+    const flor = new THREE.Group();
+    for (let k = 0; k < 6; k++) {
+      const pet = malha(new THREE.SphereGeometry(0.16, 12, 8), 0xff7ab8); pet.scale.y = 0.45;
+      pet.position.set(Math.cos(k * Math.PI / 3) * 0.21, 0, Math.sin(k * Math.PI / 3) * 0.21); flor.add(pet);
+    }
+    const miolo = malha(new THREE.SphereGeometry(0.13, 12, 8), 0xffc531); miolo.position.y = 0.04;
+    const folha = malha(new THREE.SphereGeometry(0.16, 10, 6), 0x35c26b); folha.scale.set(1.3, 0.25, 0.6); folha.position.set(-0.3, -0.08, 0.1);
+    flor.add(miolo, folha); flor.position.set(0.36, 0.8, 0.22); flor.rotation.set(0.75, 0, -0.4);
+    g.add(flor);
+  } else if (tipo === 17) { // gorro de inverno: calota vermelha, dobra branca e pompom
+    const calota = malha(new THREE.SphereGeometry(0.85, 24, 12, 0, Math.PI * 2, 0, 0.9), 0xd92b3a, { roughness: 0.9 }); calota.position.y = 0.05;
+    const dobra = malha(new THREE.TorusGeometry(0.66, 0.1, 10, 28), 0xffffff, { roughness: 0.9 }); dobra.rotation.x = Math.PI / 2; dobra.position.y = 0.61;
+    const pompom = malha(new THREE.SphereGeometry(0.2, 12, 8), 0xffffff, { roughness: 0.9 }); pompom.position.y = 1.02;
+    g.add(calota, dobra, pompom);
+  } else if (tipo === 18) { // fone de ouvido: arco por cima e duas conchas nos lados
+    const arco = malha(new THREE.TorusGeometry(0.82, 0.05, 8, 28, Math.PI), 0x22252e); arco.position.y = 0.3; arco.scale.y = 0.7;
+    g.add(arco);
+    par(s => {
+      const concha = new THREE.Group();
+      const corpo = malha(new THREE.CylinderGeometry(0.25, 0.25, 0.18, 20), 0x22252e); corpo.rotation.z = Math.PI / 2;
+      const tampa = malha(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 20), 0xe5383b); tampa.rotation.z = Math.PI / 2; tampa.position.x = s * 0.1;
+      concha.add(corpo, tampa); concha.position.y = 0.3; return concha;
+    }, 0.82);
+  } else if (tipo === 19) { // laco: duas asas vermelhas e o no no meio, em cima da cabeca
+    par(s => { const asa = malha(new THREE.ConeGeometry(0.26, 0.44, 14), 0xe5383b); asa.rotation.z = s * Math.PI / 2; asa.scale.z = 0.45; asa.position.y = 0.92; return asa; }, 0.24);
+    const no = malha(new THREE.SphereGeometry(0.11, 12, 8), 0xb3262a); no.position.y = 0.92;
+    g.add(no);
+  } else if (tipo === 20) { // cogumelo: chapeu vermelho de pintas brancas
+    const copa = malha(new THREE.SphereGeometry(0.8, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), 0xe5383b); copa.scale.y = 0.7; copa.position.y = 0.55;
+    const baixo = malha(new THREE.CylinderGeometry(0.79, 0.79, 0.05, 28), 0xfff4e6); baixo.position.y = 0.55;
+    g.add(copa, baixo);
+    for (const [a, el] of [[0, 1.57], [1.57, 0.6], [2.83, 0.6], [4.08, 0.6], [5.34, 0.6], [0.31, 0.6]]) {
+      const pinta = malha(new THREE.SphereGeometry(0.14, 12, 8), 0xffffff); pinta.scale.y = 0.6;
+      pinta.position.set(Math.cos(el) * Math.cos(a) * 0.76, 0.55 + Math.sin(el) * 0.54, Math.cos(el) * Math.sin(a) * 0.76); g.add(pinta);
+    }
+  } else if (tipo === 21) { // chapeu de festa: cone listrado torto, com pompom
+    const cone = new THREE.Group();
+    for (let k = 0; k < 4; k++) {
+      const gomo = malha(new THREE.CylinderGeometry(0.34 * (3 - k) / 4, 0.34 * (4 - k) / 4, 0.19, 20), k % 2 ? 0xffc531 : 0x22c7d6); gomo.position.y = 0.77 + k * 0.19; cone.add(gomo);
+    }
+    const pompom = malha(new THREE.SphereGeometry(0.11, 12, 8), 0xf0458f); pompom.position.y = 1.47;
+    const babado = malha(new THREE.TorusGeometry(0.34, 0.045, 8, 24), 0xf0458f); babado.rotation.x = Math.PI / 2; babado.position.y = 0.7;
+    cone.add(pompom, babado); cone.rotation.z = -0.2; g.add(cone);
+  } else if (tipo === 22) { // coroa de louros: folhas verdes em volta da cabeca, aberta na frente
+    for (const s of [-1, 1]) for (let k = 0; k < 8; k++) for (const sobe of [-1, 1]) {
+      const a = 0.35 + k * 0.37, folha = malha(new THREE.SphereGeometry(0.15, 10, 6), sobe > 0 ? 0x4c9a3a : 0x3a7d2c);
+      folha.scale.set(1.4, 0.55, 0.75);
+      folha.position.set(s * Math.sin(a) * 0.57, 0.68 + sobe * 0.09, Math.cos(a) * 0.57);
+      folha.rotation.set(0, s > 0 ? a : Math.PI - a, sobe * 0.7); g.add(folha);
+    }
   }
   return g;
 }
@@ -759,8 +917,8 @@ function montaBoneco(g, i) {
   descarta(g); g.clear();
   const cor = cores[i], corpo = new THREE.Group();
   corpo.rotation.order = 'YXZ';       // gira para onde anda e so entao inclina para a frente
-  const casca = malha(new THREE.SphereGeometry(RAIO, 32, 24), idxCor[i] === 12 ? 0xffffff : cor, { roughness: 0.32, ...ACABAMENTO[idxCor[i]] });
-  if (idxCor[i] === 12) casca.material.map = TX.galaxia;
+  const pele = PELES[idxCor[i]];      // com textura a cor do material fica branca: quem pinta e o mapa
+  const casca = malha(new THREE.SphereGeometry(RAIO, 32, 24), pele?.map ? 0xffffff : cor, { roughness: 0.32, ...ACABAMENTO[idxCor[i]], ...pele });
   corpo.add(casca);
   const olhos = [], pes = [], maos = [], corMao = new THREE.Color(cor).multiplyScalar(0.7);
   for (const lado of [-1, 1]) {
@@ -857,22 +1015,15 @@ function anima(b, e, dt, t) {
   if (u.flutua) { u.flutua.position.y = 1.3 + Math.sin(t * 3 + b.id) * 0.06; u.flutua.rotation.z += dt * 2; }
   const dono = bonecos.includes(b) ? bonecos.indexOf(b) : atores.indexOf(b);
   if (idxCor[dono] === 11) u.casca.material.color.setHSL((t * 0.2) % 1, 0.85, 0.56);
+  else if (idxCor[dono] === 14) u.casca.material.emissiveIntensity = 0.85 + Math.sin(t * 3.2 + b.id) * 0.4;      // lava pulsa
 }
-
-const PARECIDAS = [[1, 11], [3, 10], [5, 10]];      // rosa x arco-iris, amarelo e laranja x dourado: no placar e nas arenas ninguem distingue
-function mesmaCor(a, b) { return a === b || PARECIDAS.some(([x, y]) => (a === x && b === y) || (a === y && b === x)); }
 
 function aplicaPerfil(m) {
   const i = m.j - 1;
   if (!(i >= 0 && i < SLOTS)) return;
   if (i < 2) celularReal[i] = performance.now();
-  perfis[i] = { nome: String(m.nome ?? '').slice(0, 10), cor: PALETA[m.cor] === undefined ? i : m.cor, chapeu: m.chapeu | 0 };
-  for (let k = 0; k < SLOTS; k++) {
-    idxCor[k] = perfis[k].cor;
-    // cor igual ou quase igual a de quem veio antes: cai no padrao do lugar e, se esse tambem repete, na primeira cor livre
-    if (idxCor.slice(0, k).some(o => mesmaCor(o, idxCor[k]))) idxCor[k] = [k, ...PALETA.keys()].find(c => !idxCor.slice(0, k).some(o => mesmaCor(o, c)));
-    cores[k] = PALETA[idxCor[k]];
-  }
+  perfis[i] = { nome: String(m.nome ?? '').slice(0, 10), cor: indice(m.cor, PALETA.length, i), chapeu: indice(m.chapeu, N_CHAPEUS, 0) };
+  semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
   fazBonecos();
   rodadaMontada = -1; palcoChave = '';       // arenas que usam a cor dos jogadores sao refeitas
 }

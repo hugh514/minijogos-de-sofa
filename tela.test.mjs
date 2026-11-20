@@ -81,3 +81,42 @@ test('trocaNomes: ao, pelo e no Jogador N viram a, por e em {nome}', () => {
   assert.equal(trocaNomes('Passe ao Jogador 3', nomes), 'Passe ao Jogador 3', 'sem nome: fica como veio');
   assert.equal(trocaNomes('pela Jogador 2 e na Jogador 1', nomes), 'por Bia e em Ana');
 });
+
+// ---------- catalogo de cores e chapeus da tela: perfil que chega pela rede e cor repetida ----------
+const cat = (() => {
+  const html = fs.readFileSync(new URL('./tela.html', import.meta.url), 'utf8');
+  const trecho = html.split('// @catalogo')[1].split('// @fim-catalogo')[0].replace(/^[^\n]*\n/, '');
+  return new Function(`${trecho}; return { PALETA, N_CHAPEUS, ACABAMENTO, indice, mesmaCor, semRepetir, corEscura };`)();
+})();
+
+test('indice: cor ou chapeu invalido vindo da rede cai no padrao e nunca quebra', () => {
+  const { indice, N_CHAPEUS } = cat;
+  assert.equal(indice(0, N_CHAPEUS, 0), 0);
+  assert.equal(indice(N_CHAPEUS - 1, N_CHAPEUS, 0), N_CHAPEUS - 1);
+  for (const ruim of [N_CHAPEUS, 999, -1, 2.5, '3', null, undefined, NaN, Infinity, {}, [], 'length', '__proto__']) assert.equal(indice(ruim, N_CHAPEUS, 0), 0, String(ruim));
+  assert.equal(indice(99, cat.PALETA.length, 2), 2, 'cor fora do catalogo: a padrao do lugar');
+});
+
+test('mesmaCor: as 4 cores padrao nao se confundem e a relacao vale nos dois sentidos', () => {
+  const { mesmaCor, PALETA } = cat;
+  for (let a = 0; a < PALETA.length; a++) for (let b = 0; b < PALETA.length; b++) {
+    assert.equal(mesmaCor(a, b), mesmaCor(b, a));
+    if (a < 4 && b < 4 && a !== b) assert.equal(mesmaCor(a, b), false);
+  }
+  assert.equal(mesmaCor(7, 7), true);
+});
+
+test('semRepetir: quaisquer 4 cores pedidas viram 4 cores validas que ninguem confunde', () => {
+  const { semRepetir, mesmaCor, PALETA } = cat, n = PALETA.length;
+  assert.deepEqual(semRepetir([0, 1, 2, 3]), [0, 1, 2, 3]);
+  assert.deepEqual(semRepetir([5, 5, 2, 3]), [5, 1, 2, 3], 'repetiu: cai na cor padrao do lugar');
+  for (let a = 0; a < n; a++) for (let b = 0; b < n; b++) for (let c = 0; c < n; c++) for (let d = 0; d < n; d++) {
+    const r = semRepetir([a, b, c, d]);
+    if (r[0] !== a || r.some((x, k) => PALETA[x] === undefined || r.slice(0, k).some(o => mesmaCor(o, x)))) assert.fail(`${[a, b, c, d]} virou ${r}`);
+  }
+});
+
+test('corEscura: so as cores escuras do catalogo pedem contorno claro no nome', () => {
+  const escuras = cat.PALETA.flatMap((c, i) => cat.corEscura(c) ? [i] : []);
+  assert.deepEqual(escuras, [9, 18], 'grafite e bolinhas (azul-marinho)');
+});
