@@ -3,14 +3,14 @@
 # Almofadada
 
 **Party game 3D para jogar no PC com o celular como controle.**
-De 2 a 4 pessoas, 80 minijogos, nada para instalar no celular e nada de internet.
+De 2 a 5 pessoas, 105 minijogos, nada para instalar no celular e nada de internet.
 
 ![testes](https://github.com/hugh514/minijogos-de-sofa/actions/workflows/testes.yml/badge.svg)
 ![licença](https://img.shields.io/badge/licen%C3%A7a-MIT-blue)
 ![three.js](https://img.shields.io/badge/three.js-0.187-black)
 ![dependências](https://img.shields.io/badge/depend%C3%AAncias-1-brightgreen)
 
-<img src="docs/prints/festa-futebol-duplas.png" width="820" alt="Futebol de dupla com quatro jogadores">
+<img src="docs/prints/festa-galinhas.png" width="820" alt="Ladrão de galinhas com cinco no sofá: quatro jogam e um descansa">
 
 </div>
 
@@ -45,19 +45,19 @@ Sem celular por perto, o teclado do PC também joga (Jogador 1 com `WASD`, `F` e
 
 ## Brincadeiras e minijogos
 
-São 80 minijogos. Cada um declara com quais brincadeiras e quantos jogadores funciona.
+São 105 minijogos. Cada um declara com quais brincadeiras e quantos jogadores funciona.
 
 | Brincadeira | Jogadores | Como funciona | Minijogos que podem sair |
 |---|---|---|---|
 | **Duelo** | 2 | Rodadas curtas, 1 ponto cada. Quem chegar ao alvo de pontos (10, ou 6 quando há poucos minijogos) vence a partida. | 56 |
-| **Cada um por si** | 2 a 5 | Todos contra todos. Com 5 no sofá, a cada rodada um descansa (rodízio) e os outros quatro jogam. O minijogo diz quem venceu a rodada, e só ele pontua. | 12 feitos para a Festa (com 3 ou 4 jogadores). Com 2 jogadores, esses 12 mais os 56 do Duelo, 68 |
-| **Duplas** | 4 ou 5 | O Jogador 1 toca no celular em quem joga com ele (sem escolher, Jogador 1 e 3 contra 2 e 4). O ponto é do time. Com 5 no sofá um descansa por rodada, as duplas mudam a cada rodada e o ponto é de cada um da dupla vencedora. Nos minijogos do Duelo joga um de cada dupla, em revezamento (cada um enfrenta os dois da outra dupla), e o parceiro torce pelo celular. | 14 feitos para a Festa mais os 56 do Duelo, 70 |
+| **Cada um por si** | 2 a 5 | Todos contra todos. Com 5 no sofá, a cada rodada um descansa (rodízio) e os outros quatro jogam. O minijogo diz quem venceu a rodada, e só ele pontua. | 37 feitos para a Festa (com 3, 4 ou 5 jogadores). Com 2 jogadores, esses 37 mais os 56 do Duelo, 93 |
+| **Duplas** | 4 ou 5 | O Jogador 1 toca no celular em quem joga com ele (sem escolher, Jogador 1 e 3 contra 2 e 4). O ponto é do time. Com 5 no sofá um descansa por rodada, as duplas mudam a cada rodada e o ponto é de cada um da dupla vencedora. Nos minijogos do Duelo joga um de cada dupla, em revezamento (cada um enfrenta os dois da outra dupla), e o parceiro torce pelo celular. | Com 4: 39 feitos para a Festa mais os 56 do Duelo, 95. Com 5: os 39 da Festa |
 | **Todos juntos** | 2 a 5 | Cooperativo contra o jogo, em 5 noites. A equipe vence a partida se vencer mais da metade delas. | 10 |
 
-Os números acima são os do código atual: 56 minijogos só do Duelo, mais 24 feitos para a Festa, que somam os 80. Para conferir:
+Os números acima são os do código atual: 56 minijogos só do Duelo, mais 49 feitos para a Festa (37 de Cada um por si e Duplas, 2 só de Duplas e 10 de Todos juntos), que somam os 105. Para conferir:
 
 ```bash
-node --input-type=module -e "import fs from 'node:fs'; const L = await import('./logica.mjs'); for (const a of fs.readdirSync('jogos').filter(n => /^[a-z0-9-]+\.mjs/.test(n))) L.registra((await import('./jogos/' + a)).default); console.log(L.JOGOS.length, L.elegiveis('classico', 2).length, L.elegiveis('vs', 3).length, L.elegiveis('vs', 2).length, L.elegiveis('times', 4).length, L.elegiveis('coop', 4).length)"
+node --input-type=module -e "import fs from 'node:fs'; const L = await import('./logica.mjs'); for (const a of fs.readdirSync('jogos').filter(n => /^[a-z0-9-]+\.mjs/.test(n))) L.registra((await import('./jogos/' + a)).default); console.log(L.JOGOS.length, L.elegiveis('classico', 2).length, L.elegiveis('vs', 3).length, L.elegiveis('vs', 2).length, L.elegiveis('times', 4).length, L.elegiveis('times', 5).length, L.elegiveis('coop', 4).length)"
 # 80 56 12 68 14 10
 ```
 
@@ -108,7 +108,35 @@ Onde ler mais:
 
 ## Prints
 
-**Versão atual:**
+**Versão atual, com até 5 no sofá:**
+
+| | |
+|---|---|
+| <img src="docs/prints/duplas-com-5.png" alt="Explicação de uma rodada de Duplas com cinco jogadores"> | <img src="docs/prints/festa-sumo-5.png" alt="Sumô de três vidas com cinco no placar"> |
+| **Duplas com 5:** um descansa por rodada, as duplas mudam e a explicação mostra quem joga com quem | **Cinco no sofá:** quatro jogam, o placar mostra os cinco e o cartão de quem descansa fica apagado |
+| <img src="docs/prints/festa-cadeiras.png" alt="Dança das cadeiras da festa"> | <img src="docs/prints/festa-lava.png" alt="Chão de lava da festa"> |
+| **Dança das cadeiras:** uma cadeira a menos que os jogadores em pé | **Chão de lava:** o piso pisado racha e cai |
+| <img src="docs/prints/festa-labirinto.png" alt="Labirinto de bombas na festa"> | <img src="docs/prints/festa-cobras.png" alt="Trilha de luz na festa"> |
+| **Labirinto de bombas:** um em cada canto | **Trilha de luz:** bateu no rastro, saiu |
+| <img src="docs/prints/festa-hoquei.png" alt="Hóquei de todos"> | <img src="docs/prints/festa-canhoes.png" alt="Canhões de todos"> |
+| **Hóquei de todos:** cada um defende o seu gol | **Canhões de todos:** derrube as caixas dos rivais |
+| <img src="docs/prints/festa-volei-balao.png" alt="Balão não pode cair"> | <img src="docs/prints/festa-detector.png" alt="Caça aos tesouros"> |
+| **Balão não pode cair:** cada um defende o seu pedaço da quadra | **Caça aos tesouros:** o celular diz se está quente ou frio |
+| <img src="docs/prints/festa-helice.png" alt="Hélice maluca"> | <img src="docs/prints/festa-tanques.png" alt="Tanques em guerra"> |
+| **Hélice maluca:** pule a barra baixa e não pule na alta | **Tanques em guerra:** o tiro quica uma vez |
+| <img src="docs/prints/pets-no-sofa.png" alt="Bonecos com chapéus e pets no sofá"> | <img src="docs/prints/podio-5.png" alt="Pódio com cinco jogadores"> |
+| **Loja:** skins, chapéus e pets comprados com as moedas das rodadas | **Pódio** com os cinco |
+
+No celular:
+
+| | | |
+|---|---|---|
+| <img src="docs/prints/celular-escolhe-dupla.png" alt="Menu do Jogador 1 com a escolha da dupla"> | <img src="docs/prints/celular-cartas-festa.png" alt="Oferta de cartas de poder no celular"> | <img src="docs/prints/celular-descansa.png" alt="Celular de quem descansa na rodada"> |
+| **Duplas:** o Jogador 1 toca em quem joga com ele | **Cartas de poder** para quem perdeu a rodada | **Quem descansa** é avisado e pode torcer |
+| <img src="docs/prints/loja-pets.png" alt="Aba de pets da loja"> | <img src="docs/prints/loja-rastros.png" alt="Aba de rastros da loja"> | |
+| **Pets** que seguem o boneco | **Rastros** ao andar | |
+
+**Mais minijogos (os prints abaixo são de antes do quinto lugar no sofá):**
 
 | | |
 |---|---|
