@@ -67,6 +67,7 @@ function leCorpo(req, limite, usa) {
 function inteiro(v) { return Number.isInteger(v) ? v : undefined; }
 function slot(v) { return Number.isInteger(v) && v >= 1 && v <= SLOTS ? v : undefined; }       // numero do jogador, de 1 a 5
 function reacao(v) { return Number.isInteger(v) && v >= 0 && v <= 63 ? v : undefined; }   // indice na lista fixa de emojis da tela
+function item(v) { return Number.isInteger(v) && v >= 0 && v <= 15 ? v : undefined; }      // indice do item de rodada usado (lista ITENS do motor); ni e o contador
 function contador(v) { return Number.isInteger(v) && v >= 0 && v <= 1e9 ? v : undefined; }    // contador que so cresce (torcida)
 
 function listaJogos() {
@@ -91,6 +92,7 @@ function recebeEntrada(m) {
     j: m.j, x: +m.x || 0, y: +m.y || 0, d: !!m.d, b: !!m.b,
     n: inteiro(m.n), nb: inteiro(m.nb), op: inteiro(m.op), nop: inteiro(m.nop), s: inteiro(m.s), q: inteiro(m.q),
     r: reacao(m.r), nr: inteiro(m.nr), nt: contador(m.nt),
+    it: item(m.it), ni: contador(m.ni),
   });
   for (const t of telas) manda(t, msg);
 }

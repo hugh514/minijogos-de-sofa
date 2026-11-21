@@ -149,3 +149,21 @@ test('cores chapadas novas: par em PARECIDAS com quem confunde, e nenhuma confun
   for (let nova = 22; nova < 28; nova++) for (let padrao = 0; padrao < 4; padrao++) assert.equal(mesmaCor(nova, padrao), false, nova + ' x ' + padrao);
   for (const [a, b] of [[22, 6], [23, 7], [24, 13], [25, 5], [26, 4], [26, 20]]) assert.equal(mesmaCor(a, b), true, a + ' x ' + b);
 });
+
+// ---------- itens de rodada (spec 009): o aviso curto da TV ----------
+test('fraseItem: todo item do motor tem aviso na TV com os nomes de quem jogou e de quem levou', async () => {
+  const { ITENS } = await import('./logica.mjs');
+  const { fraseItem } = puras('tela.html', ['fraseItem']);
+  assert.equal(fraseItem({ id: 'bomba' }, 'Ana', 'Bia'), 'Ana jogou uma bomba em Bia');
+  assert.equal(fraseItem({ id: 'gelo' }, 'Ana', 'Bia'), 'Ana congelou Bia');
+  assert.equal(fraseItem({ id: 'tinta' }, 'Ana', 'Bia'), 'Ana jogou tinta no celular de Bia');
+  assert.equal(fraseItem({ id: 'turbo' }, 'Ana', 'Ana'), 'Ana ligou o turbo');
+  assert.equal(fraseItem({ id: 'guarda' }, 'Ana', 'Ana'), 'Ana abriu o guarda-chuva');
+  assert.equal(fraseItem({ id: 'bomba', bloqueado: true }, 'Ana', 'Bia'), 'O guarda-chuva de Bia segurou a bomba de Ana');
+  for (const k of ITENS) {
+    const t = fraseItem({ id: k.id }, 'Ana', 'Bia');
+    assert.ok(t.startsWith('Ana ') && t.length <= 40, k.id + ': ' + t);
+    if (k.alvo) assert.ok(fraseItem({ id: k.id, bloqueado: true }, 'Ana', 'Bia').includes('Bia segurou'), k.id);
+  }
+  for (const torto of [undefined, null, {}, { id: 'nada' }, { id: 'constructor' }, { id: '__proto__' }, 5]) assert.equal(fraseItem(torto, 'Ana', 'Bia'), '', JSON.stringify(torto));
+});

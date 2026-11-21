@@ -69,6 +69,7 @@ O que o jogo tem, em resumo:
 - **Rotação com variedade:** o mesmo minijogo não volta cedo, e o mesmo tipo de jogo não sai duas vezes seguidas. Veja [`specs/005-rotacao-e-variedade`](specs/005-rotacao-e-variedade/spec.md).
 - **Nenhuma rodada acaba em menos de 5 segundos**, por mais que alguém aperte sem querer. Veja [`specs/006-regra-dos-5-segundos`](specs/006-regra-dos-5-segundos/spec.md).
 - **Perfil, moedas e loja** de cores, chapéus, pets que seguem o boneco na TV, rastros e pacotes de reações, salvos no próprio celular.
+- **Itens de rodada** comprados com moedas na aba Itens da Loja e usados durante a rodada pelo celular: Bomba (atordoa), Gelo (congela), Turbo, Guarda-chuva (bloqueia o próximo item) e Tinta (mancha o celular do rival). Cada um usa 1 por rodada e 3 por partida; não valem no cooperativo. Detalhes em [`specs/009-itens-de-rodada`](specs/009-itens-de-rodada/spec.md).
 - **Minijogo novo sem reiniciar:** a tela confere a pasta `jogos/` a cada 8 s e põe o arquivo novo na rotação.
 
 ## Como este projeto é construído

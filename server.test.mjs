@@ -240,3 +240,15 @@ test('servidor: /fontes serve so a fonte woff2 da pasta, nunca a licenca nem cam
     assert.equal(r.status, 404, c + ' deveria ser 404 e foi ' + r.status);
   }
 });
+
+test('servidor: /in repassa o item usado (it de 0 a 15 e contador ni inteiro) e descarta valor torto', async () => {
+  const tela = escuta('/eventos');
+  await espera(80);
+  await pede('POST', '/in', JSON.stringify({ j: 2, x: 0, y: 0, it: 3, ni: 7 }));
+  for (const [it, ni] of [[16, 1], [-1, 2], [1.5, 3], ['2', 4], [null, 5], [{}, 6], [2, '9'], [2, 1.5], [2, null], [2, {}]]) await pede('POST', '/in', JSON.stringify({ j: 3, x: 0, y: 0, it, ni }));
+  await espera(150);
+  const de = j => tela.msgs.filter(m => m.j === j);
+  assert.deepEqual(de(2).map(m => [m.it, m.ni]), [[3, 7]]);
+  assert.deepEqual(de(3).map(m => [m.it, m.ni]), [[undefined, 1], [undefined, 2], [undefined, 3], [undefined, 4], [undefined, 5], [undefined, 6], [2, undefined], [2, undefined], [2, undefined], [2, undefined]]);
+  tela.fecha();
+});

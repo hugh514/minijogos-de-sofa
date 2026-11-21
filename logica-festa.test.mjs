@@ -853,3 +853,392 @@ test('ausentes: quem saiu do sofa fica de fora da rodada e volta quando reconect
     assert.deepEqual(c.duelo, [0, 1, 2, 4], 'com 5 no sofa e um ausente, ninguem precisa descansar');
   } finally { volta(); }
 });
+
+// ---------- itens de rodada (spec 009): comprados na Loja do celular, usados durante a rodada, com limite ----------
+import { ITENS, usaItem, itemLiberado, ITENS_POR_RODADA, ITENS_POR_PARTIDA, T_SEM_ITEM, T_IMUNE_ITEM } from './logica.mjs';
+
+// Rodada de mentira que nunca acaba sozinha, ja na fase 'jogando' e depois dos 3 s sem item. Jogadores em fila no eixo x (J1 em 0, J2 em 3, J3 em 6...).
+function rodadaItens({ n = 4, modo = 'vs', extra = {}, festa = { min: 2, max: 5, modos: ['vs', 'times', 'coop'] }, t = T_SEM_ITEM + 0.5 } = {}) {
+  const jogo = { ...falso('f-itens', festa), ...extra, inicia(p) { p.dados = {}; p.arena = { tipo: 'ret', lx: 40, lz: 40, parede: true }; p.jogadores.forEach((j, i) => { j.x = i * 3; }); } };
+  if (!festa) delete jogo.festa;
+  registra(jogo);
+  const p = criaPartida(sorte, { n, modo });
+  p.duelos = 0;       // a rodada sorteada na criacao nao conta: o revezamento comeca do primeiro par
+  pulaPara(p, jogo);
+  while (p.fase !== 'jogando') passo(p, DT);
+  roda(p, t);
+  return p;
+}
+const parado = { x: 0, y: 0, d: false, b: false };
+
+test('itens: catalogo com os cinco itens e os limites', () => {
+  assert.deepEqual(ITENS.map(k => k.id), ['bomba', 'gelo', 'turbo', 'guarda', 'tinta']);
+  for (const k of ITENS) assert.ok(typeof k.nome === 'string' && k.nome && typeof k.dica === 'string' && k.dica, k.id);
+  assert.equal(new Set(ITENS.map(k => k.nome)).size, ITENS.length);
+  assert.ok(!ITENS.some(k => k.nome === 'Escudo'), 'nao confunde com a carta de poder Escudo');
+  assert.deepEqual([ITENS_POR_RODADA, ITENS_POR_PARTIDA, T_SEM_ITEM, T_IMUNE_ITEM], [1, 3, 3, 4]);
+});
+
+test('itens: a bomba acerta o rival mais proximo e o atordoa por 1,5 s (joystick zerado, botoes e escolhas ignorados)', () => {
+  try {
+    const p = rodadaItens();
+    entrada(p, 1, { x: 1, y: 0, d: false, n: 0, nb: 0, nop: 0 });
+    assert.equal(usaItem(p, 0, 'bomba'), true);
+    const alvo = p.jogadores[1];
+    assert.ok(Math.abs(alvo.tonto - 1.5) < 1e-9, 'o mais perto de J1 e J2');
+    assert.equal(p.jogadores[2].tonto ?? 0, 0);
+    assert.deepEqual(alvo.ent, parado, 'joystick zerado na hora');
+    entrada(p, 1, { x: 1, y: 0, d: true, n: 1, b: true, nb: 1, op: 2, nop: 1 });
+    assert.deepEqual(alvo.ent, parado, 'joystick segue zerado');
+    assert.equal(alvo.apertouA, 0); assert.equal(alvo.apertouB, 0); assert.equal(alvo.escolha, -1);
+    alvo.vx = 0;
+    const x0 = alvo.x;
+    roda(p, 1.4);
+    assert.ok(Math.abs(alvo.x - x0) < 0.2, 'atordoado nao anda: ' + (alvo.x - x0));
+    assert.ok(alvo.tonto > 0);
+    roda(p, 0.2);
+    assert.equal(alvo.tonto, 0);
+    assert.equal(alvo.ent.x, 1, 'o joystick que o dedo segurava volta a valer sozinho');
+    roda(p, 0.5);
+    assert.ok(alvo.x - x0 > 1, 'e ele anda de novo');
+    entrada(p, 1, { x: 0, y: 0, d: true, n: 2, nb: 1, op: 1, nop: 2 });
+    assert.equal(alvo.apertouA, 1); assert.equal(alvo.escolha, 1);
+  } finally { limpa(); }
+});
+
+test('itens: o mais proximo e medido pela posicao, nao pelo indice', () => {
+  try {
+    const p = rodadaItens();
+    p.jogadores[3].x = 0.5; p.jogadores[3].z = 1;
+    assert.equal(usaItem(p, 0, 'bomba'), true);
+    assert.ok(p.jogadores[3].tonto > 0);
+    assert.equal(p.jogadores[1].tonto ?? 0, 0);
+  } finally { limpa(); }
+});
+
+test('itens: em minijogo sem posicao (semMovimento ou sem joystick) o alvo e o lider do placar', () => {
+  try {
+    for (const extra of [{ semMovimento: true }, { controle: { modo: 'opcoes' } }]) {
+      const p = rodadaItens({ extra });
+      p.jogadores[2].pontos = 4; p.jogadores[1].pontos = 2;
+      assert.equal(usaItem(p, 0, 'bomba'), true);
+      assert.ok(p.jogadores[2].tonto > 0, 'lider');
+      assert.equal(p.jogadores[1].tonto ?? 0, 0);
+      limpa();
+    }
+  } finally { limpa(); }
+});
+
+test('itens: o lider usa o item no melhor colocado dos outros; empate vai para o proximo na roda', () => {
+  try {
+    const p = rodadaItens({ extra: { semMovimento: true } });
+    p.jogadores[2].pontos = 4; p.jogadores[1].pontos = 2;
+    assert.equal(usaItem(p, 2, 'bomba'), true);
+    assert.ok(p.jogadores[1].tonto > 0, 'o lider acerta o segundo');
+    const q = rodadaItens({ extra: { semMovimento: true } });
+    assert.equal(usaItem(q, 2, 'bomba'), true);
+    assert.ok(q.jogadores[3].tonto > 0, 'todos empatados: o proximo depois de quem jogou');
+  } finally { limpa(); }
+});
+
+test('itens: quem esta atordoado ou congelado nao usa item', () => {
+  try {
+    const p = rodadaItens();
+    assert.equal(usaItem(p, 0, 'bomba'), true);
+    assert.equal(itemLiberado(p, 1, 'bomba'), false);
+    assert.equal(usaItem(p, 1, 'bomba'), false);
+    assert.equal(p.jogadores[1].itensRodada ?? 0, 0);
+  } finally { limpa(); }
+});
+
+test('itens: gelo congela por 2 s e deixa o chao liso por mais 3 s em minijogo de joystick; nos outros, 1,2 s parado', () => {
+  try {
+    const p = rodadaItens();
+    assert.equal(usaItem(p, 0, 'gelo'), true);
+    const alvo = p.jogadores[1];
+    assert.ok(Math.abs(alvo.gelo - 2) < 1e-9); assert.ok(Math.abs(alvo.liso - 5) < 1e-9);
+    entrada(p, 1, { x: 1, y: 0, d: true, n: 5 });
+    assert.deepEqual(alvo.ent, parado);
+    roda(p, 2.1);
+    assert.equal(alvo.gelo, 0); assert.ok(alvo.liso > 2.8);
+    // liso: com o mesmo empurrao, desliza bem mais que o normal
+    const livre = p.jogadores[3];
+    for (const j of [alvo, livre]) { j.ent = { ...parado }; j.vx = 8; j.vz = 0; j.z += 20 * (j === alvo ? 1 : -1); }
+    const xa = alvo.x, xl = livre.x;
+    roda(p, 1);
+    assert.ok(alvo.x - xa > (livre.x - xl) * 1.5, `liso ${alvo.x - xa} x normal ${livre.x - xl}`);
+    roda(p, 2.2);
+    assert.equal(alvo.liso, 0);
+    const q = rodadaItens({ extra: { semMovimento: true } });
+    assert.equal(usaItem(q, 0, 'gelo'), true);
+    const b = q.jogadores.find(j => j.gelo > 0);
+    assert.ok(Math.abs(b.gelo - 1.2) < 1e-9); assert.equal(b.liso ?? 0, 0);
+  } finally { limpa(); }
+});
+
+test('itens: turbo deixa quem usou mais rapido por 4 s e so vale em minijogo em que o motor move o boneco', () => {
+  try {
+    const p = rodadaItens();
+    for (const i of [0, 3]) { p.jogadores[i].z = i ? 20 : -20; p.jogadores[i].x = 0; entrada(p, i, { x: 1, y: 0 }); }
+    assert.equal(usaItem(p, 0, 'turbo'), true);
+    assert.ok(Math.abs(p.jogadores[0].turboItem - 4) < 1e-9);
+    roda(p, 2);
+    assert.ok(p.jogadores[0].x > p.jogadores[3].x * 1.25, `turbo ${p.jogadores[0].x} x normal ${p.jogadores[3].x}`);
+    roda(p, 2.1);
+    assert.equal(p.jogadores[0].turboItem, 0);
+    for (const extra of [{ semMovimento: true }, { controle: { modo: 'botao' } }, { controle: { joystick: false } }]) {
+      const q = rodadaItens({ extra });
+      assert.equal(itemLiberado(q, 0, 'turbo'), false);
+      assert.equal(usaItem(q, 0, 'turbo'), false);
+      assert.equal(q.jogadores[0].itensRodada ?? 0, 0, 'recusado nao conta no limite');
+      assert.equal(itemLiberado(q, 0, 'bomba'), true);
+      limpa();
+    }
+  } finally { limpa(); }
+});
+
+test('itens: o guarda-chuva bloqueia o proximo item jogado em quem abriu, e so um', () => {
+  try {
+    const p = rodadaItens();
+    assert.equal(usaItem(p, 1, 'guarda'), true);
+    assert.equal(p.jogadores[1].guarda, true);
+    assert.equal(usaItem(p, 0, 'bomba'), true, 'quem jogou gasta o item mesmo bloqueado');
+    assert.equal(p.jogadores[1].tonto ?? 0, 0);
+    assert.equal(p.jogadores[1].guarda, false);
+    assert.equal(p.itens.at(-1).bloqueado, true);
+    assert.ok(p.eventos.includes('item-bloqueio'));
+    roda(p, T_IMUNE_ITEM + 0.1);
+    p.jogadores[2].x = 3.1; p.jogadores[2].z = 5;       // J3 perto de J2
+    assert.equal(usaItem(p, 2, 'bomba'), true);
+    assert.ok(p.jogadores[1].tonto > 0, 'o segundo item passa');
+  } finally { limpa(); }
+});
+
+test('itens: o guarda-chuva vale so na rodada em que foi aberto', () => {
+  try {
+    const p = rodadaItens();
+    assert.equal(usaItem(p, 1, 'guarda'), true);
+    pulaPara(p, JOGOS.find(j => j.id === 'f-itens'));
+    assert.ok(!p.jogadores[1].guarda);
+  } finally { limpa(); }
+});
+
+test('itens: a tinta marca o alvo por 3 s e nao mexe no controle', () => {
+  try {
+    const p = rodadaItens();
+    entrada(p, 1, { x: 1, y: 0 });
+    assert.equal(usaItem(p, 0, 'tinta'), true);
+    const alvo = p.jogadores[1];
+    assert.ok(Math.abs(alvo.tinta - 3) < 1e-9);
+    assert.equal(alvo.ent.x, 1);
+    assert.equal(alvo.tonto ?? 0, 0);
+    roda(p, 3.1);
+    assert.equal(alvo.tinta, 0);
+  } finally { limpa(); }
+});
+
+test('itens: cada jogador usa 1 por rodada e 3 por partida; a partida nova zera', () => {
+  try {
+    const p = rodadaItens();
+    const jogo = JOGOS.find(j => j.id === 'f-itens');
+    const novaRodada = () => { pulaPara(p, jogo); while (p.fase !== 'jogando') passo(p, DT); roda(p, T_SEM_ITEM + 0.5); };
+    assert.equal(usaItem(p, 0, 'guarda'), true);
+    assert.equal(itemLiberado(p, 0, 'bomba'), false);
+    assert.equal(usaItem(p, 0, 'bomba'), false, 'segundo item na mesma rodada');
+    assert.equal(usaItem(p, 1, 'guarda'), true, 'o limite e de cada um');
+    novaRodada(); assert.equal(usaItem(p, 0, 'guarda'), true);
+    novaRodada(); assert.equal(usaItem(p, 0, 'guarda'), true);
+    assert.equal(p.jogadores[0].itensPartida, 3);
+    novaRodada();
+    assert.equal(itemLiberado(p, 0, 'guarda'), false);
+    assert.equal(usaItem(p, 0, 'guarda'), false, 'quarto item da partida');
+    assert.equal(usaItem(p, 1, 'guarda'), true);
+    reinicia(p);
+    assert.deepEqual(p.jogadores.map(j => j.itensPartida), [0, 0, 0, 0], 'partida nova');
+    assert.ok(p.jogadores.every(j => j.itemGasto === null), 'e o ultimo gasto nao fica para a partida seguinte');
+  } finally { limpa(); }
+});
+
+test('itens: nada nos primeiros 3 s da rodada, na explicacao, nem depois que a rodada acabou', () => {
+  try {
+    const p = rodadaItens({ t: 0 });
+    assert.equal(usaItem(p, 0, 'bomba'), false);
+    roda(p, T_SEM_ITEM - 0.2);
+    assert.equal(itemLiberado(p, 0, 'bomba'), false);
+    assert.equal(usaItem(p, 0, 'bomba'), false);
+    roda(p, 0.3);
+    assert.equal(itemLiberado(p, 0, 'bomba'), true);
+    p.dados.fimCedo = 1;       // decidida antes dos 5 s (comMinimo): ja acabou para efeito de item
+    assert.equal(usaItem(p, 0, 'bomba'), false);
+    delete p.dados.fimCedo;
+    p.dados.resposta = 1; passo(p, DT);
+    assert.equal(p.fase, 'resultado');
+    assert.equal(usaItem(p, 0, 'bomba'), false);
+    assert.equal(p.jogadores[0].itensRodada ?? 0, 0);
+    pulaPara(p, JOGOS.find(j => j.id === 'f-itens'));
+    assert.equal(p.fase, 'intro');
+    assert.equal(usaItem(p, 0, 'bomba'), false);
+  } finally { limpa(); }
+});
+
+test('itens: quem foi atingido fica imune por 4 s; o item vai para outro rival e, sem rival livre, nao gasta', () => {
+  try {
+    const p = rodadaItens({ n: 3 });
+    assert.equal(usaItem(p, 0, 'bomba'), true);       // J2 (mais perto de J1)
+    assert.ok(Math.abs(p.jogadores[1].imuneItem - T_IMUNE_ITEM) < 1e-9);
+    assert.equal(usaItem(p, 2, 'tinta'), true);       // J3 esta mais perto de J2, mas J2 esta imune: vai em J1
+    assert.equal(p.jogadores[1].tinta ?? 0, 0);
+    assert.ok(p.jogadores[0].tinta > 0);
+    limpa();
+    const q = rodadaItens({ n: 2, festa: { min: 2, max: 2, modos: ['vs'] } });
+    assert.equal(usaItem(q, 0, 'tinta'), true);
+    q.jogadores[0].itensRodada = 0;       // so para isolar a imunidade do limite da rodada
+    assert.equal(usaItem(q, 0, 'bomba'), false, 'unico rival imune');
+    assert.equal(q.jogadores[0].itensRodada, 0);
+    assert.equal(q.jogadores[1].tonto ?? 0, 0);
+    roda(q, T_IMUNE_ITEM + 0.1);
+    assert.equal(usaItem(q, 0, 'bomba'), true);
+  } finally { limpa(); }
+});
+
+test('itens: nao valem no cooperativo', () => {
+  try {
+    const p = rodadaItens({ modo: 'coop', festa: { min: 2, max: 5, modos: ['coop'] } });
+    assert.equal(p.jogo.id, 'f-itens');
+    for (const k of ITENS) { assert.equal(itemLiberado(p, 0, k.id), false, k.id); assert.equal(usaItem(p, 0, k.id), false, k.id); }
+    assert.deepEqual(p.itens, []);
+  } finally { limpa(); }
+});
+
+test('itens: em Duplas o parceiro nunca e alvo', () => {
+  try {
+    const p = rodadaItens({ modo: 'times' });
+    p.jogadores[2].x = 0.5; p.jogadores[2].z = 2;       // o parceiro de J1 (J3) perto dele; rivais J2 em 3 e J4 em 9
+    assert.equal(usaItem(p, 0, 'bomba'), true);
+    assert.equal(p.jogadores[2].tonto ?? 0, 0);
+    assert.ok(p.jogadores[1].tonto > 0);
+    limpa();
+    const q = rodadaItens({ modo: 'times', extra: { semMovimento: true } });
+    q.jogadores[2].pontos = 5;       // forca um "lider" no time de quem joga
+    assert.equal(usaItem(q, 0, 'bomba'), true);
+    assert.equal(q.jogadores[2].tonto ?? 0, 0);
+  } finally { limpa(); }
+});
+
+test('itens: quem esta de fora da rodada nao usa nem e alvo (Duplas com minijogo de 2 e rodizio com 5)', () => {
+  const volta = semClassicos();
+  try {
+    const p = rodadaItens({ modo: 'times', festa: null });       // minijogo de 2: joga um de cada dupla
+    assert.deepEqual(p.duelo, [0, 1]);
+    assert.equal(itemLiberado(p, 2, 'bomba'), false);
+    assert.equal(usaItem(p, 2, 'bomba'), false);
+    assert.equal(usaItem(p, 0, 'bomba'), true);
+    assert.ok(p.jogadores[1].tonto > 0);
+    limpa();
+    const q = rodadaItens({ n: 5, festa: { min: 2, max: 4, modos: ['vs'] } });
+    assert.deepEqual(q.duelo, [0, 1, 2, 3]);
+    assert.equal(usaItem(q, 4, 'bomba'), false, 'quem descansa nao usa');
+    q.jogadores[4].x = 9.2; q.jogadores[4].z = 0;       // quem descansa "ao lado" de J4 nao vira alvo
+    assert.equal(usaItem(q, 3, 'bomba'), true);
+    assert.equal(q.jogadores[4].tonto ?? 0, 0);
+    assert.ok(q.jogadores[2].tonto > 0);
+  } finally { limpa(); volta(); }
+});
+
+test('itens: minijogo que declara semItens recusa todos', () => {
+  try {
+    const p = rodadaItens({ extra: { semItens: true } });
+    for (const k of ITENS) { assert.equal(itemLiberado(p, 0, k.id), false); assert.equal(usaItem(p, 0, k.id), false); }
+  } finally { limpa(); }
+});
+
+test('itens: quem caiu (fora do jogo) nao usa nem e alvo', () => {
+  try {
+    const p = rodadaItens();
+    p.jogadores[1].vivo = false;
+    assert.equal(usaItem(p, 1, 'bomba'), false);
+    assert.equal(usaItem(p, 0, 'bomba'), true);
+    assert.equal(p.jogadores[1].tonto ?? 0, 0);
+    assert.ok(p.jogadores[2].tonto > 0);
+  } finally { limpa(); }
+});
+
+test('itens: pelo celular (it e contador ni), cada toque conta uma vez e o gasto so e registrado quando o motor aceita', () => {
+  try {
+    const p = rodadaItens();
+    const j = p.jogadores[0];
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 7 });       // primeira mensagem: so a base do contador
+    assert.equal(j.itensRodada ?? 0, 0); assert.equal(j.itemGasto ?? null, null);
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 8 });
+    assert.equal(j.itensRodada, 1);
+    assert.equal(j.itemGasto.id, 'bomba');
+    const serie = j.itemGasto.n;
+    assert.ok(p.jogadores[1].tonto > 0);
+    for (let k = 0; k < 3; k++) entrada(p, 0, { x: 0, y: 0, it: 0, ni: 8 });       // o mesmo toque repetido (sinal de vida)
+    assert.equal(j.itensPartida, 1); assert.equal(j.itemGasto.n, serie);
+    entrada(p, 0, { x: 0, y: 0, it: 4, ni: 9 });       // segundo item na rodada: recusado, nada gasto
+    assert.equal(j.itemGasto.n, serie); assert.equal(j.itensPartida, 1);
+    assert.equal(j.itensNegados, 1);
+    entrada(p, 2, { x: 0, y: 0, it: 3, ni: 1 }); entrada(p, 2, { x: 0, y: 0, it: 3, ni: 2 });
+    assert.equal(p.jogadores[2].itemGasto.id, 'guarda');
+    assert.ok(p.jogadores[2].itemGasto.n > serie, 'cada gasto tem um numero de serie proprio na partida');
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 3 });       // contador menor (celular recarregou): so acerta a base
+    assert.equal(j.itensNegados, 1);
+  } finally { limpa(); }
+});
+
+test('itens: pausado (semToque) o contador acompanha e o toque nao vale depois', () => {
+  try {
+    const p = rodadaItens();
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 1 });
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 2 }, true);
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 2 });
+    assert.equal(p.jogadores[0].itensRodada ?? 0, 0);
+    assert.deepEqual(p.itens, []);
+  } finally { limpa(); }
+});
+
+test('itens: valores tortos vindos da rede nao quebram nem gastam', () => {
+  try {
+    const p = rodadaItens();
+    const j = p.jogadores[0];
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: 1 });
+    let ni = 1;
+    for (const it of [-1, 5, 99, 1.5, '0', null, undefined, {}, [], 'constructor', '__proto__', 'length', NaN, Infinity, true])
+      assert.doesNotThrow(() => entrada(p, 0, { x: 0, y: 0, it, ni: ++ni }), String(it));
+    for (const torto of ['9999', 1e12 + 0.5, null, {}, NaN, -3, Infinity])
+      assert.doesNotThrow(() => entrada(p, 0, { x: 0, y: 0, it: 0, ni: torto }), String(torto));
+    assert.equal(j.itensRodada ?? 0, 0); assert.equal(j.itemGasto ?? null, null);
+    assert.deepEqual(p.itens, []);
+    for (const id of [undefined, null, 'nada', 'constructor', '__proto__', 0, {}]) assert.equal(usaItem(p, 0, id), false);
+    for (const i of [-1, 9, 1.5, 'x', undefined]) { assert.equal(usaItem(p, i, 'bomba'), false); assert.equal(itemLiberado(p, i, 'bomba'), false); }
+    assert.ok(Number.isInteger(j.ni), 'o contador guardado continua inteiro');
+    entrada(p, 0, { x: 0, y: 0, it: 0, ni: j.ni + 1 });
+    assert.equal(j.itensRodada, 1, 'e o proximo toque de verdade vale');
+  } finally { limpa(); }
+});
+
+test('itens: cada uso vira evento de som e entra no registro p.itens da rodada (quem, em quem, quando)', () => {
+  try {
+    const p = rodadaItens();
+    p.eventos.length = 0;
+    usaItem(p, 0, 'bomba'); usaItem(p, 1, 'tinta'); usaItem(p, 2, 'turbo'); usaItem(p, 3, 'guarda');
+    assert.deepEqual(p.eventos, ['item-bomba', 'item-turbo', 'item-guarda'], 'J2 atordoado nao jogou a tinta');
+    assert.deepEqual(p.itens.map(u => [u.id, u.de, u.para]), [['bomba', 0, 1], ['turbo', 2, 2], ['guarda', 3, 3]]);
+    assert.ok(p.itens.every(u => Math.abs(u.t - p.t) < 1e-9 && !u.bloqueado));
+    pulaPara(p, JOGOS.find(j => j.id === 'f-itens'));
+    assert.deepEqual(p.itens, [], 'rodada nova, registro novo');
+    for (const j of p.jogadores) for (const k of ['tonto', 'gelo', 'liso', 'turboItem', 'tinta', 'imuneItem']) assert.equal(j[k], 0, k);
+  } finally { limpa(); }
+});
+
+test('itens: funcionam no Duelo (classico) e nao em minijogo cooperativo do Duelo', () => {
+  try {
+    const p = rodadaItens({ n: 2, modo: 'classico', festa: null });
+    assert.equal(usaItem(p, 1, 'gelo'), true);
+    assert.ok(p.jogadores[0].gelo > 0);
+    limpa();
+    const q = rodadaItens({ n: 2, modo: 'classico', festa: null, extra: { coop: true } });
+    assert.equal(usaItem(q, 0, 'bomba'), false);
+  } finally { limpa(); }
+});

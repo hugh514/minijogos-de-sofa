@@ -29,6 +29,7 @@ export default {
   semPulo: true,        // botão B não pula
   semMod: ['lua'],      // modificadores de rodada que não podem sair neste minijogo (ids: ouro, gelo, foguete, espelho, lua)
   semCarta: ['pulo'],   // cartas de poder que não são oferecidas neste minijogo (ids: dobro, moedas, escudo, turbo, dash, pulo)
+  semItens: true,       // itens de rodada (bomba, gelo, turbo, guarda-chuva, tinta) não valem neste minijogo (ver "Itens de rodada")
   rotulo: 'moedas',     // texto do placar da rodada, se você mantiver p.dados.placar = [a, b]
   duracao: 25,          // se a rodada tem tempo fixo, a tela mostra a contagem regressiva
   coop: true,           // cooperativo: os dois jogam juntos (ver "Minijogo cooperativo")
@@ -177,6 +178,17 @@ Regras (todas em `logica.mjs`, sem nada para o minijogo fazer):
 - **Histórico**: só entra a rodada que de fato começou; ao voltar ao menu ou trocar de modo antes de começar, o id sorteado sai do histórico. O alvo `p.alvo` é recalculado a cada rodada enquanto todos têm 0 pontos (a pasta pode ainda estar carregando).
 - **Poucos elegíveis** (menos de 8): minijogo repetido na mesma partida volta com modificador diferente. Com menos de 6 elegíveis o alvo de pontos (`p.alvo`) é 6 em vez de `PONTOS_VITORIA` (10), e a tela mostra `p.alvo`, nunca a constante. "Todos contra todos" com 2 pessoas sorteia também os minijogos do Clássico (menos os `coop`).
 - **Cooperativo (5 noites)**: o baralho garante que as 5 noites cubram os minijogos coop distintos antes de repetir um (com 4 coop, a quinta noite é a única repetida, com modificador).
+
+## Itens de rodada (o motor cuida, o minijogo não precisa fazer nada)
+
+O jogador compra itens na Loja do celular e usa durante a rodada (spec `specs/009-itens-de-rodada`). O motor aplica tudo sozinho, igual em todo minijogo:
+Bomba e Gelo deixam o alvo sem controle por um instante (`j.ent` zerado, `j.apertouA`, `j.apertouB` e `j.escolha` não chegam), Turbo multiplica a aceleração do
+movimento padrão (não mexe em `j.turbo`), Guarda-chuva bloqueia o próximo item e Tinta só mancha o celular do alvo. O alvo é o rival mais próximo em minijogo de
+joystick e o líder do placar nos outros. Limites: 1 por rodada e 3 por partida por jogador, nada nos 3 primeiros segundos, 4 s de imunidade para quem foi atingido,
+nada no cooperativo. Os tempos ficam em `j.tonto`, `j.gelo`, `j.liso`, `j.turboItem`, `j.tinta` e `j.imuneItem` (segundos que faltam), `j.guarda` diz se o
+guarda-chuva está aberto e `p.itens` lista os usos da rodada; a tela desenha os efeitos e o aviso. Se o seu minijogo move o boneco por conta própria e lê `j.ent`,
+o atordoado já para sozinho. Se item não combina com o minijogo (rodada de um toque só, por exemplo), declare `semItens: true`. Eventos novos de som: `item-bomba`,
+`item-gelo`, `item-turbo`, `item-guarda`, `item-tinta` e `item-bloqueio`.
 
 ## Cartas de poder (o motor cuida, o minijogo não precisa fazer nada)
 

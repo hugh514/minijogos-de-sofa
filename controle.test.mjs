@@ -162,3 +162,71 @@ test('reacoes: celular e tela tem a mesma lista na mesma ordem, e todo pacote ap
   const usados = [0, 1, 2, 3, 4, 5, ...pacotes.flatMap(p => p[2])];
   assert.deepEqual(usados, [...tela.keys()], 'cada emoji esta em um pacote so (ou e de graca)');
 });
+
+// ---------- itens de rodada (spec 009): catalogo e estoque no celular ----------
+import { ITENS as ITENS_MOTOR } from './logica.mjs';
+const itensFone = catalogo('controle.html', ['ITENS', 'ESTOQUE_MAX', 'estoqueLimpo', 'compraItem', 'gastaItem'])[1];
+
+test('itens: celular e motor tem os mesmos itens na mesma ordem (so o indice viaja pela rede), com preco na faixa', () => {
+  assert.deepEqual(itensFone.ITENS.map(k => k[0]), ITENS_MOTOR.map(k => k.id));
+  assert.deepEqual(itensFone.ITENS.map(k => k[1]), ITENS_MOTOR.map(k => k.nome));
+  // quem perde ganha 3 moedas e quem vence ganha 10: um item custa de 2 a 3 rodadas ganhas, nunca mais que isso
+  for (const [id, , preco, dica] of itensFone.ITENS) { assert.ok(Number.isInteger(preco) && preco >= 15 && preco <= 30, id); assert.ok(typeof dica === 'string' && dica.length > 5 && dica.length <= 40, id); }
+  assert.equal(itensFone.ESTOQUE_MAX, 9);
+  assert.ok(itensFone.ITENS.length <= 16, 'o servidor so repassa indice de 0 a 15');
+});
+
+test('itens: todo item tem icone no celular', () => {
+  for (const k of itensFone.ITENS) assert.ok(fonteFone.includes(`<symbol id="i-${k[4]}"`), k[0]);
+});
+
+test('itens: compra por unidade, so com saldo e ate 9 de cada', () => {
+  const { compraItem, estoqueLimpo } = itensFone;
+  const perfil = { moedas: 70, itens: estoqueLimpo(null) };
+  assert.deepEqual(perfil.itens, { bomba: 0, gelo: 0, turbo: 0, guarda: 0, tinta: 0 });
+  assert.equal(compraItem(perfil, 0), true);
+  assert.deepEqual([perfil.moedas, perfil.itens.bomba], [40, 1]);
+  assert.equal(compraItem(perfil, 0), true);
+  assert.equal(compraItem(perfil, 0), false, 'saldo de 10 nao compra bomba de 30');
+  assert.deepEqual([perfil.moedas, perfil.itens.bomba], [10, 2]);
+  for (const torto of [-1, 5, 1.5, '0', null, undefined, 'length']) assert.equal(compraItem(perfil, torto), false, String(torto));
+  const rico = { moedas: 9999, itens: estoqueLimpo(null) };
+  for (let k = 0; k < 9; k++) assert.equal(compraItem(rico, 4), true);
+  assert.equal(compraItem(rico, 4), false, 'estoque cheio');
+  assert.deepEqual([rico.itens.tinta, rico.moedas], [9, 9999 - 9 * 15]);
+});
+
+test('itens: o estoque so desconta quando a tela confirma o uso, e cada confirmacao conta uma vez', () => {
+  const { gastaItem, estoqueLimpo } = itensFone;
+  const perfil = { moedas: 0, itens: { ...estoqueLimpo(null), bomba: 2, tinta: 1 }, gastos: [] };
+  assert.equal(gastaItem(perfil, { id: 'a-1', k: 0 }), true);
+  assert.equal(perfil.itens.bomba, 1);
+  for (let k = 0; k < 5; k++) assert.equal(gastaItem(perfil, { id: 'a-1', k: 0 }), false, 'o mesmo estado chega varias vezes');
+  assert.equal(perfil.itens.bomba, 1);
+  assert.equal(gastaItem(perfil, { id: 'a-2', k: 4 }), true);
+  assert.equal(perfil.itens.tinta, 0);
+  assert.equal(gastaItem(perfil, { id: 'a-3', k: 4 }), true, 'confirmacao sem estoque: registra e nao fica negativo');
+  assert.equal(perfil.itens.tinta, 0);
+  for (const torto of [undefined, null, 'x', 7, {}, { id: 5, k: 0 }, { id: '', k: 0 }, { id: 'b-1', k: 9 }, { id: 'b-2', k: 'bomba' }, { id: 'x'.repeat(80), k: 0 }, { id: 'b-3' }])
+    assert.equal(gastaItem(perfil, torto), false, JSON.stringify(torto));
+  assert.equal(perfil.itens.bomba, 1);
+  for (let k = 0; k < 40; k++) gastaItem(perfil, { id: 'c-' + k, k: 1 });
+  assert.ok(perfil.gastos.length <= 12, 'a lista de confirmacoes vistas nao cresce sem fim');
+});
+
+test('itens: estoque salvo torto volta ao padrao (so inteiro de 0 a 9 por item do catalogo)', () => {
+  const { estoqueLimpo } = itensFone;
+  assert.deepEqual(estoqueLimpo({ bomba: 3, gelo: 99, turbo: -2, guarda: '4', tinta: 2.7, outro: 5, __proto__: { x: 1 } }), { bomba: 3, gelo: 9, turbo: 0, guarda: 0, tinta: 0 });
+  for (const torto of [undefined, null, 5, 'abc', [1, 2, 3]]) assert.deepEqual(estoqueLimpo(torto), { bomba: 0, gelo: 0, turbo: 0, guarda: 0, tinta: 0 }, String(torto));
+});
+
+test('itens: confirmacao que nao e de um toque deste celular so fica registrada, sem descontar (outro aparelho no mesmo lugar)', () => {
+  const { gastaItem, estoqueLimpo } = itensFone;
+  const perfil = { moedas: 0, itens: { ...estoqueLimpo(null), bomba: 2 }, gastos: [] };
+  assert.equal(gastaItem(perfil, { id: 'z-1', k: 0 }, false), false);
+  assert.equal(perfil.itens.bomba, 2);
+  assert.equal(gastaItem(perfil, { id: 'z-1', k: 0 }, true), false, 'e a mesma confirmacao nao desconta depois, quando este celular usar um item');
+  assert.equal(perfil.itens.bomba, 2);
+  assert.equal(gastaItem(perfil, { id: 'z-2', k: 0 }, true), true);
+  assert.equal(perfil.itens.bomba, 1);
+});

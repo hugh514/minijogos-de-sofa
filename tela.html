@@ -275,6 +275,10 @@
   .cx .coop{display:inline-block;margin:0 0 .6em;padding:.25em 1.1em .3em;border-radius:.6em;background:linear-gradient(180deg,#5fe08a,#22a06b);color:#06210f;font-size:1.4em;font-weight:900;box-shadow:0 .16em 0 #0b5a33}
   .cx .oferta{margin:-.2em 0 .7em;font-size:1.15em;font-weight:800;color:#ffd84d}
   .jg .chipCarta{font-size:.8em;margin-top:.15em}
+  /* itens de rodada (spec 009): aviso curto embaixo e ficha do efeito no cartao de quem levou */
+  #hudItens{position:absolute;left:0;width:100%;bottom:2.2%;text-align:center}
+  .avItem{display:inline-block;padding:.16em 1em .24em;border-radius:.45em;font-size:1.7em;font-weight:900;color:#fff;background:#0c1022f5;border-bottom:.16em solid var(--ci);box-shadow:0 .14em 0 #0009;animation:surge .25s cubic-bezier(.2,1.5,.4,1)}
+  .inv.efeito{border-color:var(--ci);color:var(--ci)}
   #conta span{text-shadow:0 0 .25em var(--brilho,#fff8),0 .08em 0 #0b0e1a}
   #conta span.ja{font-size:1.25em;text-shadow:0 0 .3em #5fe08a,0 0 .08em #fff,0 .08em 0 #0b0e1a}
   #conta i{position:absolute;left:50%;top:50%;width:1em;height:1em;margin:-.5em 0 0 -.5em;border-radius:50%;border:.06em solid var(--brilho,#fff);opacity:0;animation:onda .7s ease-out both;pointer-events:none}
@@ -302,6 +306,7 @@
   <div id="fim"></div>
   <!-- lanchonete: bloco reservado para a Lanchonete (frente C), vazio por enquanto -->
   <div id="hudLanchonete"></div>
+  <div id="hudItens"></div>
   <div id="voo"></div>
   <div id="lampejo"></div>
   <div id="cortina"></div>
@@ -352,7 +357,7 @@
 import * as THREE from '/three/three.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as clonaModelo } from 'three/addons/utils/SkeletonUtils.js';
-import { vista, timeNaRodada, criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, comMinimo, NOITES_COOP, CARTAS, JOGOS, RAIO } from '/logica.mjs';
+import { vista, timeNaRodada, criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, comMinimo, NOITES_COOP, CARTAS, JOGOS, RAIO, ITENS, itemLiberado } from '/logica.mjs';
 
 const $ = id => document.getElementById(id);
 // @catalogo (o tela.test.mjs e o controle.test.mjs leem este trecho: so dados e funcoes sem DOM nem THREE)
@@ -434,6 +439,14 @@ const milhar = n => (Number.isInteger(n) ? n : 0).toLocaleString('pt-BR');
 function rotulo(s, max = 20) { const t = textoSeguro(s, max); return t.length > 1 && t === t.toLocaleUpperCase('pt-BR') && t !== t.toLocaleLowerCase('pt-BR') ? t[0] + t.slice(1).toLocaleLowerCase('pt-BR') : t; }
 // Com troca = [a, b], a vira b e b vira a; o resto fica. Vale nos dois sentidos (lugar do celular -> indice e indice -> lugar).
 function lugarDe(troca, s) { return !troca ? s : s === troca[0] ? troca[1] : s === troca[1] ? troca[0] : s; }
+// Aviso curto da TV quando alguem usa um item de rodada (u vem de p.itens; de e para sao os nomes).
+const FRASE_ITEM = { bomba: ['jogou uma bomba em', 'a bomba'], gelo: ['congelou', 'o gelo'], tinta: ['jogou tinta no celular de', 'a tinta'], turbo: ['ligou o turbo'], guarda: ['abriu o guarda-chuva'] };
+function fraseItem(u, de, para) {
+  const f = u && typeof u === 'object' && Object.hasOwn(FRASE_ITEM, u.id) ? FRASE_ITEM[u.id] : null;
+  if (!f) return '';
+  if (u.bloqueado && f[1]) return `O guarda-chuva de ${para} segurou ${f[1]} de ${de}`;
+  return f[1] ? `${de} ${f[0]} ${para}` : `${de} ${f[0]}`;
+}
 // @fim-puras-texto
 const nomesPerfis = () => perfis.map((pf, i) => pf.nome || (troca ? nome(i) : ''));       // com lugares trocados, "Jogador 3" no texto do minijogo vira o lugar de verdade de quem esta ali
 // Minijogo de 2 em revezamento fala de "Jogador 1" e "Jogador 2": sao os dois da vez, nao os lugares 1 e 2.
@@ -1404,6 +1417,13 @@ const SONS = {
   gol: () => { [72, 76, 79, 84, 88].forEach((m, k) => voz(hz(m), 0.3, 'triangle', 0.1, audio?.currentTime + k * 0.07)); chiado(0.6, 0.04, 0, 'highpass', 5000); },
   ponto: () => vinheta(p.fase === 'fim' ? 'fanfarra' : p.vencedor < 0 ? 'derrota' : 'vitoria'),
   carta: () => { [76, 83, 88, 95].forEach((m, k) => voz(hz(m), 0.14, 'triangle', 0.09, audio?.currentTime + k * 0.05)); chiado(0.3, 0.04, 0, 'highpass', 6000); },
+  // itens de rodada: a bomba assobia e estoura quando chega (0,35 s de voo)
+  'item-bomba': () => { voz(1100, 0.32, 'sine', 0.07, 0, busFx, 420); chiado(0.6, 0.26, audio?.currentTime + 0.35, 'lowpass', 1400, busFx, 80); voz(95, 0.5, 'sine', 0.26, audio?.currentTime + 0.35, busFx, 30); },
+  'item-gelo': () => { [96, 100, 103].forEach((m, k) => voz(hz(m), 0.16, 'sine', 0.08, audio?.currentTime + 0.3 + k * 0.05)); chiado(0.3, 0.05, audio?.currentTime + 0.3, 'highpass', 7000); },
+  'item-tinta': () => { chiado(0.28, 0.14, audio?.currentTime + 0.3, 'lowpass', 900, busFx, 200); voz(210, 0.2, 'sine', 0.11, audio?.currentTime + 0.3, busFx, 80); },
+  'item-turbo': () => { voz(220, 0.4, 'sawtooth', 0.06, 0, busFx, 1300); chiado(0.35, 0.05, 0, 'bandpass', 800, busFx, 4000); },
+  'item-guarda': () => { voz(420, 0.1, 'triangle', 0.11, 0, busFx, 900); voz(900, 0.14, 'sine', 0.07, audio?.currentTime + 0.08); },
+  'item-bloqueio': () => { voz(300, 0.28, 'triangle', 0.13, audio?.currentTime + 0.3, busFx, 760); voz(760, 0.2, 'sine', 0.08, audio?.currentTime + 0.42); },
 };
 function somTorcida(i) {       // corneta curta: cada lado com o seu tom
   if (!audio) return;
@@ -1561,7 +1581,7 @@ function trocaLugares(a, b) {       // tudo que e de cada pessoa (e de cada celu
   for (const v of [perfis, visto, conectado, premios, vib, nrVisto, ultimaRea, sessaoVista, qVisto, ntVisto, ultimaTorcida, querRevanche]) [v[a], v[b]] = [v[b], v[a]];
   if (robo.lugar === a) robo.lugar = b; else if (robo.lugar === b) robo.lugar = a;       // o robo de treino vai junto com o lugar dele
   const ja = p.jogadores[a], jb = p.jogadores[b];
-  if (ja && jb) for (const k of ['n', 'nb', 'nop', 's', 'q', 'ent']) [ja[k], jb[k]] = [jb[k], ja[k]];       // contadores de toque sao do celular: sem isso a troca viraria toque fantasma
+  if (ja && jb) for (const k of ['n', 'nb', 'nop', 'ni', 'itensNegados', 'itemGasto', 'itensPartida', 'itensRodada', 's', 'q', 'ent']) [ja[k], jb[k]] = [jb[k], ja[k]];       // contadores de toque sao do celular: sem isso a troca viraria toque fantasma
   semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
   fazBonecos(); fazPets();       // o pet vai junto com a pessoa
   rodadaMontada = -1; palcoChave = '';
@@ -2572,6 +2592,83 @@ function vibracoes(eventos) {
   vivoAntes = p.jogadores.map(j => j.vivo); faseAntes = p.fase;
 }
 
+// ---------- itens de rodada (spec 009): o que a TV mostra de cada item usado. Vale para todo minijogo: le p.itens e os tempos de cada jogador ----------
+const COR_ITEM = { bomba: 0xff8a2a, gelo: 0x9fdcff, turbo: 0xffd84d, guarda: 0xc79bff, tinta: 0x5b2bd6 };
+const fxItens = LUGARES.map(() => {       // por lugar: estrelas de tonto, bloco de gelo, guarda-chuva e mancha de tinta, soltos na cena (seguem o boneco)
+  const g = new THREE.Group(), estrelas = new THREE.Group();
+  for (let k = 0; k < 3; k++) { const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX_RASTRO.estrela, color: 0xffe14a, transparent: true, depthWrite: false })); e.scale.setScalar(1.15); estrelas.add(e); }
+  const gelo = malha(new THREE.BoxGeometry(2.1, 2.3, 2.1), 0xbfeaff, { transparent: true, opacity: 0.62, roughness: 0.08, emissive: 0x4aa8ff, emissiveIntensity: 0.3 });
+  gelo.castShadow = false; gelo.rotation.y = 0.5; gelo.position.y = 0.25;
+  const guarda = new THREE.Group(), copa = malha(new THREE.ConeGeometry(1.3, 0.6, 8, 1, true), 0xc79bff, { side: THREE.DoubleSide, flatShading: true, emissive: 0x6a3fd0, emissiveIntensity: 0.35 });
+  const cabo = malha(new THREE.CylinderGeometry(0.05, 0.05, 1.1, 6), 0xf2f2f2); cabo.position.y = -0.55;
+  guarda.add(copa, cabo);
+  const mancha = malha(new THREE.SphereGeometry(0.62, 14, 10), 0x2a1466, { roughness: 0.2 }); mancha.scale.set(1.3, 0.5, 1.3); mancha.position.y = 0.72;
+  g.add(estrelas, gelo, guarda, mancha); g.visible = false; cena.add(g);
+  return { g, estrelas, gelo, guarda, mancha, chegando: 0, bloqueio: false };
+});
+const DUR_VOO = 0.35;       // a bomba (ou a bola de gelo, ou de tinta) voa de quem jogou ate o alvo; o efeito so aparece quando ela chega
+const projeteis = LUGARES.map(() => {
+  const g = new THREE.Group(), bomba = bombaBonita(0.45), bola = malha(new THREE.SphereGeometry(0.42, 14, 10), 0xffffff, { roughness: 0.2 });
+  g.add(bomba, bola); g.visible = false; cena.add(g);
+  return { g, bomba, bola, t: 0, de: new THREE.Vector3(), uso: null };
+});
+const EFEITOS_ITEM = [['tonto', 'Tonto', 'bomba'], ['gelo', 'Congelado', 'gelo'], ['turboItem', 'Turbo', 'turbo'], ['guarda', 'Guarda-chuva', 'guarda'], ['tinta', 'Tinta', 'tinta']];
+function chipsItem(i) {       // ficha no cartao do jogador: o efeito aparece mesmo em minijogo que esconde o boneco
+  const j = p.jogadores[i];
+  return p.fase !== 'jogando' ? '' : EFEITOS_ITEM.filter(([campo]) => j[campo] > 0 || j[campo] === true).map(([, txt, id]) => `<span class="inv efeito" style="--ci:${hex(COR_ITEM[id])}">${txt}</span>`).join('');
+}
+let logItens = null, vistosItens = 0, avisoItem = { html: '', ate: 0 };
+window.__avisoItem = () => avisoItem.html;       // para o teste automatico
+function itensNaTela(dt, t, noPalco) {
+  if (p.itens !== logItens) {       // rodada nova: registro novo
+    logItens = p.itens; vistosItens = 0; avisoItem.ate = 0;
+    for (const q of projeteis) { q.uso = null; q.g.visible = false; }
+    for (const f of fxItens) { f.chegando = 0; f.bloqueio = false; }
+  }
+  const vale = iniciou && !noPalco && (p.fase === 'jogando' || p.fase === 'resultado');
+  for (const u of (p.itens ?? []).slice(vistosItens)) {
+    vistosItens++;
+    const de = bonecos[u.de].position;
+    avisoItem = { html: `<div class="avItem" style="--ci:${hex(COR_ITEM[u.id] ?? 0xffffff)}">${limpa(fraseItem(u, nome(u.de), nome(u.para)))}</div>`, ate: performance.now() + 2600 };
+    if (u.para === u.de) { if (vale && bonecos[u.de].visible) particulas(de.x, de.y + 0.6, de.z, COR_ITEM[u.id], 24, 6); continue; }
+    const q = projeteis.find(x => !x.uso) ?? projeteis[0];
+    q.uso = u; q.t = 0; q.de.copy(de);
+    q.bomba.visible = u.id === 'bomba'; q.bola.visible = u.id !== 'bomba'; q.bola.material.color.set(COR_ITEM[u.id]);
+    fxItens[u.para].chegando++; if (u.bloqueado) fxItens[u.para].bloqueio = true;
+  }
+  for (const q of projeteis) {
+    if (!q.uso) continue;
+    const u = q.uso, alvo = bonecos[u.para], para = alvo.position, mostra = vale && alvo.visible && bonecos[u.de].visible;
+    q.t += dt;
+    const k = Math.min(1, q.t / DUR_VOO);
+    q.g.visible = mostra; q.g.position.lerpVectors(q.de, para, k); q.g.position.y += Math.sin(k * Math.PI) * 3 + 0.4; q.g.rotation.z = -k * 5;
+    if (k < 1) continue;
+    q.uso = null; q.g.visible = false;
+    const f = fxItens[u.para]; f.chegando = Math.max(0, f.chegando - 1); f.bloqueio = false;
+    vibra(u.para, [90, 40, 90], true);       // quem levou sente no celular
+    if (!mostra) continue;
+    if (u.bloqueado) { particulas(para.x, para.y + 1.5, para.z, COR_ITEM.guarda, 26, 7); particulas(para.x, para.y + 1.5, para.z, 0xffffff, 10, 5); }
+    else if (u.id === 'bomba') { particulas(para.x, para.y + 0.3, para.z, 0xff8a2a, 46, 10); particulas(para.x, para.y + 0.3, para.z, 0xffe14a, 24, 6); fumaca(para.x, para.y, para.z, 0x3a3a44, 8, 3, 1.5); tremor = Math.max(tremor, 0.6); }
+    else particulas(para.x, para.y + 0.3, para.z, COR_ITEM[u.id], 36, 7);
+  }
+  fxItens.forEach((f, i) => {
+    const j = p.jogadores[i], b = bonecos[i];
+    f.g.visible = !!j && vale && b.visible && j.vivo;
+    if (!f.g.visible) return;
+    const espera = f.chegando > 0;
+    f.g.position.copy(b.position);
+    f.estrelas.visible = j.tonto > 0 && !espera;
+    f.estrelas.children.forEach((e, k) => { const a = t * 5 + k * 2.094; e.position.set(Math.cos(a) * 1.05, 1.45 + Math.sin(t * 6 + k) * 0.08, Math.sin(a) * 1.05); e.material.rotation = -t * 3; });
+    f.gelo.visible = j.gelo > 0 && !espera;
+    f.guarda.visible = j.guarda || f.bloqueio; f.guarda.position.y = 2.05 + Math.sin(t * 3 + i) * 0.05; f.guarda.rotation.y = t * 1.5;
+    f.mancha.visible = j.tinta > 0 && !espera;
+    if (j.tinta > 0 && !espera && Math.random() < dt * 12) solta(j.x, 1.4 + j.y, j.z, COR_ITEM.tinta, false, 2);
+    if (j.liso > 0 && !(j.gelo > 0) && Math.random() < dt * 16) solta(j.x + (Math.random() - 0.5), 0.15, j.z + (Math.random() - 0.5), 0xdff6ff, false, 1.2);       // chao liso depois do gelo
+    if (j.turboItem > 0 && Math.random() < dt * 55) solta(j.x - j.vx * 0.06, 0.45 + j.y, j.z - j.vz * 0.06, Math.random() < 0.5 ? 0xffd84d : 0xff9a2a, false, 2.5);       // rastro do turbo
+  });
+  poe('hudItens', iniciou && p.fase !== 'fim' && performance.now() < avisoItem.ate ? avisoItem.html : '');
+}
+
 const CAM = new THREE.Vector3(0, 21, 17);
 const camOlho = new THREE.Vector3(0, 0, 1), camPos = new THREE.Vector3(), camMira = new THREE.Vector3(), camSuave = new THREE.Vector3();
 let camPropria = false;
@@ -2678,6 +2775,7 @@ function desenha(dt, t) {
       if (j.vivo && Math.hypot(j.vx, j.vz) > 4 && Math.random() < dt * 45) solta(j.x - j.vx * 0.06, 0.45 + j.y, j.z - j.vz * 0.06, Math.random() < 0.5 ? 0xff7a2f : 0xffd84d, false, 2.5);
   }
   if (noPalco) { cena.fog.near = 60; cena.fog.far = 260; }
+  itensNaTela(dt, t, noPalco);
   acompanha(dt, t, noPalco, podio);
   moveParticulas(dt);
   nuvens.rotation.y = t * 0.006;
@@ -2744,6 +2842,13 @@ function ofertaCelular(i) {
     cartas: lista.map(k => ({ nome: k.nome, dica: k.dica, cor: VISUAL_CARTA[k.id]?.[0] })) };
 }
 
+// Itens de rodada no celular: m = quais valem agora (um bit por item de ITENS; sem m, item nao vale nesta rodada e a barrinha some), n = usos que o
+// motor recusou (o celular treme), g = ultimo uso aceito (o celular desconta do estoque uma vez por id) e tinta = a tela dele esta manchada.
+function itensCelular(i) {
+  const j = p.jogadores[i], cabe = !ehCoop(p) && !p.jogo.semItens && (!p.duelo || p.duelo.includes(i));
+  return { m: cabe ? ITENS.reduce((a, k, n) => a | (itemLiberado(p, i, k.id) ? 1 << n : 0), 0) : undefined, n: j.itensNegados ?? 0,
+    g: j.itemGasto ? { id: sessao + '-' + j.itemGasto.n, k: ITENS.findIndex(k => k.id === j.itemGasto.id) } : undefined, tinta: (p.fase === 'jogando' && j.tinta > 0) || undefined };
+}
 let mandado = '', ultimoEnvio = 0;
 // Espera: o Jogador 1 (anfitriao) recebe o menu de modos; os outros veem so que estao conectados.
 function celularDaEspera(i) {
@@ -2819,6 +2924,7 @@ function mandaCelulares(agora) {
     else if (naRevanche()) Object.assign(e, celularDoPodio(i));
     else if (fimRodada) Object.assign(e, { modo: 'espera', texto: fraseDoFim(i), opcoes: undefined });
     e.carta = cartaCelular(i);
+    e.it = itensCelular(i);
     e.provoca = provocador === i && (fimRodada || p.fase === 'intro') || undefined;
   });
   estado.forEach((e, i) => {
@@ -2919,7 +3025,7 @@ function extras(i) {
   const k = p.duelo ? p.duelo.indexOf(i) : i;       // em duelo o minijogo de 2 lista os itens pelos dois da vez
   const inv = naRodada() && k >= 0 ? p.dados.inventario?.[k] : null;
   const itens = Array.isArray(inv) ? inv.slice(0, 5).filter(t => typeof t === 'string').map(t => doJogo(t).slice(0, 18)).filter(Boolean) : [];
-  const html = chipCarta(p.jogadores[i].carta) + itens.map(t => {
+  const html = chipCarta(p.jogadores[i].carta) + chipsItem(i) + itens.map(t => {
     const m = /^(.*?)(\d+)$/.exec(t);
     const cor = COR_INV[t.split(' ')[0]];      // itens conhecidos ganham um icone na cor do item da arena
     return `<span class="inv">${cor ? `<i class="ptInv" style="background:${cor}"></i>` : ''}${m ? `${limpa(m[1])}<b>${m[2]}</b>` : limpa(t)}</span>`;

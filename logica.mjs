@@ -162,6 +162,69 @@ export function moedasDaRodada(p, i) {
   return valor;
 }
 
+// ---------- itens de rodada: comprados na Loja do celular e usados durante a rodada ----------
+// O estoque e do celular (perfil local); aqui ficam as regras e os limites, iguais para todo minijogo.
+// alvo: vai no rival mais proximo (minijogo de joystick) ou no lider do placar (os outros). anda: so onde o motor move o boneco.
+// Minijogo em que item nao combina declara semItens: true.
+export const ITENS = [
+  { id: 'bomba', nome: 'Bomba', dica: 'Atordoa o rival mais perto', alvo: true },
+  { id: 'gelo', nome: 'Gelo', dica: 'Congela o rival e deixa o chão liso', alvo: true },
+  { id: 'turbo', nome: 'Turbo', dica: 'Você corre mais por 4 segundos', anda: true },
+  { id: 'guarda', nome: 'Guarda-chuva', dica: 'Segura o próximo item jogado em você' },
+  { id: 'tinta', nome: 'Tinta', dica: 'Mancha o celular do rival', alvo: true },
+];
+export const ITENS_POR_RODADA = 1, ITENS_POR_PARTIDA = 3, T_SEM_ITEM = 3, T_IMUNE_ITEM = 4;
+const T_TONTO_ITEM = 1.5, T_GELO = 2, T_GELO_PARADO = 1.2, T_LISO = 3, ATRITO_LISO = 0.55, T_TURBO_ITEM = 4, ACEL_TURBO_ITEM = 1.5, T_TINTA = 3;
+const TEMPOS_ITEM = ['tonto', 'gelo', 'liso', 'turboItem', 'tinta', 'imuneItem'];       // segundos que faltam de cada efeito, por jogador (a tela desenha a partir deles)
+const preso = j => j.tonto > 0 || j.gelo > 0;       // atordoado ou congelado: o controle nao vale
+const naRodada = (p, i) => !p.duelo || p.duelo.includes(i);
+function zeraItens(j) { for (const k of TEMPOS_ITEM) j[k] = 0; j.guarda = false; j.itensRodada = 0; j.entGuardada = null; }
+
+// O jogador i pode usar este item agora? (limites e fase; a tela usa para apagar o botao no celular. Alvo imune so se descobre ao usar.)
+export function itemLiberado(p, i, id) {
+  const j = p.jogadores[i], item = ITENS.find(k => k.id === id);
+  if (!j || !item || p.fase !== 'jogando' || p.t < T_SEM_ITEM || p.dados?.fimCedo !== undefined) return false;
+  if (ehCoop(p) || p.jogo.semItens || !naRodada(p, i) || !j.vivo || preso(j)) return false;
+  if ((j.itensRodada ?? 0) >= ITENS_POR_RODADA || (j.itensPartida ?? 0) >= ITENS_POR_PARTIDA) return false;
+  return !item.anda || deJoystick(p.jogo);
+}
+// Rival que leva o item: joga a rodada, esta de pe, nao e parceiro (Duplas) e nao esta imune. Empate vai para o proximo na roda depois de quem jogou.
+function alvoDoItem(p, i) {
+  const js = p.jogadores, n = js.length, eu = js[i], roda = k => (k - i + n) % n;
+  const rivais = [...js.keys()].filter(k => k !== i && naRodada(p, k) && js[k].vivo && !(js[k].imuneItem > 0) && (p.modo !== 'times' || timeDe(p, k) !== timeDe(p, i)));
+  const nota = deJoystick(p.jogo) ? k => -Math.hypot(js[k].x - eu.x, js[k].z - eu.z) : k => js[k].pontos;
+  return rivais.sort((a, b) => nota(b) - nota(a) || roda(a) - roda(b))[0] ?? -1;
+}
+function prende(j, campo, seg) {       // o que o dedo esta segurando fica guardado e volta a valer quando o efeito passa
+  j[campo] = seg; j.entGuardada ??= j.ent; j.ent = { x: 0, y: 0, d: false, b: false }; j.querDash = 0; j.querPulo = 0;
+}
+// Usa o item. Devolve true se valeu (so entao o celular desconta do estoque: a tela confirma com j.itemGasto).
+export function usaItem(p, i, id) {
+  if (!itemLiberado(p, i, id)) return false;
+  const j = p.jogadores[i], item = ITENS.find(k => k.id === id), para = item.alvo ? alvoDoItem(p, i) : i;
+  if (para < 0) return false;
+  const alvo = p.jogadores[para], anda = deJoystick(p.jogo), bloqueado = !!item.alvo && alvo.guarda;
+  if (item.alvo) { alvo.imuneItem = T_IMUNE_ITEM; alvo.guarda = false; }
+  if (bloqueado) { /* o guarda-chuva segurou: quem jogou gasta o item mesmo assim */ }
+  else if (id === 'bomba') prende(alvo, 'tonto', T_TONTO_ITEM);
+  else if (id === 'gelo') { prende(alvo, 'gelo', anda ? T_GELO : T_GELO_PARADO); if (anda) alvo.liso = T_GELO + T_LISO; }
+  else if (id === 'turbo') j.turboItem = T_TURBO_ITEM;
+  else if (id === 'guarda') j.guarda = true;
+  else if (id === 'tinta') alvo.tinta = T_TINTA;
+  j.itensRodada = (j.itensRodada ?? 0) + 1; j.itensPartida = (j.itensPartida ?? 0) + 1;
+  p.itensSerie = (p.itensSerie ?? 0) + 1; j.itemGasto = { n: p.itensSerie, id };
+  p.itens.push({ id, de: i, para, t: p.t, bloqueado });
+  p.eventos.push(bloqueado ? 'item-bloqueio' : 'item-' + id);
+  return true;
+}
+function passaItens(p, dt) {
+  for (const j of p.jogadores) {
+    const estava = preso(j);
+    for (const k of TEMPOS_ITEM) if (j[k] > 0) j[k] = Math.max(0, j[k] - dt);
+    if (estava && !preso(j) && j.entGuardada) { j.ent = j.entGuardada; j.entGuardada = null; }
+  }
+}
+
 // ---------- minijogos ----------
 // Cada um: inicia(p) monta a arena; atualiza(p, dt) devolve o indice do vencedor, -1 (empate) ou undefined.
 // Quando existe p.dados.placar, a tela mostra o placar da rodada com o texto de "rotulo".
@@ -629,7 +692,7 @@ function move(p, i, j, dt) {
   const mod = p.mod ?? {}, sinal = mod.inverte ? -1 : 1;
   const ex = ativo ? j.ent.x * sinal : 0, ez = ativo ? j.ent.y * sinal : 0;
   const carta = CARTA[j.carta] ?? {};
-  const acel = ACEL * j.turbo * (mod.acel ?? 1) * (carta.acel ?? 1);
+  const acel = ACEL * j.turbo * (mod.acel ?? 1) * (carta.acel ?? 1) * (j.turboItem > 0 ? ACEL_TURBO_ITEM : 1);
   j.vx += ex * acel * dt; j.vz += ez * acel * dt;
 
   // pulo (B)
@@ -656,7 +719,7 @@ function move(p, i, j, dt) {
     p.eventos.push('dash');
   }
 
-  const at = Math.pow(mod.atrito ?? ATRITO, dt);
+  const at = Math.pow(j.liso > 0 ? Math.max(mod.atrito ?? ATRITO, ATRITO_LISO) : mod.atrito ?? ATRITO, dt);       // liso: chao do item Gelo
   j.vx *= at; j.vz *= at; j.x += j.vx * dt; j.z += j.vz * dt;
   if (p.arena.grade) blocos(p, j);
   if (p.arena.parede) paredes(p, j);
@@ -845,6 +908,8 @@ function proximaRodada(p, forcado) {
         apertouA: 0, apertouB: 0, escolha: -1, pronto: false, cartaAnterior: anterior[i], carta: null, oferta: null, escolhaDesde: 0,
       });
     p.liberado = false;
+    for (const j of p.jogadores) zeraItens(j);
+    p.itens = [];       // itens usados nesta rodada: { id, de, para, t, bloqueado } (a tela anima e avisa)
     p.dados = {}; p.celular = p.jogadores.map(() => ({})); p.tocou = false; p.vencedor = undefined; p.anuncios = [];
     p.arena = { tipo: 'circulo', raio: 8, parede: true };
     p.fase = 'intro'; p.t = 0; p.rodada++;
@@ -971,6 +1036,7 @@ export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', histo
 export function reinicia(p) {
   for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; j.escudos = 0; }
   p.escudoSegurou = false;
+  for (const j of p.jogadores) { j.itensPartida = 0; j.itemGasto = null; }       // itens: o limite por partida recomeca
   p.seq = p.jogadores.map(() => 0); p.deficit = p.jogadores.map(() => 0); p.campeao = undefined; p.campeoes = undefined;
   esquece(p); p.noitesVistas = [];
   p.noites = { jogadas: 0, vencidas: 0 }; p.duelos = 0; p.modsVistos = {}; p.alvo = alvoDe(p);
@@ -1005,7 +1071,7 @@ export function registra(jogo) {
 export function pulaPara(p, jogo) { proximaRodada(p, jogo); }
 
 // i: 0 (azul) ou 1 (rosa). m: { x, y, d, n, b, nb, op, nop }: joystick/toque entre -1 e 1, botao A (d, contador n),
-// botao B (b, contador nb) e escolha feita na tela do celular (op, contador nop).
+// botao B (b, contador nb), escolha feita na tela do celular (op, contador nop) e item usado (it = indice em ITENS, contador ni).
 // semToque: acompanha joystick e contadores sem contar toque (tela pausada).
 export function entrada(p, i, m, semToque = false) {
   const j = p.jogadores[i];
@@ -1029,7 +1095,11 @@ export function entrada(p, i, m, semToque = false) {
   if (a && aguardando(p)) { j.pronto = true; p.eventos.push('moeda'); }     // A durante a explicacao = "estou pronto"
   const escolheu = m.nop !== undefined && j.nop !== undefined && m.nop > j.nop && Number.isInteger(m.op) && m.op >= 0;
   if (m.nop !== undefined) j.nop = m.nop;
-  if (p.fase === 'jogando') {
+  const niOk = Number.isInteger(m.ni) && m.ni >= 0, usou = niOk && j.ni !== undefined && m.ni > j.ni && !semToque;       // item: mesmo esquema de contador
+  if (niOk) j.ni = m.ni;
+  if (usou && !usaItem(p, i, Number.isInteger(m.it) ? ITENS[m.it]?.id : undefined)) j.itensNegados = (j.itensNegados ?? 0) + 1;       // a tela avisa o celular que nao valeu
+  if (p.fase === 'jogando' && preso(j)) { /* atordoado ou congelado: botoes e escolhas nao valem */ }
+  else if (p.fase === 'jogando') {
     if (a) { j.querDash = ESPERA_BOTAO; j.apertouA += a; }
     if (b) { j.querPulo = ESPERA_BOTAO; j.apertouB += b; }
     if (escolheu && p.t >= j.escolhaDesde) j.escolha = m.op;     // toque atrasado na carta nao vira resposta do minijogo
@@ -1037,7 +1107,8 @@ export function entrada(p, i, m, semToque = false) {
     if (j.oferta[m.op]) { j.carta = j.oferta[m.op]; j.oferta = null; if (j.carta === 'escudo') j.escudos = (j.escudos ?? 0) + 1; p.eventos.push('carta'); }     // carta de poder escolhida na explicacao
     else if (m.op === j.oferta.length) { j.oferta = null; if (aguardando(p)) { j.pronto = true; p.eventos.push('moeda'); } }   // "sem carta": ja fica pronto
   }
-  j.ent = { x, y, d: !!m.d, b: !!m.b };
+  if (preso(j)) j.entGuardada = { x, y, d: !!m.d, b: !!m.b };       // o joystick fica zerado ate o efeito passar
+  else j.ent = { x, y, d: !!m.d, b: !!m.b };
 }
 
 // Com p.esperaPronto ligado (a tela liga), a rodada so comeca a contagem depois que os dois apertam A.
@@ -1064,6 +1135,7 @@ export function passo(p, dt) {
   }
   if (p.fase === 'fim') { fisicaSegura(p, dt); if (p.t >= T_FIM && !p.esperaRevanche) reinicia(p); return; }     // esperaRevanche (a tela liga): o podio espera a escolha de revanche
   if (p.fase === 'resultado') { fisicaSegura(p, dt); if (p.t >= T_RESULTADO) proximaRodada(p); return; }
+  passaItens(p, dt);
   let vencedor;
   try {
     fisica(vista(p), dt);
