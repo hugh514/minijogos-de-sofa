@@ -294,7 +294,8 @@ async function celular(browser, n) {
   e = await estado();
   assert.deepEqual([e.modo, e.n], ['vs', 3]);
   assert.ok(await ev(() => !!window.__p.jogo.festa), 'cada um por si com 3: so minijogo em que todos jogam juntos');
-  await tela.waitForFunction(() => window.__bonecos.filter(b => b.visible).length === 3, null, { timeout: 5000 });
+  await ev(() => window.__jogo('tinta-festa'));       // minijogo fixo para contar os bonecos (ha minijogos que trocam o boneco por outra peca, como os tanques)
+  await tela.waitForFunction(() => window.__p.jogo.id === 'tinta-festa' && window.__bonecos.filter(b => b.visible).length === 3, null, { timeout: 5000 });
   assert.equal(await cartoes(), 3); assert.equal(await visiveis(), 3);
   assert.equal(await tela.locator('#placar .cartao.time').count(), 0);
   await comeca('tinta-festa', '08-placar-3-vs-explicacao');

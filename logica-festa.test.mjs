@@ -1,7 +1,7 @@
 // Motor com 2 a 4 jogadores: modo Festa (vs, times, coop). O Classico (2 jogadores) tem os testes em logica.test.mjs.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { vista, criaPartida, configura, passo, entrada, pulaPara, registra, jogavel, reinicia, NOITES_COOP, venceu, timeDe, ehCoop, elegiveis, moedasDaRodada, posicionaCantos, posicionaRoda, JOGOS, PONTOS_VITORIA, MODIFICADORES, GENEROS } from './logica.mjs';
+import { vista, timeNaRodada, criaPartida, configura, passo, entrada, pulaPara, registra, jogavel, reinicia, NOITES_COOP, venceu, timeDe, ehCoop, elegiveis, moedasDaRodada, posicionaCantos, posicionaRoda, JOGOS, PONTOS_VITORIA, MODIFICADORES, GENEROS } from './logica.mjs';
 
 const DT = 1 / 60;
 const roda = (p, seg) => { for (let i = 0; i < seg * 60; i++) passo(p, DT); };
@@ -719,7 +719,7 @@ test('cinco jogadores: minijogo que aceita 5 (festa.max 5) roda com todos, e 6 j
     jogaRodada(p, todos, 4);
     assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 0, 0, 0, 1]);
     assert.throws(() => criaPartida(sorte, { n: 6, modo: 'vs' }), /jogadores/);
-    assert.throws(() => criaPartida(sorte, { n: 5, modo: 'times' }), /jogadores/);
+    assert.throws(() => criaPartida(sorte, { n: 3, modo: 'times' }), /jogadores/);
     assert.throws(() => registra(falso('f-x', { min: 2, max: 6, modos: ['vs'] })), /festa torto/);
     assert.deepEqual(elegiveis('vs', 3).map(j => j.id), ['f-todos'], 'com 3 nada muda');
   } finally { volta(); }
@@ -754,8 +754,11 @@ test('escudo com freio: so para quem esta em ultimo, uma vez por jogador na part
     jogaRodada(p, jogo, 0); roda(p, 2.6);           // J1 vence: J2 e J3 escolhem carta
     assert.ok(!oferta(1).includes('escudo'), 'J2 esta atras do J1, mas nao e o ultimo: sem escudo');
     assert.ok(oferta(2).includes('escudo'), 'J3 e o ultimo: pode pegar o escudo');
-    entrada(p, 2, { x: 0, y: 0, op: oferta(2).indexOf('escudo'), nop: 1 }); entrada(p, 2, { x: 0, y: 0, op: oferta(2).indexOf('escudo'), nop: 2 });
-    p.jogadores[2].carta = 'escudo'; p.jogadores[2].escudos = 1; p.jogadores[2].oferta = null; p.jogadores[1].oferta = null;
+    const qual = oferta(2).indexOf('escudo');
+    entrada(p, 2, { x: 0, y: 0, op: qual, nop: 1 }); entrada(p, 2, { x: 0, y: 0, op: qual, nop: 2 });       // o primeiro envio so acerta a base do contador; o segundo e o toque
+    assert.equal(p.jogadores[2].carta, 'escudo', 'J3 pegou o escudo pelo celular');
+    assert.equal(p.jogadores[2].escudos, 1, 'o escudo conta na hora em que e escolhido');
+    p.jogadores[1].oferta = null;
     while (p.fase !== 'jogando') passo(p, DT);
     jogo.atualiza = () => 0; passo(p, DT);          // J1 vence de novo, o escudo do J3 segura
     assert.equal(p.jogadores[0].pontos, 5, 'o primeiro ponto valeu (5), o segundo o escudo segurou');
@@ -786,5 +789,67 @@ test('alvo da partida: em Cada um por si encolhe com mais gente no sofa (2: 10, 
     assert.deepEqual(p.campeoes, [2]);
     configura(p, { n: 2, modo: 'vs' });
     assert.equal(p.alvo, 10, 'trocou para 2 jogadores: o alvo acompanha');
+  } finally { volta(); }
+});
+
+// ---------- Duplas com 5: um descansa e os outros quatro formam duplas que mudam a cada rodada; o ponto e de cada um ----------
+test('duplas com 5: a cada rodada um descansa, as duplas mudam e cada um da dupla vencedora ganha o seu ponto', () => {
+  const sozinhos = JOGOS.splice(0);
+  const jogo = { ...falso('f-d5', { min: 4, max: 4, modos: ['times'] }), inicia(p) { p.dados = { n: p.jogadores.length, modo: p.modo }; } };
+  [jogo, classico('c-duelo', () => 0)].forEach(registra);
+  try {
+    assert.deepEqual(elegiveis('times', 5).map(j => j.id), ['f-d5'], 'com 5 so minijogo de festa: os de 2 ficam para as Duplas de 4');
+    const p = criaPartida(sorte, { n: 5, modo: 'times' });
+    assert.equal(p.alvo, 6);
+    assert.deepEqual(p.duelo, [0, 2, 1, 3], 'primeira rodada: J5 descansa, J1 e J2 contra J3 e J4 (time A nos indices 0 e 2 da vista)');
+    assert.deepEqual(p.dados, { n: 4, modo: 'times' }, 'o minijogo ve uma partida de Duplas com 4');
+    assert.deepEqual([0, 1, 2, 3, 4].map(i => timeNaRodada(p, i)), [0, 0, 1, 1, -1]);
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 0; passo(p, DT);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [1, 1, 0, 0, 0], 'J1 e J2 venceram juntos: um ponto para cada');
+    assert.ok(venceu(p, 0) && venceu(p, 1) && !venceu(p, 2) && !venceu(p, 4));
+    assert.deepEqual(p.jogadores.map(j => j.direito), [false, false, true, true, false], 'quem descansou nao perdeu');
+    // em 15 rodadas cada um descansa 3 vezes e faz dupla 3 vezes com cada um dos outros
+    reinicia(p);
+    const descansos = [0, 0, 0, 0, 0], juntos = {};
+    for (let k = 0; k < 15; k++) {
+      const d = p.duelo;
+      descansos[[0, 1, 2, 3, 4].find(i => !d.includes(i))]++;
+      for (const [a, b] of [[d[0], d[2]], [d[1], d[3]]]) { const ch = [a, b].sort().join('-'); juntos[ch] = (juntos[ch] ?? 0) + 1; }
+      pulaPara(p);
+    }
+    assert.deepEqual(descansos, [3, 3, 3, 3, 3]);
+    assert.equal(Object.keys(juntos).length, 10, 'todo mundo faz dupla com todo mundo');
+    assert.ok(Object.values(juntos).every(v => v === 3), JSON.stringify(juntos));
+  } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
+});
+
+// ---------- quem saiu do sofa nao entra na rodada (a tela marca p.ausentes) ----------
+test('ausentes: quem saiu do sofa fica de fora da rodada e volta quando reconectar', () => {
+  const volta = semClassicos();
+  const jogo = { ...falso('f-au', { min: 2, max: 4, modos: ['vs', 'coop'] }), inicia(p) { p.dados = { n: p.jogadores.length }; } };
+  registra(jogo);
+  try {
+    const p = criaPartida(sorte, { n: 4, modo: 'vs' });
+    assert.equal(p.duelo, null);
+    p.ausentes = [false, false, true, false];
+    pulaPara(p);
+    assert.deepEqual(p.duelo, [0, 1, 3], 'J3 saiu: jogam os outros tres');
+    assert.equal(p.dados.n, 3);
+    assert.equal(p.jogadores[2].pronto, true, 'ninguem espera o Entendi de quem saiu');
+    while (p.fase !== 'jogando') passo(p, DT);
+    jogo.atualiza = () => 2; passo(p, DT);          // venceu o terceiro dos que jogaram
+    assert.equal(p.vencedor, 3);
+    assert.deepEqual(p.jogadores.map(j => j.pontos), [0, 0, 0, 1]);
+    p.ausentes = [false, false, false, false];
+    roda(p, 2.6);
+    assert.equal(p.duelo, null, 'J3 voltou: a rodada seguinte e com os quatro');
+    p.ausentes = [false, true, true, true];
+    pulaPara(p);
+    assert.equal(p.duelo, null, 'so sobrou um: a ausencia nao vale para o motor (a tela e que encerra a partida)');
+    const c = criaPartida(sorte, { n: 5, modo: 'vs' });
+    c.ausentes = [false, false, false, true, false];
+    pulaPara(c);
+    assert.deepEqual(c.duelo, [0, 1, 2, 4], 'com 5 no sofa e um ausente, ninguem precisa descansar');
   } finally { volta(); }
 });

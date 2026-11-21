@@ -51,7 +51,7 @@ São 80 minijogos. Cada um declara com quais brincadeiras e quantos jogadores fu
 |---|---|---|---|
 | **Duelo** | 2 | Rodadas curtas, 1 ponto cada. Quem chegar ao alvo de pontos (10, ou 6 quando há poucos minijogos) vence a partida. | 56 |
 | **Cada um por si** | 2 a 5 | Todos contra todos. Com 5 no sofá, a cada rodada um descansa (rodízio) e os outros quatro jogam. O minijogo diz quem venceu a rodada, e só ele pontua. | 12 feitos para a Festa (com 3 ou 4 jogadores). Com 2 jogadores, esses 12 mais os 56 do Duelo, 68 |
-| **Duplas** | 4 | O Jogador 1 toca no celular em quem joga com ele (sem escolher, Jogador 1 e 3 contra 2 e 4). O ponto é do time. Nos minijogos do Duelo joga um de cada dupla, em revezamento (cada um enfrenta os dois da outra dupla), e o parceiro torce pelo celular. | 14 feitos para a Festa mais os 56 do Duelo, 70 |
+| **Duplas** | 4 ou 5 | O Jogador 1 toca no celular em quem joga com ele (sem escolher, Jogador 1 e 3 contra 2 e 4). O ponto é do time. Com 5 no sofá um descansa por rodada, as duplas mudam a cada rodada e o ponto é de cada um da dupla vencedora. Nos minijogos do Duelo joga um de cada dupla, em revezamento (cada um enfrenta os dois da outra dupla), e o parceiro torce pelo celular. | 14 feitos para a Festa mais os 56 do Duelo, 70 |
 | **Todos juntos** | 2 a 5 | Cooperativo contra o jogo, em 5 noites. A equipe vence a partida se vencer mais da metade delas. | 10 |
 
 Os números acima são os do código atual: 56 minijogos só do Duelo, mais 24 feitos para a Festa, que somam os 80. Para conferir:

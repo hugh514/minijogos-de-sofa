@@ -1,5 +1,5 @@
 // Quase no teto da festa (todos contra todos ou times). Cada um tem o seu elevador, lado a lado: segure para subir e solte para
-// travar. O teto é invisível, sorteado a cada subida e igual para todos; ele só aparece quando alguém chega perto. Quem bate
+// travar. O teto é invisível, sorteado a cada subida e igual para todos; ele só aparece quando a subida acaba para todos. Quem bate
 // despenca e a subida vale zero. São 3 subidas e a altura travada de cada uma soma no placar, em centímetros (o mesmo número
 // inteiro que a tela mostra decide o empate). Vence a maior soma; em times, a soma dos dois do time.
 import { timeDe, quem, RAIO } from '../logica.mjs';
@@ -144,7 +144,6 @@ export default {
 
   desenha(c, dt, t) {
     const { pecas, bonecos, p } = c, d = p.dados, n = p.jogadores.length;
-    let perto = 0;                                                // 0 a 1: o quanto o elevador mais alto está chegando no teto
     d.e.forEach((e, i) => {
       const x = lugar(i, n), caido = e.estado === 'caindo' || e.estado === 'caiu';
       const treme = e.estado === 'sobe' ? Math.sin(t * 45 + i) * 0.015 : 0;
@@ -155,7 +154,6 @@ export default {
       const corpo = bonecos[i].userData?.corpo ?? bonecos[i];     // amassa só o corpo: o nome em cima não estica
       if (caido) corpo.scale.set(1.25, 0.55, 1.25);
       else if (corpo === bonecos[i]) corpo.scale.setScalar(1);
-      if (!caido) perto = Math.max(perto, 1 - (d.teto - e.alt) / PERTO);
 
       if (pecas.visto[i] !== e.estado) {                          // faíscas nas viradas de estado
         if (e.estado === 'travou') c.particulas(x, e.alt + BASE, 0, pecas.cor(i), 14, 6);
@@ -164,8 +162,9 @@ export default {
         pecas.visto[i] = e.estado;
       }
     });
-    const revelado = d.fim > 0 || d.e.some(e => e.estado === 'caindo' || e.estado === 'caiu');
-    const opac = revelado ? 0.6 : Math.max(0, Math.min(1, perto)) * 0.55;
+    // O teto so aparece quando a subida acabou para todos: se aparecesse quando o primeiro chega perto ou bate,
+    // quem espera subia ate logo abaixo dele e o teto deixava de ser invisivel.
+    const opac = d.fim > 0 ? 0.6 : 0;
     pecas.teto.visible = opac > 0.01;
     pecas.teto.material.opacity = opac;
     pecas.teto.position.set(0, d.teto + BASE + 2 * RAIO + 0.15, 0);

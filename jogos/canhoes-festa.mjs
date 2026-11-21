@@ -109,7 +109,9 @@ export default {
   controle: { modo: 'toque' },
 
   inicia(p) {
-    const n = p.jogadores.length, bases = montaBases(n), caixas = [];
+    const n = p.jogadores.length, lugares = montaBases(n), caixas = [];
+    // Com 3, o lugar de baixo fica mais perto dos dois rivais: o lugar de cada um gira a cada rodada, para ninguem ficar sempre nele
+    const giro = n === 3 ? (p.rodada ?? 0) % 3 : 0, bases = lugares.map((_, i) => lugares[(i + giro) % n]);
     p.arena = { tipo: 'ret', lx: LX, lz: LZ, parede: true };
     bases.forEach((b, dn) => {
       for (const col of [-1, 0, 1]) for (const nivel of [0, 1])       // a fileira corre ao longo da parede: 3 colunas de 2 caixas

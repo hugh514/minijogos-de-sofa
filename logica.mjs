@@ -19,6 +19,13 @@ const ELEGIVEIS_ALVO_CURTO = 6, PONTOS_CURTO = 6;     // com menos de 6 elegivei
 export const MODOS = ['classico', 'vs', 'times', 'coop'];
 export const MAX_JOGADORES = 5;       // lugares no sofa; a maioria dos minijogos de festa e para ate 4 (com 5, um descansa por rodada)
 export const timeDe = (p, i) => i % 2;
+// Time do jogador de verdade (indice na partida) nesta rodada. Nas Duplas de 4 e fixo (0 e 2 contra 1 e 3).
+// Nas Duplas com 5 as duplas mudam a cada rodada: vale a posicao entre os quatro da vez (p.duelo), e quem descansa nao tem time (-1).
+export function timeNaRodada(p, i) {
+  if (p.modo !== 'times' || p.n !== MAX_JOGADORES) return i % 2;
+  const k = p.duelo ? p.duelo.indexOf(i) : -1;
+  return k < 0 ? -1 : k % 2;
+}
 // Nome de quem joga, para texto de minijogo: o do perfil (a tela poe em p.nomes) ou "Jogador N".
 export const quem = (p, i) => (typeof p.nomes?.[i] === 'string' && p.nomes[i]) || 'Jogador ' + (i + 1);
 export function ehCoop(p) { return p.modo === 'coop' || (p.modo === 'classico' && !!p.jogo?.coop); }
@@ -27,7 +34,7 @@ export function venceu(p, i) {
   const v = p.vencedor;
   if (v === undefined || v < 0) return false;
   if (ehCoop(p)) return true;
-  return p.modo === 'times' ? v === timeDe(p, i) : v === i;
+  return p.modo === 'times' ? v === timeNaRodada(p, i) : v === i;
 }
 // Minijogos que podem sair na rotacao deste modo com n jogadores.
 // "Todos contra todos" com 2 pessoas usa tambem os do Classico (sem os cooperativos): os minijogos de festa sao poucos.
@@ -35,7 +42,7 @@ export function elegiveis(modo, n) {
   if (modo === 'classico') return JOGOS.filter(j => !j.festa);
   // Com 5 no sofa, minijogo feito para ate 4 tambem vale: um descansa por rodada (rodizio)
   const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && (n <= j.festa.max || (n === MAX_JOGADORES && j.festa.max === MAX_JOGADORES - 1)) && j.festa.modos.includes(modo));
-  const deDois = (modo === 'vs' && n === 2) || modo === 'times';       // Duplas: os de 2 entram em revezamento (um de cada dupla por rodada). Cada um por si com 3 ou 4: so os que todos jogam juntos
+  const deDois = (modo === 'vs' && n === 2) || (modo === 'times' && n === 4);       // Duplas: os de 2 entram em revezamento (um de cada dupla por rodada). Cada um por si com 3 ou 4: so os que todos jogam juntos
   return deDois ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
 }
 
@@ -45,13 +52,27 @@ const DUELOS = [[0, 1], [2, 3], [0, 3], [2, 1]];
 const FORA = [[-11, -12], [11, -12], [-11, 12], [11, 12], [0, -14]];       // onde fica quem assiste: fora da arena, para torcida e confete nao cairem no meio da disputa
 // O minijogo recebe a vista: a mesma partida, mas jogadores, celular e nomes so de quem joga a rodada (p.duelo, indices de verdade).
 // Sem revezamento a vista e a propria partida. O motor e a tela usam p (todos) para placar, pontos e celulares.
-// Dois casos: Duplas com minijogo de 2 (um de cada dupla) e 5 no sofa com minijogo para ate 4 (um descansa, em rodizio: J5, J4, J3, J2, J1).
+// Casos: Duplas de 4 com minijogo de 2 (um de cada dupla); 5 no sofa com minijogo para ate 4 (um descansa, em rodizio: J5, J4, J3, J2, J1);
+// Duplas com 5 (um descansa e os outros quatro formam duplas que mudam a cada rodada); e alguem que saiu do sofa (p.ausentes, a tela marca).
 export function vista(p) { return p.duelo ? p.vistaDuelo : p; }
+// As tres formas de dividir quatro pessoas em duas duplas: [a1, a2, b1, b2] sobre os quatro da vez em ordem.
+const PARES = [[0, 1, 2, 3], [0, 2, 1, 3], [0, 3, 1, 2]];
+function quemJoga(p) {
+  const todos = [...p.jogadores.keys()];
+  if (p.modo === 'classico') return todos;
+  if (p.modo === 'times' && p.n === 4) return p.jogo.festa ? todos : DUELOS[p.duelos % DUELOS.length];
+  const duplas = p.modo === 'times';
+  let aqui = todos.filter(i => !p.ausentes?.[i]);
+  if (aqui.length < (duplas ? 4 : 2)) aqui = todos;       // sem gente para jogar a ausencia nao vale: a tela e quem decide encerrar a partida
+  const cabem = duplas ? 4 : p.jogo.festa ? p.jogo.festa.max : aqui.length;
+  if (aqui.length > cabem) { const descansa = aqui[aqui.length - 1 - p.duelos % aqui.length]; aqui = aqui.filter(i => i !== descansa); }
+  if (!duplas) return aqui;
+  const [a1, a2, b1, b2] = PARES[Math.floor(p.duelos / MAX_JOGADORES) % PARES.length].map(k => aqui[k]);
+  return [a1, b1, a2, b2];       // o minijogo ve o time A nos indices 0 e 2 e o B nos indices 1 e 3, como sempre
+}
 function montaDuelo(p) {
-  const deDois = p.modo === 'times' && !p.jogo.festa, rodizio = p.n === MAX_JOGADORES && !!p.jogo.festa && p.jogo.festa.max < MAX_JOGADORES;
-  if (!deDois && !rodizio) { p.duelo = null; p.vistaDuelo = null; return; }
-  const descansa = MAX_JOGADORES - 1 - p.duelos % MAX_JOGADORES;
-  const par = deDois ? DUELOS[p.duelos % DUELOS.length] : [...p.jogadores.keys()].filter(i => i !== descansa);
+  const par = quemJoga(p);
+  if (par.length === p.jogadores.length && par.every((i, k) => i === k)) { p.duelo = null; p.vistaDuelo = null; return; }
   p.duelo = par;
   p.jogadores.forEach((j, i) => { if (!par.includes(i)) [j.x, j.z] = FORA[i]; });
   const proprio = { jogadores: par.map(i => p.jogadores[i]), celular: par.map(i => p.celular[i]), n: par.length, nomes: undefined };
@@ -71,7 +92,7 @@ const QUEBRADOS = new Set();
 export const jogavel = (modo, n) => elegiveis(modo, n).some(j => !QUEBRADOS.has(j));
 function confereModo(n, modo) {
   if (!MODOS.includes(modo)) throw new Error('modo invalido: ' + modo);
-  if (!Number.isInteger(n) || n < 2 || n > MAX_JOGADORES || (modo === 'classico' && n !== 2) || (modo === 'times' && n !== 4)) throw new Error(`${n} jogadores nao servem para o modo ${modo}`);
+  if (!Number.isInteger(n) || n < 2 || n > MAX_JOGADORES || (modo === 'classico' && n !== 2) || (modo === 'times' && n !== 4 && n !== MAX_JOGADORES)) throw new Error(`${n} jogadores nao servem para o modo ${modo}`);
 }
 const novoJogador = () => ({ pontos: 0, direito: false, ent: { x: 0, y: 0, d: false, b: false } });
 
@@ -123,7 +144,7 @@ const N_OFERTA = 3, ESPERA_CARTA = 0.35;     // segundos em que o toque na carta
 
 function sorteiaCartas(p, i) {
   const j = p.jogo, eu = p.jogadores[i];
-  const rivais = p.jogadores.filter((_, k) => k !== i && (p.modo !== 'times' || timeDe(p, k) !== timeDe(p, i)));       // em Duplas o parceiro nao e rival
+  const rivais = p.jogadores.filter((_, k) => k !== i && (p.modo !== 'times' || p.n === MAX_JOGADORES || timeDe(p, k) !== timeDe(p, i)));       // em Duplas de 4 o parceiro nao e rival (com 5 as duplas mudam e o ponto e de cada um)
   // Escudo com freio, senao ninguem pontua nunca: so para quem esta em ultimo (sozinho ou empatado, mas atras de alguem),
   // uma vez por jogador na partida, e nunca na rodada seguinte a um ponto que um escudo segurou.
   const atras = rivais.some(r => eu.pontos < r.pontos) && rivais.every(r => eu.pontos <= r.pontos) && !eu.escudos && !p.escudoSegurou;
@@ -933,7 +954,7 @@ const limpaHistorico = h => (Array.isArray(h) ? h.filter(id => typeof id === 'st
 // Em Cada um por si so um pontua por rodada: com mais gente no sofa a partida a 10 pontos passava de 25 rodadas.
 // O alvo encolhe com o numero de jogadores para a partida durar perto do Duelo (umas 15 rodadas).
 export const ALVO_VS = { 2: PONTOS_VITORIA, 3: 8, 4: 6, 5: 6 };
-const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : p.modo === 'vs' ? ALVO_VS[p.n] ?? PONTOS_VITORIA : PONTOS_VITORIA);
+const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : p.modo === 'vs' ? ALVO_VS[p.n] ?? PONTOS_VITORIA : p.modo === 'times' && p.n === MAX_JOGADORES ? ALVO_VS[MAX_JOGADORES] : PONTOS_VITORIA);
 
 export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', historico = [] } = {}) {
   confereModo(n, modo);

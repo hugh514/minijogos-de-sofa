@@ -98,6 +98,82 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
   await ev(() => { const p = window.__p; p.jogadores.forEach((j, i) => { j.pontos = [p.alvo, 7, 5, 3, 1][i]; }); p.campeoes = [0]; p.fase = 'fim'; p.t = 0; });
   await espera(2600); await foto('5-podio-com-5');
 
+  // ---- Duplas com 5: um descansa e as duplas mudam a cada rodada; ponto para cada um da dupla
+  await tela.keyboard.press('KeyV');
+  await tela.locator('#espera').waitFor({ state: 'visible' });
+  await fones[0].locator('#menuLista button[data-m=times][aria-disabled=false]').waitFor({ timeout: 8000 });
+  await fones[0].locator('#menuLista button[data-m=times]').tap(); await frente();
+  await tela.waitForFunction(() => window.__sala().escolhaModo === 'times', null, { timeout: 4000 });
+  await tela.waitForFunction(() => document.getElementById('espera').innerText.includes('as duplas mudam'), null, { timeout: 5000 });
+  assert.equal(await fones[0].locator('#menuDuplaTx').isVisible(), false, 'com 5 nao ha dupla para escolher');
+  await foto('6-duplas-com-5-espera');
+  await fones[0].locator('#menuGo').tap(); await frente();
+  await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
+  await ev(() => { window.__p.modificadores = false; });
+  assert.deepEqual(await ev(() => [window.__p.modo, window.__p.n, window.__p.alvo]), ['times', 5, 6]);
+  const duplasVistas = new Set();
+  for (let k = 0; k < 2; k++) {
+    const antes = await ev(() => window.__p.jogadores.map(j => j.pontos));
+    await ev(() => { window.__jogo('tinta-festa'); for (const j of window.__p.jogadores) { j.oferta = null; j.direito = false; } });
+    await tela.waitForFunction(() => window.__p.jogo.id === 'tinta-festa' && window.__p.fase === 'intro', null, { timeout: 5000 });
+    const d = await ev(() => window.__p.duelo);
+    assert.equal(d.length, 4, 'quatro jogam: ' + d);
+    const fora = [0, 1, 2, 3, 4].find(i => !d.includes(i));
+    duplasVistas.add([d[0], d[2]].sort().join('+') + ' x ' + [d[1], d[3]].sort().join('+'));
+    await tela.waitForFunction(x => window.__bonecos.every((b, i) => b.visible === x.includes(i)), d, { timeout: 5000 });
+    const txt = (await tela.locator('#msg').innerText()).replace(/\s+/g, ' ');
+    assert.ok(txt.includes(`Laranja: Jogador ${d[0] + 1} e Jogador ${d[2] + 1}`) && txt.includes(`Roxo: Jogador ${d[1] + 1} e Jogador ${d[3] + 1}`), 'a explicacao mostra as duplas da rodada: ' + txt.slice(0, 300));
+    assert.ok(txt.includes(`Jogador ${fora + 1} descansa nesta rodada`), 'e quem descansa');
+    await espera(900); await foto(`6-duplas-com-5-rodada${k + 1}-explicacao`);
+    for (const f of fones.filter((_, i) => i !== fora)) {
+      await f.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
+      await f.locator('#btG').tap(); await frente();
+    }
+    await tela.waitForFunction(() => window.__p.fase === 'jogando', null, { timeout: 20000 });
+    assert.equal(await ev(() => window.__bonecos.filter(b => b.visible && b.userData.anelTime.visible).length), 4, 'os quatro da vez com o anel do time');
+    await toque(fones[d[0]], 'touchStart', 150, 220);       // so um do time laranja anda e pinta: o time dele vence
+    for (let q = 0; q < 22; q++) { await toque(fones[d[0]], 'touchMove', 150 + Math.cos(q * 0.3) * 60, 220 + Math.sin(q * 0.3) * 60); await espera(90); }
+    await toque(fones[d[0]], 'touchEnd');
+    await foto(`6-duplas-com-5-rodada${k + 1}-meio`);
+    await ev(() => { const p = window.__p; p.t = p.jogo.duracao - 0.4; });
+    await tela.waitForFunction(() => ['resultado', 'fim'].includes(window.__p.fase), null, { timeout: 30000 });
+    await espera(600);
+    const r = await ev(() => ({ v: window.__p.vencedor, pts: window.__p.jogadores.map(j => j.pontos) }));
+    if (r.v >= 0) {
+      const ganharam = r.v === 0 ? [d[0], d[2]] : [d[1], d[3]];
+      assert.deepEqual(r.pts.map((v, i) => v - antes[i]), [0, 1, 2, 3, 4].map(i => (ganharam.includes(i) ? 1 : 0)), 'um ponto para cada um da dupla vencedora');
+      await fones[ganharam[0]].waitForFunction(() => document.body.innerText.includes('Ponto da sua dupla'), null, { timeout: 5000 });
+    }
+    await foto(`6-duplas-com-5-rodada${k + 1}-fim`);
+    console.log(`ok Duplas com 5, rodada ${k + 1}: J${d[0] + 1}+J${d[2] + 1} contra J${d[1] + 1}+J${d[3] + 1}, descansou J${fora + 1}, time vencedor ${r.v}, pontos ${r.pts.join(',')}`);
+  }
+
+  // ---- alguem sai do sofa: fica de fora das rodadas seguintes sem travar a partida
+  await tela.keyboard.press('KeyV');
+  await tela.locator('#espera').waitFor({ state: 'visible' });
+  await fones[0].locator('#menuLista button[data-m=vs]').tap(); await frente();
+  await tela.waitForFunction(() => window.__sala().escolhaModo === 'vs', null, { timeout: 4000 });
+  await fones[0].locator('#menuGo').tap(); await frente();
+  await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
+  await ev(() => { window.__p.modificadores = false; });
+  await espera(1500);                              // todos mandam sinal de vida dentro da partida
+  await fones[2].context().close();                // o Jogador 3 vai embora
+  await tela.waitForFunction(() => window.__p.ausentes?.[2] === true, null, { timeout: 20000 });
+  await ev(() => { window.__jogo('sumo-vidas'); for (const j of window.__p.jogadores) { j.oferta = null; j.direito = false; } });
+  await tela.waitForFunction(() => window.__p.jogo.id === 'sumo-vidas' && window.__p.fase === 'intro', null, { timeout: 5000 });
+  const semJ3 = await ev(() => window.__p.duelo);
+  assert.deepEqual(semJ3, [0, 1, 3, 4], 'com o Jogador 3 fora, os outros quatro jogam e ninguem descansa');
+  await tela.waitForFunction(() => document.getElementById('msg').innerText.includes('Jogador 3 saiu do sofá'), null, { timeout: 5000 });       // a TV avisa quem saiu
+  await espera(900); await foto('7-jogador-saiu-explicacao');
+  for (const i of semJ3) {
+    const f = fones[i];
+    await f.waitForFunction(() => document.getElementById('btG').textContent === 'Entendi' && getComputedStyle(document.getElementById('botao')).display !== 'none', null, { timeout: 15000 });
+    await f.locator('#btG').tap(); await frente();
+  }
+  await tela.waitForFunction(() => window.__p.fase === 'jogando', null, { timeout: 20000 });       // a rodada nao esperou por quem saiu
+  await espera(500); await foto('7-jogador-saiu-meio');
+  console.log('ok o Jogador 3 saiu do sofa: ficou de fora da rodada, a TV avisou e a partida seguiu com os outros quatro');
+
   assert.deepEqual(await ev(() => window.__p.erros), [], 'sem erros dos minijogos');
   assert.deepEqual(erros, [], 'zero erros de console: ' + erros.join(' | '));
   await browser.close();
