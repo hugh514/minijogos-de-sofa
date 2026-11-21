@@ -3061,15 +3061,16 @@ function chegou(i) {
 }
 // Quem saiu do sofa no meio da partida: depois de T_AUSENTE sem sinal do celular, a pessoa fica de fora das proximas rodadas (o motor le p.ausentes)
 // e volta sozinha quando o celular reconectar. So vale para quem ja jogou nesta partida com celular (teclado e lugar nunca ocupado nao contam).
-// Se nao sobra gente para a brincadeira por T_SEM_GENTE, a tela volta ao menu.
-const T_AUSENTE = 10000, T_SEM_GENTE = 45000, sumiuEm = Array(SLOTS).fill(0), jaJogou = Array(SLOTS).fill(false);
+// O prazo e folgado porque celular que so bloqueou a tela tambem para de dar sinal; com a partida pausada o tempo nao corre.
+// A tela nunca encerra a partida por conta disso: sem gente suficiente o motor ignora a ausencia e a rodada segue como sempre.
+const T_AUSENTE = 25000, sumiuEm = Array(SLOTS).fill(0), jaJogou = Array(SLOTS).fill(false);
+let ausentesEm = 0;
 function confereAusentes(agora) {
-  if (!iniciou) { jaJogou.fill(false); p.ausentes = null; return; }
-  const fora = i => i < p.jogadores.length && jaJogou[i] && !conectado[i] && sumiuEm[i] > 0;
-  p.ausentes = LUGARES.map(i => fora(i) && agora - sumiuEm[i] > T_AUSENTE);
-  if (p.modo === 'classico') return;
-  const faltam = p.jogadores.length - todos().filter(i => fora(i) && agora - sumiuEm[i] > T_SEM_GENTE).length < (p.modo === 'times' ? 4 : 2);
-  if (faltam) { avisa('Ficou pouca gente no sofá para esta brincadeira'); voltaAoMenu(); }
+  if (!iniciou) { jaJogou.fill(false); p.ausentes = null; ausentesEm = 0; return; }
+  if (pausado || ajustesAberto) { ausentesEm = 0; return; }
+  if (!ausentesEm) for (const i of LUGARES) if (sumiuEm[i]) sumiuEm[i] = agora;       // voltou da pausa (ou a partida comecou): o prazo de quem esta sumido recomeca
+  ausentesEm = agora;
+  p.ausentes = LUGARES.map(i => i < p.jogadores.length && jaJogou[i] && !conectado[i] && sumiuEm[i] > 0 && agora - sumiuEm[i] > T_AUSENTE);
 }
 let faseVista = '', rodadaVista = -1, contaVista = '', segVisto = -1, iniciouVisto = null, pontosVistos = [0, 0];
 function hud(agora) {

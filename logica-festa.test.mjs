@@ -707,7 +707,7 @@ test('cinco jogadores: resultado fora dos 4 da vez tira o minijogo da rotacao, e
   } finally { volta(); }
 });
 
-test('cinco jogadores: minijogo que aceita 5 (festa.max 5) roda com todos, e 6 jogadores ou Duplas com 5 viram erro claro', () => {
+test('cinco jogadores: minijogo que aceita 5 (festa.max 5) roda com todos, e 6 jogadores ou Duplas com 3 viram erro claro', () => {
   const volta = semClassicos();
   const todos = falso('f-todos', { min: 2, max: 5, modos: ['vs'] });
   registra(todos);
@@ -820,6 +820,20 @@ test('duplas com 5: a cada rodada um descansa, as duplas mudam e cada um da dupl
     }
     assert.deepEqual(descansos, [3, 3, 3, 3, 3]);
     assert.equal(Object.keys(juntos).length, 10, 'todo mundo faz dupla com todo mundo');
+    // e a forma das duplas muda toda rodada: ninguem repete o parceiro em duas rodadas seguidas que jogou
+    reinicia(p);
+    let antes = null;
+    for (let k = 0; k < 15; k++) {
+      const d = p.duelo, agora = [[d[0], d[2]], [d[1], d[3]]].map(x => x.slice().sort().join('-'));
+      if (antes) assert.ok(!agora.some(x => antes.includes(x)), `rodada ${k + 1} repetiu uma dupla da anterior: ${agora} depois de ${antes}`);
+      antes = agora;
+      pulaPara(p);
+    }
+    // nas primeiras 8 rodadas (uma partida a 6 dura por volta de 10) ja aparecem pelo menos 9 das 10 duplas possiveis
+    reinicia(p);
+    const cedo = new Set();
+    for (let k = 0; k < 8; k++) { const d = p.duelo; cedo.add([d[0], d[2]].sort().join('-')); cedo.add([d[1], d[3]].sort().join('-')); pulaPara(p); }
+    assert.ok(cedo.size >= 9, 'duplas diferentes em 8 rodadas: ' + cedo.size);
     assert.ok(Object.values(juntos).every(v => v === 3), JSON.stringify(juntos));
   } finally { JOGOS.splice(0, JOGOS.length, ...sozinhos); }
 });

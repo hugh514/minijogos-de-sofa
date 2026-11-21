@@ -158,7 +158,7 @@ const espera = ms => new Promise(r => setTimeout(r, ms));
   await ev(() => { window.__p.modificadores = false; });
   await espera(1500);                              // todos mandam sinal de vida dentro da partida
   await fones[2].context().close();                // o Jogador 3 vai embora
-  await tela.waitForFunction(() => window.__p.ausentes?.[2] === true, null, { timeout: 20000 });
+  await tela.waitForFunction(() => window.__p.ausentes?.[2] === true, null, { timeout: 40000 });       // 25 s sem sinal do celular
   await ev(() => { window.__jogo('sumo-vidas'); for (const j of window.__p.jogadores) { j.oferta = null; j.direito = false; } });
   await tela.waitForFunction(() => window.__p.jogo.id === 'sumo-vidas' && window.__p.fase === 'intro', null, { timeout: 5000 });
   const semJ3 = await ev(() => window.__p.duelo);

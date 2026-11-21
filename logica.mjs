@@ -67,7 +67,9 @@ function quemJoga(p) {
   const cabem = duplas ? 4 : p.jogo.festa ? p.jogo.festa.max : aqui.length;
   if (aqui.length > cabem) { const descansa = aqui[aqui.length - 1 - p.duelos % aqui.length]; aqui = aqui.filter(i => i !== descansa); }
   if (!duplas) return aqui;
-  const [a1, a2, b1, b2] = PARES[Math.floor(p.duelos / MAX_JOGADORES) % PARES.length].map(k => aqui[k]);
+  if (!p.jogo.festa) return aqui.slice(0, 2);       // minijogo de 2 forcado numa partida de Duplas com 5 (so por atalho de teste): joga um par
+  // A forma de dividir muda a cada rodada; como 3 formas e 5 descansos nao tem divisor comum, em 15 rodadas sai cada combinacao uma vez
+  const [a1, a2, b1, b2] = PARES[p.duelos % PARES.length].map(k => aqui[k]);
   return [a1, b1, a2, b2];       // o minijogo ve o time A nos indices 0 e 2 e o B nos indices 1 e 3, como sempre
 }
 function montaDuelo(p) {
