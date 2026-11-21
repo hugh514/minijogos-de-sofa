@@ -69,10 +69,12 @@ async function celular(browser, n) {
     throw new Error('PRONTO nao chegou do jogador ' + (i + 1));
   }
   // Comeca a rodada de um minijogo e espera todos apertarem PRONTO. Devolve quando a rodada esta valendo.
-  async function comeca(id, fotoExplica) {
+  // Quem perdeu a rodada anterior recebe a oferta de carta: sem "comCartas" o teste dispensa a oferta (o assunto da etapa e outro).
+  async function comeca(id, fotoExplica, comCartas = false) {
     await tela.waitForFunction(() => ['intro', 'resultado', 'fim'].includes(window.__p.fase) || window.__p.fase === 'jogando', null, { timeout: 30000 });
     await ev(x => window.__jogo(x), id);
     await tela.waitForFunction(x => window.__p.jogo.id === x && window.__p.fase === 'intro', id, { timeout: 5000 });
+    if (!comCartas) await ev(() => { for (const j of window.__p.jogadores) { j.oferta = null; j.direito = false; } });
     if (fotoExplica) { await espera(1500); await foto(fotoExplica); }
     for (let i = 0; i < fones.length; i++) await prontoDe(i);
     await fase('jogando');
@@ -102,8 +104,8 @@ async function celular(browser, n) {
   await fones[0].locator('#menuLista button[data-m=times][aria-disabled=false]').waitFor({ timeout: 4000 });
   const chips = await tela.locator('#espera .chip b.ok').count();
   assert.equal(chips, 4, 'os 4 conectados aparecem na espera');
-  assert.deepEqual(await ev(() => window.__cores.slice()), [0, 1, 2, 3], 'cores padrao: azul, rosa, verde, amarelo');
-  assert.equal(await ev(() => [0, 1, 2, 3].some(a => [0, 1, 2, 3].some(b => a < b && window.__mesmaCor(a, b)))), false, 'nenhuma cor padrao e parecida com outra (par PARECIDAS)');
+  assert.deepEqual(await ev(() => window.__cores.slice()), [0, 1, 2, 3, 4], 'cores padrao: azul, rosa, verde, amarelo, roxo');
+  assert.equal(await ev(() => [0, 1, 2, 3, 4].some(a => [0, 1, 2, 3, 4].some(b => a < b && window.__mesmaCor(a, b)))), false, 'nenhuma cor padrao e parecida com outra (par PARECIDAS)');
   assert.equal(await ev(() => window.__sala().iniciou), false, 'com 4 conectados nada comeca sozinho');
   await espera(1200);
   await foto('01-espera-4-conectados');
@@ -122,7 +124,10 @@ async function celular(browser, n) {
   await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
   let e = await estado();
   assert.equal(e.modo, 'times'); assert.equal(e.n, 4);
-  assert.ok(await ev(() => !!window.__p.jogo.festa), 'o primeiro minijogo e de festa');
+  if (!(await ev(() => !!window.__p.jogo.festa))) {       // Duplas tambem sorteia os de 2 (revezamento): estas checagens sao da rodada com os 4
+    await ev(() => window.__jogo('tinta-festa'));
+    await tela.waitForFunction(() => window.__p.jogo.id === 'tinta-festa' && window.__bonecos.filter(b => b.visible).length === 4, null, { timeout: 5000 });
+  }
   assert.equal(await cartoes(), 4, 'placar com 4 cartoes');
   assert.equal(await tela.locator('#placar .cartao.time').count(), 4, 'em times cada cartao tem a cor do time');
   assert.equal(await tela.locator('#placar .lado').count(), 2, 'dois cartoes de cada lado');
@@ -199,6 +204,34 @@ async function celular(browser, n) {
   await semErro('futebol-times');
   console.log(`ok futebol-times: gol no placar ${e.placar.join(' x ')}, fim por tempo, time A venceu`);
 
+  // =================================================== 5b. Duplas com minijogo de 2: um de cada dupla joga, o parceiro torce
+  for (const id of ['sumo', 'bomba', 'kart']) {
+    antes = await pontos();
+    await comeca(id, `duelo-${id}-1-explicacao`);
+    const d = await ev(() => window.__p.duelo);
+    assert.ok(Array.isArray(d) && d.length === 2 && d[0] % 2 === 0 && d[1] % 2 === 1, `${id}: duelo com um de cada dupla: ${d}`);
+    assert.equal(await ev(() => window.__p.jogadores.length), 4, 'a partida segue com os 4');
+    assert.equal(await cartoes(), 4, 'o placar continua com os 4');
+    await tela.waitForFunction(d => window.__bonecos.every((b, i) => b.visible === d.includes(i)), d, { timeout: 5000 }).catch(() => {});
+    assert.deepEqual(await ev(() => window.__bonecos.flatMap((b, i) => b.visible ? [i] : [])), [...d].sort(), 'so os dois da vez na arena');
+    const fora = [0, 1, 2, 3].filter(i => !d.includes(i));
+    for (const i of fora) await fones[i].waitForFunction(() => document.body.innerText.includes('Daqui você torce'), null, { timeout: 5000 });
+    await anda(d.map(i => fones[i]), 2500, (i, k) => roda(i, k));
+    await foto(`duelo-${id}-2-meio`);
+    await foto(`duelo-${id}-3-celular-de-fora-j${fora[0] + 1}`, fones[fora[0]]);
+    await foto(`duelo-${id}-4-celular-da-vez-j${d[0] + 1}`, fones[d[0]]);
+    await ev(() => { const p = window.__p; p.t = Math.max(p.t, (p.jogo.duracao || 60) - 0.4); });
+    await ev(() => { const p = window.__p; if (window.__p.jogo.id === 'sumo') { p.dados.placar = [1, 0]; p.t = 6; p.jogadores[p.duelo[1]].vivo = false; } });
+    await tela.waitForFunction(() => ['resultado', 'fim'].includes(window.__p.fase), null, { timeout: 80000 });
+    await espera(900);
+    const r = await ev(() => ({ v: window.__p.vencedor, pts: window.__p.jogadores.map(j => j.pontos) }));
+    if (id === 'sumo') assert.equal(r.v, 0, 'sumo: o da vez do time laranja derrubou o rival');
+    if (r.v >= 0) assert.deepEqual(soma(r.pts, antes), r.v === 0 ? [1, 0, 1, 0] : [0, 1, 0, 1], `${id}: ponto para os dois da dupla`);
+    await foto(`duelo-${id}-5-fim`);
+    await semErro('duelo ' + id);
+    console.log(`ok ${id} em Duplas: J${d[0] + 1} contra J${d[1] + 1}, parceiros torcendo, vencedor ${r.v}, pontos ${r.pts.join(',')}`);
+  }
+
   // =================================================== 6. podio com 4 (um time chega a 10 pontos)
   await ev(() => { for (const i of [0, 2]) window.__p.jogadores[i].pontos = 9; });
   await comeca('tinta-festa');
@@ -260,6 +293,9 @@ async function celular(browser, n) {
   await tela.locator('#espera').waitFor({ state: 'hidden', timeout: 8000 });
   e = await estado();
   assert.deepEqual([e.modo, e.n], ['vs', 3]);
+  assert.ok(await ev(() => !!window.__p.jogo.festa), 'cada um por si com 3: so minijogo em que todos jogam juntos');
+  await ev(() => window.__jogo('tinta-festa'));       // minijogo fixo para contar os bonecos (ha minijogos que trocam o boneco por outra peca, como os tanques)
+  await tela.waitForFunction(() => window.__p.jogo.id === 'tinta-festa' && window.__bonecos.filter(b => b.visible).length === 3, null, { timeout: 5000 });
   assert.equal(await cartoes(), 3); assert.equal(await visiveis(), 3);
   assert.equal(await tela.locator('#placar .cartao.time').count(), 0);
   await comeca('tinta-festa', '08-placar-3-vs-explicacao');
@@ -273,6 +309,26 @@ async function celular(browser, n) {
   assert.ok(e.v >= -1 && e.v <= 2);
   if (e.v >= 0) assert.equal(e.pts[e.v], 1, 'so o vencedor pontua');
   await foto('tinta-festa-vs3-3-fim');
+  // cartas de poder na Festa: quem perdeu escolhe uma carta no celular antes da rodada seguinte
+  if (e.v >= 0) {
+    const perdeu = [0, 1, 2].filter(i => i !== e.v);
+    assert.deepEqual(await ev(() => window.__p.jogadores.map(j => j.direito)), [0, 1, 2].map(i => i !== e.v), 'quem perdeu tem direito a carta');
+    await ev(() => window.__jogo('sumo-vidas'));       // ainda no resultado: a rodada seguinte e a que entrega a oferta
+    await tela.waitForFunction(k => window.__p.jogo.id === 'sumo-vidas' && window.__p.jogadores[k].oferta?.length > 0, perdeu[0], { timeout: 5000 });
+    assert.equal(await ev(k => window.__p.jogadores[k].oferta, e.v), null, 'quem venceu nao escolhe carta');
+    await ev(() => { for (const j of window.__p.jogadores) if (j.oferta) j.oferta = ['dobro', 'turbo', 'moedas']; });
+    const f = fones[perdeu[0]];
+    await f.locator('#opcoes button.carta', { hasText: 'Vale dobro' }).waitFor({ timeout: 5000 });
+    await foto('cartas-festa-1-oferta-celular', f); await foto('cartas-festa-2-tv-escolhendo');
+    await f.locator('#opcoes button.carta', { hasText: 'Turbo' }).tap(); await frente();
+    await tela.waitForFunction(k => window.__p.jogadores[k].carta === 'turbo', perdeu[0], { timeout: 4000 });
+    await ev(k => { window.__p.jogadores[k].oferta = null; }, perdeu[1]);
+    for (let i = 0; i < fones.length; i++) await prontoDe(i);
+    await fase('jogando');
+    await espera(600); await foto('cartas-festa-3-tv-com-carta');
+    assert.ok((await tela.locator('#placar .chipCarta').allTextContents()).some(t => /Turbo/.test(t)), 'a carta ativa aparece no cartao do jogador');
+    console.log(`ok cartas na Festa: J${perdeu[0] + 1} perdeu, escolheu Turbo no celular e a carta apareceu na TV`);
+  }
   await comeca('sumo-vidas');
   await espera(500); await foto('sumo-vidas-vs3-1-comeco');
   await anda(fones, 1500, i => { const a = -Math.PI / 2 + i * 2 * Math.PI / 3; return [-Math.sin(a) * 40, Math.cos(a) * 40]; });

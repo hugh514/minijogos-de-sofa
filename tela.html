@@ -41,6 +41,7 @@
   .dir .num{margin-left:0;margin-right:auto}
   /* Festa: 3 ou 4 jogadores, dois cartoes menores de cada lado (esquerda J1 e J3, direita J2 e J4). Em times o fundo do cartao e a cor do time. */
   #placar .lado{display:flex;gap:.55em;align-items:flex-start}
+  #placar.cinco .cartao.mini{font-size:.72em}       /* 5 no sofa: tres cartoes de um lado, menores para nao entrar embaixo do nome do minijogo */
   .cartao.mini{min-width:0;gap:.45em;padding:.32em .7em .5em .4em;border-radius:.9em}
   .cartao.mini.dir{padding:.32em .4em .5em .7em}
   .cartao.mini .rosto{width:2.3em;height:2.3em}
@@ -85,6 +86,10 @@
   .cx.mini h2{font-size:2.4em}
   .cx p{font-size:1.6em;margin:0 0 .6em;font-weight:700;line-height:1.2}
   .cx.mini p{font-size:1.2em;margin:0}
+  .cx .folga{display:inline-block;margin:.35em 0 .05em;padding:.2em 1.1em .25em;border-radius:99em;background:var(--cor);color:#fff;font-size:1.3em;font-weight:900;text-shadow:0 .08em .12em #0009;box-shadow:0 .2em 0 #0005}
+  .cx .folga small{font-size:.72em;font-weight:800;opacity:.95;margin-left:.5em}
+  .jg.fora{opacity:.45}
+  .cartao.fora{opacity:.45}
   .cx .mp{display:inline-block;margin-bottom:.5em;padding:.2em 1em;border-radius:.5em;background:#e5383b;font-size:1.25em;animation:pulsa .45s ease-in-out infinite alternate}
   .como{display:flex;align-items:center;justify-content:center;gap:1.4em;margin:.2em 0 .7em;padding:.8em 1em;border-radius:1em;background:#ffffff12}
   .ctl{display:flex;flex-direction:column;align-items:flex-start;gap:.45em}
@@ -270,6 +275,10 @@
   .cx .coop{display:inline-block;margin:0 0 .6em;padding:.25em 1.1em .3em;border-radius:.6em;background:linear-gradient(180deg,#5fe08a,#22a06b);color:#06210f;font-size:1.4em;font-weight:900;box-shadow:0 .16em 0 #0b5a33}
   .cx .oferta{margin:-.2em 0 .7em;font-size:1.15em;font-weight:800;color:#ffd84d}
   .jg .chipCarta{font-size:.8em;margin-top:.15em}
+  /* itens de rodada (spec 009): aviso curto embaixo e ficha do efeito no cartao de quem levou */
+  #hudItens{position:absolute;left:0;width:100%;bottom:2.2%;text-align:center}
+  .avItem{display:inline-block;padding:.16em 1em .24em;border-radius:.45em;font-size:1.7em;font-weight:900;color:#fff;background:#0c1022f5;border-bottom:.16em solid var(--ci);box-shadow:0 .14em 0 #0009;animation:surge .25s cubic-bezier(.2,1.5,.4,1)}
+  .inv.efeito{border-color:var(--ci);color:var(--ci)}
   #conta span{text-shadow:0 0 .25em var(--brilho,#fff8),0 .08em 0 #0b0e1a}
   #conta span.ja{font-size:1.25em;text-shadow:0 0 .3em #5fe08a,0 0 .08em #fff,0 .08em 0 #0b0e1a}
   #conta i{position:absolute;left:50%;top:50%;width:1em;height:1em;margin:-.5em 0 0 -.5em;border-radius:50%;border:.06em solid var(--brilho,#fff);opacity:0;animation:onda .7s ease-out both;pointer-events:none}
@@ -286,7 +295,7 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div class="reaHud" id="reaHud0"></div><div class="reaHud" id="reaHud1"></div><div class="reaHud" id="reaHud2"></div><div class="reaHud" id="reaHud3"></div>
+<div class="reaHud" id="reaHud0"></div><div class="reaHud" id="reaHud1"></div><div class="reaHud" id="reaHud2"></div><div class="reaHud" id="reaHud3"></div><div class="reaHud" id="reaHud4"></div>
 <div id="hud">
   <div id="clima"></div>
   <div id="placar"></div>
@@ -297,6 +306,7 @@
   <div id="fim"></div>
   <!-- lanchonete: bloco reservado para a Lanchonete (frente C), vazio por enquanto -->
   <div id="hudLanchonete"></div>
+  <div id="hudItens"></div>
   <div id="voo"></div>
   <div id="lampejo"></div>
   <div id="cortina"></div>
@@ -339,6 +349,7 @@
   <div class="chip" id="chip1"><span id="n1"></span><b id="st1"></b></div>
   <div class="chip" id="chip2"><span id="n2"></span><b id="st2"></b></div>
   <div class="chip" id="chip3"><span id="n3"></span><b id="st3"></b></div>
+  <div class="chip" id="chip4"><span id="n4"></span><b id="st4"></b></div>
   <div id="pe"><button id="ligar">Ligar som e tela cheia</button><br><span id="peTx"></span></div>
 </div>
 <script type="importmap">{ "imports": { "three": "/three/three.module.js", "three/addons/": "/three/addons/" } }</script>
@@ -346,27 +357,67 @@
 import * as THREE from '/three/three.module.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone as clonaModelo } from 'three/addons/utils/SkeletonUtils.js';
-import { criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, comMinimo, NOITES_COOP, CARTAS, JOGOS, RAIO } from '/logica.mjs';
+import { vista, timeNaRodada, criaPartida, configura, passo, entrada, reinicia, registra, pulaPara, descarta as tiraDaRotacao, tempoIntro, aguardando, moedasDaRodada, venceu, timeDe, ehCoop, elegiveis, jogavel, comMinimo, NOITES_COOP, CARTAS, JOGOS, RAIO, ITENS, itemLiberado } from '/logica.mjs';
 
 const $ = id => document.getElementById(id);
-// Mesmo catalogo do controle.html (indices de cor e de chapeu).
+// @catalogo (o tela.test.mjs e o controle.test.mjs leem este trecho: so dados e funcoes sem DOM nem THREE)
+// Mesmo catalogo do controle.html (indices de cor e de chapeu). So se acrescenta no fim: o perfil salvo no celular guarda o indice.
 const PALETA = [0x2f7df6, 0xf0458f, 0x35c26b, 0xffc531, 0x9b5cf6, 0xff7a2f, 0x22c7d6, 0xe5383b, 0xf2f2f2, 0x30343f,
-  0xd4a017, 0xff4fa3, 0x5b3fd6, 0x39ff14];      // dourado, arco-iris (anima), galaxia (textura), neon
-const SLOTS = 4;                              // o servidor tem 4 lugares; a partida usa os primeiros p.jogadores.length
-const perfis = [0, 1, 2, 3].map(i => ({ nome: '', cor: i, chapeu: 0 }));      // cor padrao: azul, rosa, verde, amarelo
-const idxCor = [0, 1, 2, 3];                  // indice de cor de cada jogador (depois de resolver cor repetida)
-const TIMES = [0xff7a1a, 0x9a4dff], NOME_TIME = ['Time Laranja', 'Time Roxo'];      // laranja (J1 + J3) e roxo (J2 + J4): fora das 4 cores padrao dos jogadores
+  0xd4a017, 0xff4fa3, 0x5b3fd6, 0x39ff14,       // dourado, arco-iris (anima), galaxia (textura), neon
+  0xff4a12, 0x9fdcff, 0xaab4c4, 0xe6e6e6, 0x2438a8, 0x5f7a3a, 0xd9ccff, 0xff4d5e,       // lava, gelo, cromado, zebra, bolinhas, camuflado, fantasma, melancia
+  0x0fa3a3, 0x8e1b3a, 0xb6e31c, 0xffb38a, 0xb9a7f5, 0x8a5a34];      // chapadas (22 a 27): turquesa, vinho, lima, pessego, lavanda, marrom
+const N_CHAPEUS = 23;                         // 0 e sem chapeu; cada indice tem um ramo em chapeu()
+const N_PETS = 9;                             // 0 e sem pet; cada indice tem um ramo em pet()
+// Rastro que sai do boneco quando ele anda: [textura (TX_RASTRO), cores, tamanho, quanto sobe, vida em s, particulas por s, espalha, cores em ordem]. 0 e sem rastro.
+const RASTROS = [null,
+  ['estrela', [0xffe14a, 0xfff3a8, 0xffffff], 0.55, 0.5, 0.7, 11, 0.6, false],
+  ['bolha', [0xbff2ff, 0xffffff, 0x8fd8ff], 0.5, 1.5, 0.9, 9, 0.6, false],
+  ['coracao', [0xff4d7a, 0xff86a8], 0.55, 1.3, 0.9, 7, 0.5, false],
+  ['chama', [0xff4a12, 0xff9a1a, 0xffd84d], 0.7, 1.6, 0.45, 18, 0.35, false],
+  ['arco', [0xff4d5e, 0xff9a1a, 0xffd84d, 0x35c26b, 0x2f7df6, 0x9b5cf6], 0.5, 0, 0.8, 26, 0.08, true]];
 // Acabamento do corpo por indice de cor: 10 dourado metalico, 11 arco-iris (matiz anda no quadro), 12 galaxia (textura), 13 neon.
-const ACABAMENTO = { 10: { metalness: 0.55, roughness: 0.28, emissive: 0x4a3500 }, 12: { roughness: 0.4 }, 13: { roughness: 0.3, emissive: 0x39ff14, emissiveIntensity: 0.55 } };
+// De 14 em diante a textura, o reflexo e o brilho vem de PELES (mais abaixo, depois das texturas).
+const ACABAMENTO = { 10: { metalness: 0.55, roughness: 0.28, emissive: 0x4a3500 }, 12: { roughness: 0.4 }, 13: { roughness: 0.3, emissive: 0x39ff14, emissiveIntensity: 0.55 },
+  14: { roughness: 0.75, emissive: 0xff7a1a, emissiveIntensity: 0.9 }, 15: { roughness: 0.08, metalness: 0.35, emissive: 0x1d5f9a, emissiveIntensity: 0.3 },
+  16: { roughness: 0.06, metalness: 1 }, 17: { roughness: 0.5 }, 18: { roughness: 0.45 }, 19: { roughness: 0.85 },
+  20: { roughness: 0.25, emissive: 0xa48cff, emissiveIntensity: 0.55, transparent: true, opacity: 0.5 }, 21: { roughness: 0.4 } };
+const corEscura = n => (n >> 16) * 0.3 + (n >> 8 & 255) * 0.59 + (n & 255) * 0.11 < 80;
+// Pares que no placar e nas arenas ninguem distingue: rosa x arco-iris, amarelo e laranja x dourado, e as skins novas contra a cor de base delas.
+const PARECIDAS = [[1, 11], [3, 10], [5, 10], [5, 14], [7, 14], [6, 15], [8, 15], [8, 16], [15, 16], [8, 17], [16, 17], [0, 18], [2, 19], [8, 20], [15, 20], [16, 20], [17, 20], [7, 21], [14, 21], [1, 21],
+  [6, 22], [7, 23], [13, 24], [5, 25], [4, 26], [20, 26], [23, 27]];      // turquesa x ciano, vinho x vermelho, lima x neon, pessego x laranja, lavanda x roxo e fantasma, vinho x marrom
+function mesmaCor(a, b) { return a === b || PARECIDAS.some(([x, y]) => (a === x && b === y) || (a === y && b === x)); }
+// Indice que chega pela rede: so inteiro dentro do catalogo passa, o resto vira o padrao.
+const indice = (v, n, padrao) => Number.isInteger(v) && v >= 0 && v < n ? v : padrao;
+// Cor igual ou quase igual a de quem veio antes: cai no padrao do lugar e, se esse tambem repete, na primeira cor livre.
+function semRepetir(pedidas) {
+  const r = [];
+  pedidas.forEach((c, k) => r.push(r.some(o => mesmaCor(o, c)) ? [k, ...PALETA.keys()].find(x => !r.some(o => mesmaCor(o, x))) : c));
+  return r;
+}
+// Perfil que chega do celular pelo servidor: perfil antigo nao tem pet nem rastro, e indice de fora do catalogo cai em "nenhum".
+const perfilDaRede = (m, i) => ({ nome: String(m.nome ?? '').slice(0, 10), cor: indice(m.cor, PALETA.length, i), chapeu: indice(m.chapeu, N_CHAPEUS, 0), pet: indice(m.pet, N_PETS, 0), rastro: indice(m.rastro, RASTROS.length, 0) });
+// @fim-catalogo
+const SLOTS = 5;                             // o servidor tem 5 lugares; a partida usa os primeiros p.jogadores.length
+const LUGARES = [...Array(SLOTS).keys()];
+const perfis = LUGARES.map(i => ({ nome: '', cor: i, chapeu: 0, pet: 0, rastro: 0 }));      // cor padrao: azul, rosa, verde, amarelo, roxo
+const idxCor = [...LUGARES];                  // indice de cor de cada jogador (depois de resolver cor repetida)
+const TIMES = [0xff7a1a, 0x9a4dff], NOME_TIME = ['Time Laranja', 'Time Roxo'];      // laranja (J1 + J3) e roxo (J2 + J4): fora das 4 cores padrao dos jogadores
 // Mesma lista de emojis e na mesma ordem do controle.html (o celular so manda o indice).
 const REACOES = ['\u{1F604}', '\u{1F602}', '\u{1F621}', '❤️', '\u{1F44D}', '\u{1F631}',   // gratis: risada, choro de rir, raiva, coracao, polegar, susto
   '\u{1F61B}', '\u{1F60E}', '\u{1F921}', '\u{1F634}',                                                 // Provocacao: lingua, oculos escuros, palhaco, dormindo
   '\u{1F525}', '\u{1F31F}', '\u{1F3C6}', '\u{1F451}',                                                 // Festa: fogo, estrelas, trofeu, coroa
-  '\u{1F414}', '\u{1F40D}', '\u{1F422}', '\u{1F40C}'];                                               // Bichos: galinha, cobra, tartaruga, caracol
-const cores = [PALETA[0], PALETA[1], PALETA[2], PALETA[3]];        // cor atual de cada jogador (os minijogos leem daqui)
+  '\u{1F414}', '\u{1F40D}', '\u{1F422}', '\u{1F40C}',                                                // Bichos: galinha, cobra, tartaruga, caracol
+  '\u{1F355}', '\u{1F37F}', '\u{1F366}', '\u{1F369}',                                                 // Lanche: pizza, pipoca, sorvete, rosquinha
+  '\u{1F47B}', '\u{1F47D}', '\u{1F916}', '\u{1F480}'];                                               // Monstros: fantasma, alienigena, robo, caveira
+const cores = LUGARES.map(i => PALETA[i]);        // cor atual de cada jogador (os minijogos leem daqui)
 const hex = n => '#' + n.toString(16).padStart(6, '0');
 const css = i => hex(cores[i]);
-const nome = i => perfis[i].nome || 'Jogador ' + (i + 1);
+// Duplas escolhidas: o Jogador 1 escolhe quem joga com ele. Por dentro o time A e sempre os indices 0 e 2 e o B, 1 e 3
+// (os minijogos contam com isso), entao a pessoa escolhida troca de indice com quem esta no 2 enquanto a partida de Duplas dura.
+// troca = [a, b]: o celular do lugar a fala pelo indice b e vice-versa. Nome, cor, chapeu e contadores vao junto com a pessoa.
+let troca = null;
+const lugar = s => lugarDe(troca, s);       // lugar do celular <-> indice na partida (a mesma conta nos dois sentidos)
+const nome = i => perfis[i].nome || 'Jogador ' + (lugar(i) + 1);
 const limpa = s => String(s).replace(/[<>&]/g, '');
 // @puras-texto (funcoes sem DOM: o tela.test.mjs le este trecho do html)
 // Todo texto que vem de minijogo ou da rede passa por aqui: so texto e numero finito, sem restos crus, com tamanho maximo.
@@ -386,10 +437,21 @@ function trocaNomes(texto, nomes) {
 const milhar = n => (Number.isInteger(n) ? n : 0).toLocaleString('pt-BR');
 // rotulo de botao vindo do minijogo: tudo em caixa alta ("ENCHE!") vira caixa normal ("Enche!"); o resto passa como veio
 function rotulo(s, max = 20) { const t = textoSeguro(s, max); return t.length > 1 && t === t.toLocaleUpperCase('pt-BR') && t !== t.toLocaleLowerCase('pt-BR') ? t[0] + t.slice(1).toLocaleLowerCase('pt-BR') : t; }
+// Com troca = [a, b], a vira b e b vira a; o resto fica. Vale nos dois sentidos (lugar do celular -> indice e indice -> lugar).
+function lugarDe(troca, s) { return !troca ? s : s === troca[0] ? troca[1] : s === troca[1] ? troca[0] : s; }
+// Aviso curto da TV quando alguem usa um item de rodada (u vem de p.itens; de e para sao os nomes).
+const FRASE_ITEM = { bomba: ['jogou uma bomba em', 'a bomba'], gelo: ['congelou', 'o gelo'], tinta: ['jogou tinta no celular de', 'a tinta'], turbo: ['ligou o turbo'], guarda: ['abriu o guarda-chuva'] };
+function fraseItem(u, de, para) {
+  const f = u && typeof u === 'object' && Object.hasOwn(FRASE_ITEM, u.id) ? FRASE_ITEM[u.id] : null;
+  if (!f) return '';
+  if (u.bloqueado && f[1]) return `O guarda-chuva de ${para} segurou ${f[1]} de ${de}`;
+  return f[1] ? `${de} ${f[0]} ${para}` : `${de} ${f[0]}`;
+}
 // @fim-puras-texto
-const nomesPerfis = () => perfis.map(pf => pf.nome);
-const doJogo = (s, max = 120) => textoSeguro(trocaNomes(s, nomesPerfis()), max);       // texto de minijogo pronto para a tela
-const corEscura = n => (n >> 16) * 0.3 + (n >> 8 & 255) * 0.59 + (n & 255) * 0.11 < 80;
+const nomesPerfis = () => perfis.map((pf, i) => pf.nome || (troca ? nome(i) : ''));       // com lugares trocados, "Jogador 3" no texto do minijogo vira o lugar de verdade de quem esta ali
+// Minijogo de 2 em revezamento fala de "Jogador 1" e "Jogador 2": sao os dois da vez, nao os lugares 1 e 2.
+const nomesDoJogo = () => (p.duelo ? p.duelo.map(nome) : nomesPerfis());
+const doJogo = (s, max = 120) => textoSeguro(trocaNomes(s, nomesDoJogo()), max);       // texto de minijogo pronto para a tela
 const nomeHtml = i => `<span class="nm${corEscura(cores[i]) ? ' escuro' : ''}" style="color:${css(i)}">${limpa(nome(i))}</span>`;
 
 function sorteioDe(texto) {       // gerador fixo por texto: cada minijogo tem sempre a mesma musica e o mesmo lugar
@@ -479,8 +541,75 @@ function galaxia() {
     for (let k = 0; k < 160; k++) { x.fillStyle = `rgba(255,255,255,${0.5 + sorte() * 0.5})`; x.beginPath(); x.arc(sorte() * w, sorte() * h, 0.8 + sorte() * 1.8, 0, 7); x.fill(); }
   });
 }
+// Pele do boneco: 512 x 256 enrolada na esfera (o rosto fica em 1/4 da largura). "emenda" repete o desenho nas laterais para nao aparecer costura.
+function emenda(x, w, desenha) { for (const dx of [-w, 0, w]) { x.save(); x.translate(dx, 0); desenha(); x.restore(); } }
+function pele(fundo, desenha) {
+  let s = 11;
+  const sorte = () => (s = (s * 16807) % 2147483647) / 2147483647;      // sempre o mesmo desenho
+  return textura(512, 256, (x, w, h) => { x.fillStyle = fundo; x.fillRect(0, 0, w, h); desenha(x, w, h, sorte); });
+}
+const bolha = (x, px, py, rx, ry, cor, gira = 0) => { x.fillStyle = cor; x.beginPath(); x.ellipse(px, py, rx, ry, gira, 0, 7); x.fill(); };
 const TX = {
   galaxia: galaxia(),
+  peleLava: pele('#2a0703', (x, w, h, r) => {       // crosta escura rachada, com magma claro nas rachaduras (o mesmo mapa acende no emissivo)
+    x.lineCap = x.lineJoin = 'round';
+    const veios = Array.from({ length: 26 }, () => { let px = r() * w, py = r() * h; return [[px, py], ...Array.from({ length: 5 }, () => [px += (r() - 0.5) * 110, py += (r() - 0.5) * 90])]; });
+    for (const [larg, cor] of [[26, '#a81c02'], [15, '#ff5a12'], [6, '#ffd24a']]) emenda(x, w, () => {
+      x.strokeStyle = cor; x.lineWidth = larg;
+      for (const v of veios) { x.beginPath(); v.forEach(([px, py], k) => k ? x.lineTo(px, py) : x.moveTo(px, py)); x.stroke(); }
+    });
+  }),
+  peleGelo: pele('#bfe6ff', (x, w, h, r) => {       // gelo: azul claro com facetas e riscos brancos
+    const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#f4fcff'); g.addColorStop(0.55, '#a9dcff'); g.addColorStop(1, '#5fa8e8');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    for (let k = 0; k < 22; k++) {
+      const px = r() * w, py = r() * h, a = r() * 6.3, c = 30 + r() * 60;
+      emenda(x, w, () => {
+        x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * c, py + Math.sin(a) * c); x.lineTo(px + Math.cos(a + 1.1) * c * 0.7, py + Math.sin(a + 1.1) * c * 0.7); x.closePath();
+        x.fillStyle = k % 2 ? 'rgba(255,255,255,.5)' : 'rgba(60,140,220,.3)'; x.fill();
+        x.strokeStyle = 'rgba(255,255,255,.9)'; x.lineWidth = 2.5; x.stroke();
+      });
+    }
+  }),
+  peleZebra: pele('#f6f6f6', (x, w, h) => {         // listras pretas onduladas, mais gordas no meio
+    x.fillStyle = '#17181c';
+    for (let k = 0; k < 12; k++) {
+      const cx = (k + 0.5) * w / 12, meio = y => cx + Math.sin(y * 0.045 + k * 1.7) * 11, gordura = y => 5 + Math.sin(y / h * Math.PI) * 5;
+      x.beginPath();
+      for (let y = 0; y <= h; y += 8) x.lineTo(meio(y) - gordura(y), y);
+      for (let y = h; y >= 0; y -= 8) x.lineTo(meio(y) + gordura(y), y);
+      x.fill();
+    }
+  }),
+  peleBolinhas: pele('#2438a8', (x, w, h) => {      // bolinhas brancas em fileiras desencontradas (mais largas perto dos polos para nao afinar)
+    for (let l = 0; l < 5; l++) {
+      const py = 38 + l * 45, estica = 1 / Math.max(0.45, Math.sin(py / h * Math.PI));
+      for (let k = 0; k < 10; k++) emenda(x, w, () => bolha(x, (k + (l % 2) / 2) * w / 10 + 12, py, 14 * estica, 14, '#ffffff'));
+    }
+  }),
+  peleCamuflado: pele('#5f7a3a', (x, w, h, r) => {  // manchas grandes em verde escuro, marrom e areia
+    for (let k = 0; k < 46; k++) {
+      const px = r() * w, py = r() * h, rx = 24 + r() * 40, ry = 14 + r() * 22, g = r() * 3, cor = ['#2f4420', '#7a5a36', '#2f4420', '#b5a97a'][k % 4];
+      emenda(x, w, () => { bolha(x, px, py, rx, ry, cor, g); bolha(x, px + rx * 0.7, py + ry * 0.5, rx * 0.6, ry * 0.8, cor, g + 1); });
+    }
+  }),
+  peleMelancia: pele('#ff4d5e', (x, w, h) => {      // fatia: polpa vermelha com sementes, faixa clara e casca verde embaixo
+    x.fillStyle = '#f4ffe0'; x.fillRect(0, h * 0.56, w, h * 0.06);
+    x.fillStyle = '#2f9e44'; x.fillRect(0, h * 0.61, w, h);
+    x.fillStyle = '#1b6e2c'; for (let k = 0; k < 16; k++) x.fillRect(k * w / 16, h * 0.63, w / 40, h);
+    for (let l = 0; l < 3; l++) for (let k = 0; k < 9; k++) bolha(x, (k + (l % 2) / 2 + 0.25) * w / 9, 46 + l * 36, 5, 9, '#1a1114', 0.2 - (l % 2) * 0.4);
+  }),
+  // Reflexo do cromado e do gelo: ceu claro, horizonte branco e chao escuro, lido como ambiente (so esses materiais usam).
+  reflexo: (() => {
+    const t = textura(256, 128, (x, w, h) => {
+      const g = x.createLinearGradient(0, 0, 0, h);
+      [[0, '#dff1ff'], [0.3, '#7fb8f0'], [0.47, '#ffffff'], [0.53, '#465064'], [0.72, '#9aa6b8'], [1, '#6b7688']].forEach(([p, c]) => g.addColorStop(p, c));
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+      for (const [px, cor] of [[40, '#ffffff'], [150, '#fff2c0'], [215, '#ffffff']]) bolha(x, px, 34, 16, 10, cor);       // janelas de luz
+    });
+    t.mapping = THREE.EquirectangularReflectionMapping;
+    return t;
+  })(),
   brilho: textura(128, 128, (x, w) => {
     const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
     g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.25, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -539,6 +668,9 @@ const TX = {
     manchas(x, w, ['rgba(255,190,60,.5)', 'rgba(110,14,0,.6)', 'rgba(255,120,30,.5)'], 16, 90);
   }, true),
 };
+// Textura, reflexo e mapa de brilho de cada skin (o resto do acabamento esta em ACABAMENTO, la em cima).
+const PELES = { 12: { map: TX.galaxia }, 14: { map: TX.peleLava, emissiveMap: TX.peleLava }, 15: { map: TX.peleGelo, envMap: TX.reflexo, envMapIntensity: 0.9 },
+  16: { envMap: TX.reflexo, envMapIntensity: 1.25 }, 17: { map: TX.peleZebra }, 18: { map: TX.peleBolinhas }, 19: { map: TX.peleCamuflado }, 21: { map: TX.peleMelancia } };
 function brilho(cor, tam, opacidade = 0.6) {      // halo barato para coisas que brilham
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX.brilho, color: cor, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: opacidade }));
   s.scale.setScalar(tam);
@@ -733,6 +865,75 @@ function chapeu(tipo) {
     const fita = malha(new THREE.CylinderGeometry(0.6, 0.6, 0.14, 28, 1, true), 0x1d2a6b, { side: THREE.DoubleSide }); fita.position.y = 0.55; g.add(fita);
     const placa = malha(new THREE.BoxGeometry(0.3, 0.12, 0.04), 0xc8ccd8, { metalness: 0.5, roughness: 0.3 }); placa.position.set(0, 0.55, 0.6); g.add(placa);
     for (const s of [-1, 1]) { const ponta = malha(new THREE.BoxGeometry(0.1, 0.4, 0.04), 0x1d2a6b); ponta.position.set(s * 0.12, 0.38, -0.66); ponta.rotation.set(0.3, 0, s * 0.35); g.add(ponta); }
+  } else if (tipo === 13) { // bone: calota vermelha, aba para a frente e botao em cima
+    const calota = malha(new THREE.SphereGeometry(0.84, 24, 12, 0, Math.PI * 2, 0, 0.95), 0xe5383b); calota.position.y = 0.06;
+    const aba = malha(new THREE.CylinderGeometry(0.46, 0.46, 0.06, 24), 0xa81f28); aba.position.set(0, 0.55, 0.58); aba.rotation.x = 0.32;
+    const botao = malha(new THREE.SphereGeometry(0.08, 10, 8), 0xffffff); botao.position.y = 0.9;
+    g.add(calota, aba, botao);
+  } else if (tipo === 14) { // chapeu de bruxo: aba larga, cone alto roxo, faixa e fivela
+    const aba = malha(new THREE.CylinderGeometry(0.72, 0.72, 0.06, 28), 0x4b2a8a); aba.position.y = 0.7;
+    const cone = malha(new THREE.ConeGeometry(0.42, 0.85, 24), 0x4b2a8a); cone.position.y = 1.13;
+    const faixa = malha(new THREE.CylinderGeometry(0.345, 0.405, 0.13, 24), 0x1d1036); faixa.position.y = 0.81;
+    const fivela = malha(new THREE.BoxGeometry(0.17, 0.13, 0.05), 0xffc531, { metalness: 0.6, roughness: 0.3, emissive: 0x4a3000 }); fivela.position.set(0, 0.81, 0.375);
+    g.add(aba, cone, faixa, fivela);
+  } else if (tipo === 15) { // cowboy: aba virada para cima nas bordas, copa alta e fita escura
+    const aba = malha(new THREE.LatheGeometry([[0.3, 0], [0.62, 0], [0.8, 0.07], [0.88, 0.2]].map(([r, y]) => new THREE.Vector2(r, y)), 28), 0x9a6a36, { side: THREE.DoubleSide });
+    aba.position.y = 0.68; aba.scale.z = 0.8;
+    const copa = malha(new THREE.CylinderGeometry(0.34, 0.42, 0.42, 24), 0x9a6a36); copa.position.y = 0.91; copa.scale.z = 0.85;
+    const topo = malha(new THREE.SphereGeometry(0.34, 20, 10), 0x9a6a36); topo.position.y = 1.12; topo.scale.set(1, 0.3, 0.85);
+    const fita = malha(new THREE.CylinderGeometry(0.415, 0.43, 0.1, 24), 0x3a2412); fita.position.y = 0.76; fita.scale.z = 0.85;
+    g.add(aba, copa, topo, fita);
+  } else if (tipo === 16) { // flor: miolo amarelo, seis petalas e uma folha, de lado na cabeca
+    const flor = new THREE.Group();
+    for (let k = 0; k < 6; k++) {
+      const pet = malha(new THREE.SphereGeometry(0.16, 12, 8), 0xff7ab8); pet.scale.y = 0.45;
+      pet.position.set(Math.cos(k * Math.PI / 3) * 0.21, 0, Math.sin(k * Math.PI / 3) * 0.21); flor.add(pet);
+    }
+    const miolo = malha(new THREE.SphereGeometry(0.13, 12, 8), 0xffc531); miolo.position.y = 0.04;
+    const folha = malha(new THREE.SphereGeometry(0.16, 10, 6), 0x35c26b); folha.scale.set(1.3, 0.25, 0.6); folha.position.set(-0.3, -0.08, 0.1);
+    flor.add(miolo, folha); flor.position.set(0.36, 0.8, 0.22); flor.rotation.set(0.75, 0, -0.4);
+    g.add(flor);
+  } else if (tipo === 17) { // gorro de inverno: calota vermelha, dobra branca e pompom
+    const calota = malha(new THREE.SphereGeometry(0.85, 24, 12, 0, Math.PI * 2, 0, 0.9), 0xd92b3a, { roughness: 0.9 }); calota.position.y = 0.05;
+    const dobra = malha(new THREE.TorusGeometry(0.66, 0.1, 10, 28), 0xffffff, { roughness: 0.9 }); dobra.rotation.x = Math.PI / 2; dobra.position.y = 0.61;
+    const pompom = malha(new THREE.SphereGeometry(0.2, 12, 8), 0xffffff, { roughness: 0.9 }); pompom.position.y = 1.02;
+    g.add(calota, dobra, pompom);
+  } else if (tipo === 18) { // fone de ouvido: arco por cima e duas conchas nos lados
+    const arco = malha(new THREE.TorusGeometry(0.82, 0.05, 8, 28, Math.PI), 0x22252e); arco.position.y = 0.3; arco.scale.y = 0.7;
+    g.add(arco);
+    par(s => {
+      const concha = new THREE.Group();
+      const corpo = malha(new THREE.CylinderGeometry(0.25, 0.25, 0.18, 20), 0x22252e); corpo.rotation.z = Math.PI / 2;
+      const tampa = malha(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 20), 0xe5383b); tampa.rotation.z = Math.PI / 2; tampa.position.x = s * 0.1;
+      concha.add(corpo, tampa); concha.position.y = 0.3; return concha;
+    }, 0.82);
+  } else if (tipo === 19) { // laco: duas asas vermelhas e o no no meio, em cima da cabeca
+    par(s => { const asa = malha(new THREE.ConeGeometry(0.26, 0.44, 14), 0xe5383b); asa.rotation.z = s * Math.PI / 2; asa.scale.z = 0.45; asa.position.y = 0.92; return asa; }, 0.24);
+    const no = malha(new THREE.SphereGeometry(0.11, 12, 8), 0xb3262a); no.position.y = 0.92;
+    g.add(no);
+  } else if (tipo === 20) { // cogumelo: chapeu vermelho de pintas brancas
+    const copa = malha(new THREE.SphereGeometry(0.8, 28, 12, 0, Math.PI * 2, 0, Math.PI / 2), 0xe5383b); copa.scale.y = 0.7; copa.position.y = 0.55;
+    const baixo = malha(new THREE.CylinderGeometry(0.79, 0.79, 0.05, 28), 0xfff4e6); baixo.position.y = 0.55;
+    g.add(copa, baixo);
+    for (const [a, el] of [[0, 1.57], [1.57, 0.6], [2.83, 0.6], [4.08, 0.6], [5.34, 0.6], [0.31, 0.6]]) {
+      const pinta = malha(new THREE.SphereGeometry(0.14, 12, 8), 0xffffff); pinta.scale.y = 0.6;
+      pinta.position.set(Math.cos(el) * Math.cos(a) * 0.76, 0.55 + Math.sin(el) * 0.54, Math.cos(el) * Math.sin(a) * 0.76); g.add(pinta);
+    }
+  } else if (tipo === 21) { // chapeu de festa: cone listrado torto, com pompom
+    const cone = new THREE.Group();
+    for (let k = 0; k < 4; k++) {
+      const gomo = malha(new THREE.CylinderGeometry(0.34 * (3 - k) / 4, 0.34 * (4 - k) / 4, 0.19, 20), k % 2 ? 0xffc531 : 0x22c7d6); gomo.position.y = 0.77 + k * 0.19; cone.add(gomo);
+    }
+    const pompom = malha(new THREE.SphereGeometry(0.11, 12, 8), 0xf0458f); pompom.position.y = 1.47;
+    const babado = malha(new THREE.TorusGeometry(0.34, 0.045, 8, 24), 0xf0458f); babado.rotation.x = Math.PI / 2; babado.position.y = 0.7;
+    cone.add(pompom, babado); cone.rotation.z = -0.2; g.add(cone);
+  } else if (tipo === 22) { // coroa de louros: folhas verdes em volta da cabeca, aberta na frente
+    for (const s of [-1, 1]) for (let k = 0; k < 8; k++) for (const sobe of [-1, 1]) {
+      const a = 0.35 + k * 0.37, folha = malha(new THREE.SphereGeometry(0.15, 10, 6), sobe > 0 ? 0x4c9a3a : 0x3a7d2c);
+      folha.scale.set(1.4, 0.55, 0.75);
+      folha.position.set(s * Math.sin(a) * 0.57, 0.68 + sobe * 0.09, Math.cos(a) * 0.57);
+      folha.rotation.set(0, s > 0 ? a : Math.PI - a, sobe * 0.7); g.add(folha);
+    }
   }
   return g;
 }
@@ -749,16 +950,16 @@ function etiqueta(texto, cor, escura) {
   return s;
 }
 
-const bonecos = [0, 1, 2, 3].map(() => new THREE.Group());      // os da arena (os minijogos mexem neles); sobram escondidos os que a partida nao usa
-const atores = [0, 1, 2, 3].map(() => new THREE.Group());       // copias para a tela de espera e o podio
+const bonecos = LUGARES.map(() => new THREE.Group());      // os da arena (os minijogos mexem neles); sobram escondidos os que a partida nao usa
+const atores = LUGARES.map(() => new THREE.Group());       // copias para a tela de espera e o podio
 bonecos.forEach(b => mundo.add(b));
 atores.forEach(b => palco.add(b));
 function montaBoneco(g, i) {
   descarta(g); g.clear();
   const cor = cores[i], corpo = new THREE.Group();
   corpo.rotation.order = 'YXZ';       // gira para onde anda e so entao inclina para a frente
-  const casca = malha(new THREE.SphereGeometry(RAIO, 32, 24), idxCor[i] === 12 ? 0xffffff : cor, { roughness: 0.32, ...ACABAMENTO[idxCor[i]] });
-  if (idxCor[i] === 12) casca.material.map = TX.galaxia;
+  const pele = PELES[idxCor[i]];      // com textura a cor do material fica branca: quem pinta e o mapa
+  const casca = malha(new THREE.SphereGeometry(RAIO, 32, 24), pele?.map ? 0xffffff : cor, { roughness: 0.32, ...ACABAMENTO[idxCor[i]], ...pele });
   corpo.add(casca);
   const olhos = [], pes = [], maos = [], corMao = new THREE.Color(cor).multiplyScalar(0.7);
   for (const lado of [-1, 1]) {
@@ -793,6 +994,149 @@ function montaBoneco(g, i) {
 }
 function fazBoneco(i) { montaBoneco(bonecos[i], i); montaBoneco(atores[i], i); atores[i].userData.anel.visible = false; }
 function fazBonecos() { for (let i = 0; i < SLOTS; i++) fazBoneco(i); }
+
+// ---------- pets: bichinho de companhia que segue o dono (so enfeite: nao colide nem muda regra) ----------
+const ESC_PET = 1;       // o modelo tem ~0,6 de largura e ~0,9 de altura: perto de 40% do boneco (1,6 de diametro). Menor que isso some na arena vista do alto
+function pet(tipo) {       // de frente para +z, pes no chao (y = 0)
+  const g = new THREE.Group(), u = g.userData;
+  const poe = (m, x, y, z, pai = g) => { m.position.set(x, y, z); pai.add(m); return m; };
+  const bola = (r, cor, x, y, z, sx = 1, sy = 1, sz = 1, extra) => { const m = poe(malha(new THREE.SphereGeometry(r, 14, 10), cor, extra), x, y, z); m.scale.set(sx, sy, sz); return m; };
+  const cone = (r, h, cor, x, y, z, lados = 8, extra) => poe(malha(new THREE.ConeGeometry(r, h, lados), cor, extra), x, y, z);
+  const caixa = (w, h, d, cor, x, y, z, extra) => poe(malha(new THREE.BoxGeometry(w, h, d), cor, extra), x, y, z);
+  const olhos = (y, z, dx, r = 0.05) => { for (const s of [-1, 1]) bola(r, 0x111111, s * dx, y, z, 1, 1.15, 0.6, { roughness: 0.2 }); };
+  const rabo = (m, x, y, z) => { const eixo = new THREE.Group(); eixo.position.set(x, y, z); eixo.add(m); g.add(eixo); u.cauda = eixo; return m; };
+  if (tipo === 1) {       // pintinho
+    bola(0.3, 0xffd93b, 0, 0.3, 0); bola(0.22, 0xffd93b, 0, 0.68, 0.08);
+    cone(0.07, 0.18, 0xff8a1a, 0, 0.65, 0.33).rotation.x = Math.PI / 2;
+    cone(0.05, 0.16, 0xf5b800, 0, 0.93, 0.04);
+    olhos(0.74, 0.27, 0.1);
+    u.asas = [-1, 1].map(s => bola(0.15, 0xf5b800, s * 0.29, 0.34, 0, 0.4, 1, 1.1));
+    for (const s of [-1, 1]) bola(0.09, 0xff8a1a, s * 0.12, 0.03, 0.1, 1, 0.4, 1.5);
+  } else if (tipo === 2) {       // gato
+    const cor = 0xf29b3a;
+    bola(0.27, cor, 0, 0.27, -0.05, 1, 0.95, 1.3); bola(0.25, cor, 0, 0.6, 0.2);
+    for (const s of [-1, 1]) cone(0.11, 0.22, cor, s * 0.15, 0.86, 0.18, 4).rotation.y = Math.PI / 4;
+    bola(0.1, 0xfff3e0, 0, 0.53, 0.4, 1.3, 0.8, 0.6); bola(0.035, 0xff7a8a, 0, 0.57, 0.45);
+    olhos(0.66, 0.4, 0.11);
+    for (const z of [-0.2, 0.02]) bola(0.275, 0xc9741f, 0, 0.3, z, 1.01, 0.9, 0.16);       // listras
+    rabo(malha(new THREE.CylinderGeometry(0.045, 0.045, 0.5, 8), cor), 0, 0.3, -0.36).position.set(0, 0.22, -0.08);
+    u.cauda.rotation.x = -0.5; u.abana = 3;
+  } else if (tipo === 3) {       // cachorro
+    const cor = 0xb97a48, escuro = 0x6b4226;
+    bola(0.28, cor, 0, 0.28, -0.05, 1, 0.95, 1.3); bola(0.25, cor, 0, 0.62, 0.2);
+    bola(0.14, 0xf0d9b5, 0, 0.55, 0.4, 1, 0.8, 1.1); bola(0.055, 0x111111, 0, 0.6, 0.53); bola(0.045, 0xff6f91, 0, 0.46, 0.47, 1, 0.5, 1);
+    for (const s of [-1, 1]) bola(0.13, escuro, s * 0.25, 0.6, 0.14, 0.45, 1.25, 0.8);       // orelhas caidas
+    bola(0.1, escuro, 0.1, 0.7, 0.36, 1, 1, 0.5);       // mancha no olho
+    olhos(0.7, 0.41, 0.1);
+    rabo(cone(0.05, 0.28, escuro, 0, 0, 0), 0, 0.42, -0.36).position.set(0, 0.12, -0.04);
+    u.cauda.rotation.x = -0.7; u.abana = 14;
+  } else if (tipo === 4) {       // patinho
+    bola(0.3, 0xffffff, 0, 0.28, -0.02, 1, 0.85, 1.25); bola(0.2, 0xffffff, 0, 0.68, 0.16);
+    cone(0.12, 0.24, 0xffffff, 0, 0.44, -0.36, 8).rotation.x = -0.9;
+    bola(0.12, 0xff9a1a, 0, 0.63, 0.36, 1.15, 0.35, 1.2);       // bico largo
+    olhos(0.74, 0.31, 0.1);
+    u.asas = [-1, 1].map(s => bola(0.16, 0xdfe6f0, s * 0.28, 0.3, -0.02, 0.35, 0.9, 1.2));
+    for (const s of [-1, 1]) bola(0.1, 0xff9a1a, s * 0.13, 0.03, 0.1, 1, 0.3, 1.5);
+  } else if (tipo === 5) {       // robozinho
+    const metal = { metalness: 0.3, roughness: 0.35 }, luz = { emissive: 0x22e0ff, emissiveIntensity: 2 };
+    caixa(0.44, 0.34, 0.36, 0xff8a3c, 0, 0.33, 0, { roughness: 0.4 }); caixa(0.38, 0.28, 0.32, 0xe8edf5, 0, 0.7, 0, metal);
+    caixa(0.3, 0.12, 0.03, 0x111827, 0, 0.71, 0.165);
+    for (const s of [-1, 1]) { bola(0.04, 0x22e0ff, s * 0.07, 0.71, 0.18, 1, 1, 0.6, luz); caixa(0.08, 0.22, 0.1, 0xe8edf5, s * 0.27, 0.34, 0, metal); }
+    bola(0.05, 0xffd84d, 0, 0.36, 0.18, 1, 1, 0.5, { emissive: 0xffd84d, emissiveIntensity: 1.2 });
+    caixa(0.03, 0.14, 0.03, 0x5d6880, 0, 0.9, 0); bola(0.055, 0xff4d5e, 0, 1.0, 0, 1, 1, 1, { emissive: 0xff4d5e, emissiveIntensity: 1 });
+    for (const s of [-1, 1]) poe(malha(new THREE.CylinderGeometry(0.13, 0.13, 0.1, 14), 0x22252e), s * 0.2, 0.13, 0).rotation.z = Math.PI / 2;
+  } else if (tipo === 6) {       // fantasminha
+    const veu = { roughness: 0.5, emissive: 0x8fa0ff, emissiveIntensity: 0.3, transparent: true, opacity: 0.9 };
+    bola(0.29, 0xffffff, 0, 0.56, 0, 1, 1.05, 1, veu);
+    poe(malha(new THREE.CylinderGeometry(0.29, 0.31, 0.3, 16), 0xffffff, veu), 0, 0.4, 0);
+    for (let k = 0; k < 6; k++) cone(0.11, 0.2, 0xffffff, Math.cos(k * Math.PI / 3) * 0.2, 0.17, Math.sin(k * Math.PI / 3) * 0.2, 8, veu).rotation.x = Math.PI;
+    for (const s of [-1, 1]) bola(0.06, 0x111111, s * 0.11, 0.6, 0.25, 1, 1.5, 0.5);
+    bola(0.045, 0x111111, 0, 0.45, 0.28, 1, 1.2, 0.5);
+    u.voa = 0.22;
+  } else if (tipo === 7) {       // dragaozinho
+    const cor = 0x3fbf5f;
+    bola(0.27, cor, 0, 0.3, -0.05, 1, 1, 1.25); bola(0.2, 0xffe08a, 0, 0.27, 0.1, 0.9, 0.9, 1);
+    bola(0.22, cor, 0, 0.64, 0.2); bola(0.13, cor, 0, 0.58, 0.4, 1, 0.8, 1);
+    for (const s of [-1, 1]) { cone(0.05, 0.18, 0xfff3d0, s * 0.11, 0.87, 0.14); bola(0.025, 0x14301c, s * 0.05, 0.6, 0.52); }
+    olhos(0.71, 0.38, 0.11);
+    for (let k = 0; k < 3; k++) cone(0.05, 0.14, 0xff6b3d, 0, 0.6 - k * 0.12, -0.2 - k * 0.1, 4).rotation.x = -0.6;       // espinhos nas costas
+    cone(0.09, 0.42, cor, 0, 0.2, -0.5).rotation.x = -1.9;
+    u.asas = [-1, 1].map(s => {
+      const eixo = poe(new THREE.Group(), s * 0.2, 0.5, -0.12), asa = malha(new THREE.ConeGeometry(0.3, 0.46, 3), 0xff6b3d, { side: THREE.DoubleSide });
+      asa.scale.z = 0.12; asa.rotation.z = -s * Math.PI / 2; asa.position.x = s * 0.24; eixo.add(asa);
+      return eixo;
+    });
+    u.voa = 0.3; u.bate = 13;
+  } else if (tipo === 8) {       // ovni
+    bola(0.44, 0xb8c2d6, 0, 0.3, 0, 1, 0.26, 1, { metalness: 0.7, roughness: 0.25 });
+    bola(0.1, 0x7dff6a, 0, 0.44, 0); olhos(0.46, 0.085, 0.04, 0.025);       // o piloto
+    bola(0.23, 0x9fe8ff, 0, 0.4, 0, 1, 0.95, 1, { transparent: true, opacity: 0.45, roughness: 0.05, emissive: 0x2a9fd0, emissiveIntensity: 0.4 });
+    bola(0.14, 0xffe14a, 0, 0.2, 0, 1, 0.4, 1, { emissive: 0xffe14a, emissiveIntensity: 1.4 });
+    u.gira = poe(new THREE.Group(), 0, 0, 0);
+    for (let k = 0; k < 6; k++) { const c = k % 2 ? 0xff4fa3 : 0xffe14a; u.gira.add(bola(0.05, c, Math.cos(k * Math.PI / 3) * 0.36, 0.3, Math.sin(k * Math.PI / 3) * 0.36, 1, 1, 1, { emissive: c, emissiveIntensity: 1.5 })); }
+    u.voa = 0.5;
+  }
+  g.traverse(o => {       // so as pecas grandes fazem sombra: olho, bico e luzinha nao pagam o passe de sombra
+    if (!o.isMesh) return;
+    o.geometry.computeBoundingSphere(); o.receiveShadow = false;
+    o.castShadow = o.geometry.boundingSphere.radius * Math.max(o.scale.x, o.scale.y, o.scale.z) >= 0.2;
+  });
+  return g;
+}
+const pets = LUGARES.map(() => new THREE.Group());       // um por lugar, soltos na cena: seguem o boneco da arena ou o ator do palco
+pets.forEach(g => { g.visible = false; g.rotation.order = 'YXZ'; cena.add(g); });
+const segue = LUGARES.map(() => ({ ok: false, palco: false, x: 0, z: 0, dx: 0, dz: -1, acum: 0 }));       // por onde o dono andou (dx, dz: ultima direcao)
+function fazPets() {       // so refaz o de quem trocou de pet: os outros continuam onde estavam
+  pets.forEach((g, i) => {
+    if (g.userData.tipo === perfis[i].pet) return;
+    descarta(g); g.clear();
+    const m = pet(perfis[i].pet);
+    g.userData = { ...m.userData, tipo: perfis[i].pet, novo: true, y: 0, vel: 0, fase: 0 };
+    g.add(m);
+  });
+}
+// Depois que a rodada e o minijogo puseram cada boneco no lugar: o pet vai atras do dono com atraso e o rastro sai de onde ele passou.
+// Vale para qualquer minijogo sem ele saber: so le a posicao, a escala e o visible do boneco. Boneco escondido, pet escondido.
+function acompanha(dt, t, noPalco, podio) {
+  for (let i = 0; i < SLOTS; i++) {
+    const dono = noPalco ? atores[i] : bonecos[i], g = pets[i], u = g.userData, s = segue[i];
+    const aparece = dono.visible && !!dono.userData.corpo && !divide;       // tela dividida (kart): a camera fica colada atras do boneco, e o pet e o rastro tapariam a pista
+    g.visible = aparece && !!u.tipo;
+    if (!aparece) { s.ok = false; continue; }
+    const esc = dono.scale.x, px = dono.position.x, pz = dono.position.z, chao = (noPalco ? dono.userData.baseY ?? dono.position.y : dono.position.y) - RAIO * esc;
+    const mx = px - s.x, mz = pz - s.z, andou = Math.hypot(mx, mz), vel = andou / Math.max(dt, 0.001);
+    const salto = !s.ok || s.palco !== noPalco || vel > 40;       // apareceu agora ou foi teleportado: nada de arrastar pet nem riscar rastro pelo caminho
+    if (!salto && vel > 0.8) { s.dx = mx / andou; s.dz = mz / andou; }
+    s.x = px; s.z = pz; s.ok = true; s.palco = noPalco;
+    const tr = RASTROS[perfis[i].rastro];
+    if (tr && !noPalco && !salto && vel > 1.5 && p.jogadores[i]?.vivo) {
+      s.acum = Math.min(3, s.acum + dt * tr[5] * Math.min(1, vel / 4));
+      for (; s.acum >= 1; s.acum--) soltaRastro(tr, px - s.dx * 0.75 * esc, chao + 0.2 * esc, pz - s.dz * 0.75 * esc, esc);
+    }
+    if (!g.visible) continue;
+    // palco: ao lado do dono, no degrau do podio ou no assento do sofa (ali sempre para o lado do meio: nas pontas fica o braco do sofa). Arena: atras e um pouco de lado de para onde ele anda.
+    const ax = noPalco ? px + (podio ? 1.12 : i < 2 ? 1.2 : -1.2) * esc : px - (s.dx * 0.95 - s.dz * 0.85) * esc;
+    const az = noPalco ? pz + (podio ? 0.95 : 0.45) * esc : pz - (s.dz * 0.95 + s.dx * 0.85) * esc;
+    const pos = g.position;
+    if (salto || u.novo) { pos.set(ax, chao, az); u.y = chao; u.vel = 0; u.novo = false; g.rotation.y = 0; }
+    else {
+      const k = 1 - Math.exp(-dt * (noPalco ? 8 : 7)), ox = pos.x, oz = pos.z;
+      pos.x += (ax - pos.x) * k; pos.z += (az - pos.z) * k; u.y += (chao - u.y) * (1 - Math.exp(-dt * 7));
+      u.vel = Math.hypot(pos.x - ox, pos.z - oz) / Math.max(dt, 0.001);
+      g.rotation.y = giraPara(g.rotation.y, u.vel > 0.6 ? Math.atan2(pos.x - ox, pos.z - oz) : noPalco ? (ax > px ? -0.25 : 0.25) : Math.atan2(px - pos.x, pz - pos.z), dt * 8);       // parado, olha para o dono
+    }
+    const anda = Math.min(1, u.vel / 2.5);
+    u.fase += dt * (4 + anda * 9);
+    const pulinho = u.voa ? u.voa + Math.sin(t * 2.6 + i) * 0.07 : Math.abs(Math.sin(u.fase)) * 0.22 * anda + Math.max(0, Math.sin(t * 1.9 + i * 1.3)) ** 10 * 0.2 * (1 - anda);
+    pos.y = u.y + pulinho * esc;
+    g.rotation.x = u.voa ? anda * 0.22 : 0;
+    g.rotation.z = Math.sin(u.fase) * 0.09 * (u.voa ? 0.5 : anda);       // balanco
+    g.scale.setScalar(esc * ESC_PET);
+    if (u.cauda) u.cauda.rotation.y = Math.sin(t * u.abana + i) * 0.6;
+    if (u.asas) u.asas.forEach((a, k) => { a.rotation.z = (k ? 1 : -1) * (u.bate ? Math.sin(t * u.bate) * 0.6 : Math.max(0, Math.sin(u.fase * 2)) * 0.7 * anda); });
+    if (u.gira) u.gira.rotation.y += dt * 3;
+  }
+}
 
 // ---------- cartas de poder: cor e icone (SVG em linha, sem arquivo) de cada uma ----------
 const VISUAL_CARTA = {
@@ -855,23 +1199,16 @@ function anima(b, e, dt, t) {
   if (u.flutua) { u.flutua.position.y = 1.3 + Math.sin(t * 3 + b.id) * 0.06; u.flutua.rotation.z += dt * 2; }
   const dono = bonecos.includes(b) ? bonecos.indexOf(b) : atores.indexOf(b);
   if (idxCor[dono] === 11) u.casca.material.color.setHSL((t * 0.2) % 1, 0.85, 0.56);
+  else if (idxCor[dono] === 14) u.casca.material.emissiveIntensity = 0.85 + Math.sin(t * 3.2 + b.id) * 0.4;      // lava pulsa
 }
 
-const PARECIDAS = [[1, 11], [3, 10], [5, 10]];      // rosa x arco-iris, amarelo e laranja x dourado: no placar e nas arenas ninguem distingue
-function mesmaCor(a, b) { return a === b || PARECIDAS.some(([x, y]) => (a === x && b === y) || (a === y && b === x)); }
-
 function aplicaPerfil(m) {
-  const i = m.j - 1;
-  if (!(i >= 0 && i < SLOTS)) return;
-  if (i < 2) celularReal[i] = performance.now();
-  perfis[i] = { nome: String(m.nome ?? '').slice(0, 10), cor: PALETA[m.cor] === undefined ? i : m.cor, chapeu: m.chapeu | 0 };
-  for (let k = 0; k < SLOTS; k++) {
-    idxCor[k] = perfis[k].cor;
-    // cor igual ou quase igual a de quem veio antes: cai no padrao do lugar e, se esse tambem repete, na primeira cor livre
-    if (idxCor.slice(0, k).some(o => mesmaCor(o, idxCor[k]))) idxCor[k] = [k, ...PALETA.keys()].find(c => !idxCor.slice(0, k).some(o => mesmaCor(o, c)));
-    cores[k] = PALETA[idxCor[k]];
-  }
-  fazBonecos();
+  if (!(m.j >= 1 && m.j <= SLOTS)) return;
+  if (m.j <= 2) celularReal[m.j - 1] = performance.now();
+  const i = lugar(m.j - 1);       // com a dupla escolhida, o perfil vai para o indice em que a pessoa esta jogando
+  perfis[i] = perfilDaRede(m, m.j - 1);       // a cor padrao e a do lugar do celular
+  semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
+  fazBonecos(); fazPets();
   rodadaMontada = -1; palcoChave = '';       // arenas que usam a cor dos jogadores sao refeitas
 }
 
@@ -917,7 +1254,55 @@ function fumaca(x, y, z, cor = 0xffffff, n = 6, espalha = 2, tam = 0.9) {
     u.v.set((Math.random() - 0.5) * espalha, 0.4 + Math.random() * 0.8, (Math.random() - 0.5) * espalha);
   }
 }
+// Rastro comprado na loja: sprites com desenho proprio (estrela, bolha, coracao, chama, ponto do arco-iris), brancos para a cor vir do material.
+const TX_RASTRO = {
+  estrela: textura(64, 64, (x, w) => {
+    x.fillStyle = '#fff'; x.shadowColor = '#fff'; x.shadowBlur = 5; x.beginPath();
+    for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 - Math.PI / 2, r = k % 2 ? 11 : 26; x.lineTo(w / 2 + Math.cos(a) * r, w / 2 + Math.sin(a) * r); }
+    x.fill();
+  }),
+  bolha: textura(64, 64, (x, w) => {
+    x.fillStyle = 'rgba(255,255,255,.22)'; x.strokeStyle = '#fff'; x.lineWidth = 5;
+    x.beginPath(); x.arc(w / 2, w / 2, 24, 0, 7); x.fill(); x.stroke();
+    x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.arc(w / 2, w / 2, 15, 3.5, 4.5); x.stroke();
+  }),
+  coracao: textura(64, 64, x => {
+    x.fillStyle = '#fff'; x.beginPath(); x.moveTo(32, 56);
+    x.bezierCurveTo(-8, 30, 10, 2, 32, 20); x.bezierCurveTo(54, 2, 72, 30, 32, 56); x.fill();
+  }),
+  chama: textura(64, 64, x => {
+    const g = x.createRadialGradient(32, 40, 2, 32, 38, 26);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.6, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.beginPath(); x.moveTo(32, 2);
+    x.bezierCurveTo(60, 30, 54, 62, 32, 62); x.bezierCurveTo(10, 62, 4, 30, 32, 2); x.fill();
+  }),
+  arco: textura(64, 64, (x, w) => {
+    const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.7, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, w, w);
+  }),
+};
+const rastros = Array.from({ length: 128 }, () => {       // 4 jogadores de arco-iris mantem ~100 vivos
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX_RASTRO.estrela, transparent: true, depthWrite: false }));
+  s.visible = false; s.userData = { vida: 0, total: 1, vy: 0, tam: 1 }; cena.add(s);
+  return s;
+});
+let proxRastro = 0;
+function soltaRastro([tx, coresR, tam, sobe, vida, , espalha, emOrdem], x, y, z, esc) {
+  const k = proxRastro++, s = rastros[k % rastros.length], u = s.userData;
+  s.material.map = TX_RASTRO[tx]; s.material.color.set(coresR[emOrdem ? k % coresR.length : Math.floor(Math.random() * coresR.length)]);
+  s.position.set(x + (Math.random() - 0.5) * espalha * esc, y + Math.random() * espalha * esc, z + (Math.random() - 0.5) * espalha * esc);
+  u.vida = u.total = vida * (0.8 + Math.random() * 0.4); u.vy = sobe * (0.7 + Math.random() * 0.6); u.tam = tam * esc * (0.75 + Math.random() * 0.5);
+  s.visible = true;
+}
 function moveParticulas(dt) {
+  for (const s of rastros) {
+    if (!s.visible) continue;
+    const u = s.userData; u.vida -= dt;
+    if (u.vida <= 0 || palco.visible) { s.visible = false; continue; }       // no corte para o podio o resto do rastro some junto com a arena
+    const f = u.vida / u.total;
+    s.position.y += u.vy * dt; s.scale.setScalar(u.tam * (0.55 + f * 0.45)); s.material.opacity = Math.min(1, f * 2.2);
+  }
   let mexeu = false;
   for (let k = 0; k < N_PART; k++) {
     const q = parts[k];
@@ -994,6 +1379,18 @@ function chiado(dur, vol, quando, tipoFiltro, f, destino, fAte) {      // ruido 
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   fonte.connect(filtro).connect(g).connect(destino ?? busFx); fonte.start(t, Math.random() * 0.5); fonte.stop(t + dur + 0.03);
 }
+// Voz de boca: onda aspera passando por dois filtros nas frequencias da vogal (a, e, i, o, u). E o que faz "ha ha", "po po poc" e "uuuh" parecerem voz e nao bip.
+const VOGAIS = { a: [800, 1250], e: [480, 1900], i: [300, 2300], o: [450, 850], u: [330, 720] };
+function fala(f0, f0Fim, dur, vol, quando, vogal) {
+  if (!audio) return;
+  f0 = Math.min(2000, Math.max(40, +f0 || 200)); dur = Math.min(2, Math.max(0.03, +dur || 0.1)); vol = Math.min(0.4, Math.max(0.0002, +vol || 0));
+  const t = Math.max(audio.currentTime, +quando || 0), o = audio.createOscillator(), g = audio.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t);
+  if (f0Fim) o.frequency.exponentialRampToValueAtTime(Math.min(2000, Math.max(40, f0Fim)), t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + Math.min(0.02, dur / 3)); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  for (const fq of VOGAIS[vogal] ?? VOGAIS.a) { const b = audio.createBiquadFilter(); b.type = 'bandpass'; b.frequency.value = fq; b.Q.value = 5; o.connect(b).connect(g); }
+  g.connect(busFx); o.start(t); o.stop(t + dur + 0.03);
+}
 const nota = (freq, dur = 0.1, tipo = 'square', vol = 0.08, quando = 0) => voz(freq, dur, tipo, vol, quando);     // bip avulso (c.som dos minijogos)
 const hz = midi => 440 * 2 ** ((midi - 69) / 12);
 function vinheta(tipo) {
@@ -1020,6 +1417,13 @@ const SONS = {
   gol: () => { [72, 76, 79, 84, 88].forEach((m, k) => voz(hz(m), 0.3, 'triangle', 0.1, audio?.currentTime + k * 0.07)); chiado(0.6, 0.04, 0, 'highpass', 5000); },
   ponto: () => vinheta(p.fase === 'fim' ? 'fanfarra' : p.vencedor < 0 ? 'derrota' : 'vitoria'),
   carta: () => { [76, 83, 88, 95].forEach((m, k) => voz(hz(m), 0.14, 'triangle', 0.09, audio?.currentTime + k * 0.05)); chiado(0.3, 0.04, 0, 'highpass', 6000); },
+  // itens de rodada: a bomba assobia e estoura quando chega (0,35 s de voo)
+  'item-bomba': () => { voz(1100, 0.32, 'sine', 0.07, 0, busFx, 420); chiado(0.6, 0.26, audio?.currentTime + 0.35, 'lowpass', 1400, busFx, 80); voz(95, 0.5, 'sine', 0.26, audio?.currentTime + 0.35, busFx, 30); },
+  'item-gelo': () => { [96, 100, 103].forEach((m, k) => voz(hz(m), 0.16, 'sine', 0.08, audio?.currentTime + 0.3 + k * 0.05)); chiado(0.3, 0.05, audio?.currentTime + 0.3, 'highpass', 7000); },
+  'item-tinta': () => { chiado(0.28, 0.14, audio?.currentTime + 0.3, 'lowpass', 900, busFx, 200); voz(210, 0.2, 'sine', 0.11, audio?.currentTime + 0.3, busFx, 80); },
+  'item-turbo': () => { voz(220, 0.4, 'sawtooth', 0.06, 0, busFx, 1300); chiado(0.35, 0.05, 0, 'bandpass', 800, busFx, 4000); },
+  'item-guarda': () => { voz(420, 0.1, 'triangle', 0.11, 0, busFx, 900); voz(900, 0.14, 'sine', 0.07, audio?.currentTime + 0.08); },
+  'item-bloqueio': () => { voz(300, 0.28, 'triangle', 0.13, audio?.currentTime + 0.3, busFx, 760); voz(760, 0.2, 'sine', 0.08, audio?.currentTime + 0.42); },
 };
 function somTorcida(i) {       // corneta curta: cada lado com o seu tom
   if (!audio) return;
@@ -1150,24 +1554,42 @@ p.modificadores = true;     // de vez em quando uma rodada vem com tempero (gelo
 const todos = () => p.jogadores.map((_, i) => i);       // indices dos jogadores da partida (2 no Classico, 2 a 4 na Festa)
 window.__p = p;      // para depurar e para o teste automatico
 window.__perfis = perfis;
+window.__premioDe = i => premios[i];       // para o teste automatico
 window.__ids = () => JOGOS.map(j => j.id);
 window.__jogo = id => pulaPara(p, JOGOS.find(j => j.id === id));
 window.__registra = j => registra(comMinimo(j));
 window.__bonecos = bonecos;
+window.__pets = pets;
 window.__cores = idxCor;
 window.__mesmaCor = mesmaCor;
-const visto = [0, 0, 0, 0], conectado = [false, false, false, false];
+const visto = Array(SLOTS).fill(0), conectado = Array(SLOTS).fill(false);
 let iniciou = false;
 
 // ---------- menu de modos: o Jogador 1 escolhe no celular, a espera mostra, e COMECAR (ou Enter) comeca ----------
 // Os ids (classico, vs, times, coop) sao os mesmos do servidor e do motor; so o texto mudou.
 const MODOS_TXT = {
   classico: ['Duelo', 'Dois no sofá. Quem fizer 10 primeiro leva'],
-  vs: ['Cada um por si', 'De 2 a 4. Ponto só para quem vencer'],
+  vs: ['Cada um por si', 'De 2 a 5. Ponto só para quem vencer'],
   times: ['Duplas', ''],
   coop: ['Todos juntos', 'Vocês contra o jogo por 5 noites'],
 };
-const dicaModo = m => m === 'times' ? `${nome(0)} e ${nome(2)} contra ${nome(1)} e ${nome(3)}` : MODOS_TXT[m][1];
+let parceiro = 2;       // quem joga com o Jogador 1 nas Duplas (indice do lugar: 1, 2 ou 3); o anfitriao escolhe no celular
+const rivais = () => [1, 2, 3].filter(i => i !== parceiro);
+const dicaModo = m => m !== 'times' ? MODOS_TXT[m][1] : seguidos() >= SLOTS ? 'Com 5: um descansa por rodada e as duplas mudam. Ponto para cada um da dupla'
+  : `${nome(0)} e ${nome(parceiro)} contra ${rivais().map(nome).join(' e ')}`;
+function trocaLugares(a, b) {       // tudo que e de cada pessoa (e de cada celular) muda de indice junto
+  for (const v of [perfis, visto, conectado, premios, vib, nrVisto, ultimaRea, sessaoVista, qVisto, ntVisto, ultimaTorcida, querRevanche]) [v[a], v[b]] = [v[b], v[a]];
+  if (robo.lugar === a) robo.lugar = b; else if (robo.lugar === b) robo.lugar = a;       // o robo de treino vai junto com o lugar dele
+  const ja = p.jogadores[a], jb = p.jogadores[b];
+  if (ja && jb) for (const k of ['n', 'nb', 'nop', 'ni', 'itensNegados', 'itemGasto', 'itensPartida', 'itensRodada', 's', 'q', 'ent']) [ja[k], jb[k]] = [jb[k], ja[k]];       // contadores de toque sao do celular: sem isso a troca viraria toque fantasma
+  semRepetir(perfis.map(q => q.cor)).forEach((c, k) => { idxCor[k] = c; cores[k] = PALETA[c]; });
+  fazBonecos(); fazPets();       // o pet vai junto com a pessoa
+  rodadaMontada = -1; palcoChave = '';
+}
+function sentaDupla(par) {       // par: indice do lugar do parceiro, ou 2 para a ordem de sempre
+  if (troca) { trocaLugares(...troca); troca = null; }
+  if (par !== 2 && [1, 3].includes(par)) { trocaLugares(par, 2); troca = [par, 2]; }
+}
 let escolhaModo = 'classico', semAuto = false, autoDesde = 0, modoPadrao = true;
 // Ninguem escolheu no menu: o padrao segue quem esta no sofa (2 = Duelo, 3 ou 4 = Cada um por si) e comeca sozinho depois de AUTO_MS, com contagem na TV e no celular
 const AUTO_MS = 6000;
@@ -1187,19 +1609,21 @@ function quebrado(modo, n) {       // o unico minijogo do modo quebrou: nao deix
 }
 function comecaPartida(teclado = false) {
   if (iniciou) return;
-  const modo = escolhaModo, seg = seguidos(), n = modo === 'classico' ? 2 : seg;
+  const modo = escolhaModo, seg = seguidos(), n = modo === 'classico' ? 2 : modo === 'times' ? Math.min(seg, SLOTS) : seg;       // Duplas com 4 (duplas fixas) ou com 5 (um descansa e as duplas mudam)
   const falta = teclado && modo === 'classico' ? quebrado(modo, 2) : faltaPara(modo);
   if (falta) return avisa(falta);
   if (modo !== 'classico' && !elegiveis(modo, n).length) return avisa('Ainda carregando os minijogos. Tente em 5 segundos');
+  sentaDupla(2);       // desfaz a troca da partida anterior enquanto os jogadores dela ainda existem
   if (modo !== p.modo || n !== p.n) configura(p, { n, modo });
+  if (modo === 'times' && n === 4) sentaDupla(parceiro);       // so depois do configura: os 4 jogadores ja existem e os contadores de cada celular trocam junto
   iniciou = true; zeraNoite();
   limpaEscolha();
 }
 // Revanche no podio: o Jogador 1 escolhe no celular; os outros pedem (acende o boneco); sem toque em T_REVANCHE s, vale revanche.
-const T_REVANCHE = 20, querRevanche = [false, false, false, false];
+const T_REVANCHE = 20, querRevanche = Array(SLOTS).fill(false);
 // Medalhas da noite (o podio mostra): maior sequencia, viradas e quem mais torceu, contadas so nesta partida.
 let noite;
-function zeraNoite() { noite = { seq: [0, 0, 0, 0], viradas: [0, 0, 0, 0], torcidas: [0, 0, 0, 0] }; querRevanche.fill(false); }
+function zeraNoite() { noite = { seq: Array(SLOTS).fill(0), viradas: Array(SLOTS).fill(0), torcidas: Array(SLOTS).fill(0) }; querRevanche.fill(false); }
 zeraNoite();
 function recomeca() { reinicia(p); zeraNoite(); premios.fill(null); }
 function medalhas() {       // ate 3 medalhas da noite no podio: so aparece quem fez alguma coisa
@@ -1222,18 +1646,20 @@ function limpaEscolha() { fetch('/modo-limpa', { method: 'POST' }).catch(() => {
 function voltaAoMenu() {       // de volta a espera: o anfitriao escolhe de novo, a partida recomeca do zero
   if (!iniciou) return;
   iniciou = false; semAuto = true; autoDesde = 0;
+  sentaDupla(2);       // no menu cada um volta ao seu lugar
   limpaEscolha();
   recomeca();
 }
 function recebeEscolha(e) {
   if (iniciou || !MODOS_TXT[e.modo]) return;
+  if ([2, 3, 4].includes(e.par) && e.par - 1 !== parceiro) { parceiro = e.par - 1; if (!e.antiga) novidade(`${nome(0)} escolheu ${nome(parceiro)} de dupla`); }
   if (!e.antiga && e.modo !== escolhaModo) novidade(nome(0) + ' escolheu ' + MODOS_TXT[e.modo][0]);
   escolhaModo = e.modo;
   if (!e.antiga || !MODOS_AUTO.includes(e.modo)) modoPadrao = false;       // escolha antiga de Duelo ou Cada um por si (repetida a tela nova) nao desliga o padrao por quantos estao no sofa
   if (!e.antiga) semAuto = true;      // o anfitriao mexeu no menu agora: nada de comecar sozinho (a escolha antiga, repetida a tela nova, nao conta)
   if (e.comeca) comecaPartida();
 }
-window.__sala = () => ({ escolhaModo, seguidos: seguidos(), iniciou, semAuto, lugarRobo: robo.lugar });
+window.__sala = () => ({ escolhaModo, seguidos: seguidos(), iniciou, semAuto, lugarRobo: robo.lugar, parceiro, troca });
 // A frase da espera nos celulares muda com o que acontece na TV (troca de modo, alguem sentou) por alguns segundos.
 let novo = { txt: '', ate: 0 };
 function novidade(txt) { novo = { txt, ate: performance.now() + 4000 }; }
@@ -1254,11 +1680,11 @@ new EventSource('/eventos').onmessage = e => {
   const m = JSON.parse(e.data);
   if (m.perfil) return aplicaPerfil(m.perfil);
   if (m.escolha) return recebeEscolha(m.escolha);
-  if (m.pausa) return pausa(Number.isInteger(m.j) && m.j >= 1 && m.j <= SLOTS ? m.j - 1 : -1, m.continua === true);
+  if (m.pausa) return pausa(Number.isInteger(m.j) && m.j >= 1 && m.j <= SLOTS ? lugar(m.j - 1) : -1, m.continua === true);
   if (m.comando) return comando(m.comando);
-  const i = m.j - 1;
-  if (!(i >= 0 && i < SLOTS)) return;
-  if (i < 2) celularReal[i] = performance.now();
+  if (!(m.j >= 1 && m.j <= SLOTS)) return;
+  if (m.j <= 2) celularReal[m.j - 1] = performance.now();
+  const i = lugar(m.j - 1);
   visto[i] = performance.now();
   if (iniciou && !p.jogadores[i]) {      // celular de um lugar que nao esta na partida: nao joga, mas pode torcer e reagir
     if (!pausado && !ajustesAberto) recebeReacao(i, m);
@@ -1290,7 +1716,7 @@ function roboLevanta(agora) {       // o robo larga o lugar; so solta o controle
   if (l < 0) return;
   robo.lugar = -1;
   if (perfis[l].nome === NOME_ROBO) perfis[l].nome = '';
-  if (!temCelular(l, agora)) { visto[l] = 0; entrada(p, l, { x: 0, y: 0, d: false, b: false }); }
+  if (!temCelular(lugar(l), agora)) { visto[l] = 0; entrada(p, l, { x: 0, y: 0, d: false, b: false }); }
 }
 function trocaRobo() {
   roboLigado = !roboLigado;
@@ -1304,12 +1730,12 @@ function roboJoga(agora) {
     const quer = real[0] && real[1] ? -1 : real[1] ? 0 : 1;
     if (quer !== robo.lugar) { roboLevanta(agora); robo.lugar = quer; }
   }
-  if (robo.lugar >= 0 && real[robo.lugar]) roboLevanta(agora);       // chegou um celular de verdade no lugar dele: o lugar e da pessoa ate o fim da partida, mesmo que o celular suma
+  if (robo.lugar >= 0 && temCelular(lugar(robo.lugar), agora)) roboLevanta(agora);       // chegou um celular de verdade no lugar dele: o lugar e da pessoa ate o fim da partida, mesmo que o celular suma
   const i = robo.lugar;
   if (i < 0) return;
   visto[i] = agora;
   if (!perfis[i].nome) perfis[i].nome = NOME_ROBO;
-  const eu = p.jogadores[i], rival = p.jogadores[1 - i];
+  const eu = p.jogadores[i], rival = p.jogadores[p.duelo ? p.duelo.find(k => k !== i) ?? 1 - i : 1 - i];
   if (!iniciou || !eu || pausado || ajustesAberto || agora < robo.prox) return;
   robo.prox = agora + 450;
   const m = { x: 0, y: 0, d: false, b: false, n: robo.n, nb: robo.nb, op: 0, nop: robo.nop };
@@ -1685,7 +2111,7 @@ const DESENHO = {
   bomba: {
     monta(c) { c.pecas.b = bombaBonita(0.5); c.grupo.add(c.pecas.b); c.pecas.fase = 0; },
     desenha(c, dt) {
-      const d = p.dados, dono = bonecos[d.dono], b = c.pecas.b, u = b.userData;
+      const d = p.dados, dono = c.bonecos[d.dono], b = c.pecas.b, u = b.userData;
       c.pecas.fase += dt * (3 + 30 / (Math.max(d.pavio, 0) + 1.5));      // pisca mais rapido perto de explodir
       const pulso = (Math.sin(c.pecas.fase) + 1) / 2;
       b.visible = p.fase !== 'resultado' && p.fase !== 'fim';
@@ -1707,7 +2133,7 @@ const DESENHO = {
       circulo.rotation.x = -Math.PI / 2; circulo.position.y = 0.015;
       c.grupo.add(linha, circulo);
       for (const s of [-1, 1]) {      // o gol da direita e defendido pelo jogador 2, o da esquerda pelo jogador 1
-        const cor = cores[s > 0 ? 1 : 0];
+        const cor = c.cores[s > 0 ? 1 : 0];
         const gol = malha(new THREE.BoxGeometry(1.2, 1.6, a.gol * 2), cor, { transparent: true, opacity: 0.5, emissive: cor, emissiveIntensity: 0.25 });
         gol.position.set(s * (a.lx + 0.6), 0.8, 0); gol.castShadow = false; c.grupo.add(gol);
         const area = new THREE.Mesh(new THREE.PlaneGeometry(2.4, a.gol * 2 + 1.6), new THREE.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0.28 }));
@@ -1723,7 +2149,7 @@ const DESENHO = {
     desenha(c, dt) {
       const b = p.dados.bola, m = c.pecas.bola;
       m.position.set(b.x, 0.6, b.z); m.rotation.z -= b.vx * dt / 0.6; m.rotation.x += b.vz * dt / 0.6;
-      if (p.fase === 'resultado' && p.vencedor >= 0 && Math.random() < dt * 30) confete(b.x, 1.5, b.z, 2, 8, cores[p.vencedor]);
+      if (p.fase === 'resultado' && p.vencedor >= 0 && Math.random() < dt * 30) confete(b.x, 1.5, b.z, 2, 8, c.cores[p.vencedor]);
     },
   },
   labirinto: {
@@ -1770,9 +2196,9 @@ const DESENHO = {
       c.pecas.nColetas ??= 0; c.pecas.nQueimados ??= 0;
       for (const ev of (d.coletas ?? []).slice(c.pecas.nColetas)) {
         const [x, z] = cel(ev.i, ev.k), cor = ITEM_LAB[ev.tipo]?.[0] ?? 0xffffff;
-        particulas(x, 1, z, cor, 24, 8); confete(x, 1.2, z, 14, 6, cores[ev.quem]);
+        particulas(x, 1, z, cor, 24, 8); confete(x, 1.2, z, 14, 6, c.cores[ev.quem]);
         if (audio) [72, 79, 84, 91].forEach((m, k) => voz(hz(m), 0.1, 'square', 0.05, audio.currentTime + k * 0.045));
-        vibra(ev.quem, [30, 30, 60]);
+        vibra(p.duelo?.[ev.quem] ?? ev.quem, [30, 30, 60]);
       }
       for (const ev of (d.queimados ?? []).slice(c.pecas.nQueimados)) {
         const [x, z] = cel(ev.i, ev.k);
@@ -1846,8 +2272,8 @@ const DESENHO = {
         const m = c.pecas.pisos[n];
         if (c.pecas.dono[n] !== dono) {
           c.pecas.dono[n] = dono;
-          m.material.color.set(dono < 0 ? 0x3b4565 : cores[dono]); m.material.emissive.set(dono < 0 ? 0 : cores[dono]); m.material.emissiveIntensity = 0.18;
-          if (dono >= 0) { m.scale.y = 3; particulas(m.position.x, 0.3, m.position.z, cores[dono], 3, 3.5); }
+          m.material.color.set(dono < 0 ? 0x3b4565 : c.cores[dono]); m.material.emissive.set(dono < 0 ? 0 : c.cores[dono]); m.material.emissiveIntensity = 0.18;
+          if (dono >= 0) { m.scale.y = 3; particulas(m.position.x, 0.3, m.position.z, c.cores[dono], 3, 3.5); }
         }
         m.scale.y += (1 - m.scale.y) * Math.min(1, dt * 10);
       });
@@ -1862,10 +2288,11 @@ function tira(jogo, erro) {       // desenho com erro: tira o minijogo e segue o
 
 function monta() {
   if (c) { mundo.remove(c.grupo); descarta(c.grupo); }
-  c = { THREE, grupo: new THREE.Group(), pecas: {}, base: {}, p, malha, pool, modelo, mixers: [], particulas, bonecos: bonecos.slice(0, p.jogadores.length), cores: cores.slice(0, p.jogadores.length), times: TIMES, modo: p.modo, som: nota };
+  const daVez = p.duelo ?? todos();       // Duplas com minijogo de 2: so os dois da vez entram na arena
+  c = { THREE, grupo: new THREE.Group(), pecas: {}, base: {}, p: vista(p), malha, pool, modelo, mixers: [], particulas, bonecos: daVez.map(i => bonecos[i]), cores: daVez.map(i => cores[i]), times: TIMES, modo: p.modo, som: nota };
   mundo.add(c.grupo);
   for (const [i, b] of bonecos.entries()) {       // nada do que um minijogo fez no boneco (esconder, esticar, deitar) passa para a rodada seguinte
-    b.visible = i < p.jogadores.length; b.scale.setScalar(1); b.rotation.set(0, 0, 0);       // so os jogadores da partida aparecem na arena
+    b.visible = daVez.includes(i); b.scale.setScalar(1); b.rotation.set(0, 0, 0);       // so os jogadores da partida aparecem na arena
     b.userData.corpo?.rotation.set(0, 0, 0); b.userData.corpo?.scale.setScalar(1); b.userData.alvoY = 0;
   }
   escolheTema();
@@ -1906,7 +2333,7 @@ function almofada(x, y, z, cor) {
   palcoPecas.add(m);
 }
 MOVEIS.forEach(carregaModelo);
-const SOFA_LARG = 15, ASSENTOS = [-5.1, -1.7, 1.7, 5.1];
+const SOFA_LARG = 15, ASSENTOS = [-4.9, -2.45, 0, 2.45, 4.9];
 const moveisProntos = () => !!c && MOVEIS.every(n => modelos.get(n)?.estado === 'pronto');
 function moveis() {       // monta a sala e devolve a altura do assento e o z de quem senta
   const com = moveisProntos(), sofa = com ? modelo(MOVEIS[0]) : null;
@@ -1959,7 +2386,7 @@ function arrumaPalco(podio) {
   ordem.forEach((i, k) => {
     const ant = ordem[k - 1];
     if (k && (camp.includes(i) !== camp.includes(ant) || pts[i] !== pts[ant])) lugar++;
-    const h = [2.3, 1.2, 0.8, 0.5][lugar], x = (k - (n - 1) / 2) * 3.4;
+    const h = [2.3, 1.2, 0.8, 0.5, 0.35][lugar], x = (k - (n - 1) / 2) * 3.4;
     const bloco = malha(new THREE.BoxGeometry(3.3, h, 3.2), 0xf2f4fa, { roughness: 0.5 }); bloco.position.set(x, h / 2, 0);
     const tampo = malha(new THREE.BoxGeometry(3.4, 0.2, 3.3), cores[i], { roughness: 0.4 }); tampo.position.set(x, h + 0.1, 0);
     const num = numero(lugar + 1); num.position.set(x, h / 2, 1.61); num.scale.setScalar(lugar ? 0.6 : 1);
@@ -1992,7 +2419,7 @@ function desenhaPalco(dt, t, podio) {
   }
   if (podio) {
     if (Math.random() < dt * 45) solta((Math.random() - 0.5) * 16, 9 + Math.random() * 2, (Math.random() - 0.5) * 6, CONFETE[Math.floor(Math.random() * CONFETE.length)], true, 2);
-    camera.position.set(Math.sin(t * 0.35) * 2.2, 4.4, 12.6 + (p.jogadores.length > 2 ? 2.5 : 0)); camera.lookAt(0, 3.1, 0);
+    camera.position.set(Math.sin(t * 0.35) * 2.2, 4.4, 12.6 + [0, 0, 0, 2.5, 2.5, 5][p.jogadores.length]); camera.lookAt(0, 3.1, 0);
   } else {
     // a sala fica na esquerda (60% da tela): a camera olha um pouco para a direita do sofa
     camera.position.set(5.4 + Math.sin(t * 0.2) * 0.5, 4.6 + Math.sin(t * 0.33) * 0.15, 17.5); camera.lookAt(5.4, 2.2, 0);
@@ -2017,17 +2444,17 @@ function texturaRea(k) {
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.userData.fixo = true;
   return texRea[k] = t;
 }
-const reaSprites = [0, 1, 2, 3].map(() => Array.from({ length: 4 }, () => {
+const reaSprites = LUGARES.map(() => Array.from({ length: 4 }, () => {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, fog: false, toneMapped: false, transparent: true }));
   s.visible = false; s.renderOrder = 11; cena.add(s);
   return { s, idade: VIDA_REA };
 }));
 const nrVisto = Array(SLOTS).fill(undefined), ultimaRea = Array(SLOTS).fill(-1e9), sessaoVista = Array(SLOTS).fill(undefined), qVisto = Array(SLOTS).fill(undefined);
-window.__reacoes = [0, 0, 0, 0];      // quantas reacoes foram mostradas (para o teste automatico)
+window.__reacoes = Array(SLOTS).fill(0);      // quantas reacoes foram mostradas (para o teste automatico)
 window.__nrVisto = nrVisto;
 // Torcida: botao "Torcer" do celular em espera. Mesmo esquema da reacao (contador nt que so cresce).
 const ESPERA_TORCIDA = 0.45, ntVisto = Array(SLOTS).fill(undefined), ultimaTorcida = Array(SLOTS).fill(-1e9);
-window.__torcidas = [0, 0, 0, 0];
+window.__torcidas = Array(SLOTS).fill(0);
 // Contador novo maior que o visto = toque. Primeira leitura ou contador que diminuiu (celular recarregou): so acerta o passo.
 function novoToque(vistos, i, v) {
   if (!Number.isInteger(v) || v < 0) return false;
@@ -2074,24 +2501,32 @@ function torce(i) {       // confete saindo do cartao do jogador (lado dele) e d
 }
 // Som de cada reacao, na mesma ordem de REACOES. v: notas [freq, duracao, onda, volume, atraso, freq final]; c: ruido.
 const SOM_REA = [
-  { v: [[520, 0.07, 'square', 0.07, 0, 400], [560, 0.07, 'square', 0.07, 0.1, 420], [600, 0.09, 'square', 0.07, 0.2, 440]] },   // risada
-  { v: [[700, 0.12, 'square', 0.06, 0, 500], [650, 0.12, 'square', 0.06, 0.13, 450], [600, 0.2, 'square', 0.06, 0.26, 380]] },   // choro de rir
-  { v: [[110, 0.4, 'sawtooth', 0.12, 0, 70]], c: [[0.3, 0.05, 0, 'lowpass', 500]] },                                          // raiva
-  { v: [[660, 0.14, 'sine', 0.12, 0, 660], [880, 0.22, 'sine', 0.12, 0.14, 880]] },                                            // coracao
-  { v: [[880, 0.1, 'triangle', 0.12, 0, 880], [1320, 0.2, 'triangle', 0.12, 0.09, 1320]] },                                    // joinha
-  { v: [[300, 0.3, 'sine', 0.12, 0, 1500]] },                                                                                  // susto
-  { v: [[90, 0.35, 'sawtooth', 0.1, 0, 75]], c: [[0.35, 0.06, 0, 'lowpass', 900]] },                                           // lingua
-  { v: [[300, 0.15, 'triangle', 0.1, 0, 600], [900, 0.25, 'triangle', 0.1, 0.15, 900]] },                                      // oculos
-  { v: [[260, 0.16, 'square', 0.09, 0, 250], [260, 0.22, 'square', 0.09, 0.22, 240]] },                                        // palhaco
-  { v: [[120, 0.6, 'sine', 0.14, 0, 90]], c: [[0.6, 0.03, 0, 'lowpass', 400]] },                                               // dormindo
-  { c: [[0.6, 0.08, 0, 'lowpass', 1800], [0.4, 0.05, 0.15, 'highpass', 2500]] },                                               // fogo
-  { v: [[1568, 0.1, 'sine', 0.08, 0, 1568], [2093, 0.1, 'sine', 0.08, 0.08, 2093], [2637, 0.18, 'sine', 0.08, 0.16, 2637]] }, // estrelas
-  { v: [[523, 0.1, 'triangle', 0.1, 0, 523], [659, 0.1, 'triangle', 0.1, 0.1, 659], [784, 0.1, 'triangle', 0.1, 0.2, 784], [1047, 0.3, 'triangle', 0.1, 0.3, 1047]] }, // trofeu
-  { v: [[392, 0.15, 'square', 0.06, 0, 392], [523, 0.15, 'square', 0.06, 0.15, 523], [659, 0.3, 'square', 0.06, 0.3, 659]] }, // coroa
-  { v: [[700, 0.06, 'square', 0.08, 0, 500], [720, 0.06, 'square', 0.08, 0.1, 520], [900, 0.12, 'square', 0.08, 0.22, 600]] }, // galinha
-  { c: [[0.6, 0.07, 0, 'highpass', 4000]] },                                                                                   // cobra
-  { v: [[200, 0.35, 'sine', 0.14, 0, 140]] },                                                                                  // tartaruga
-  { v: [[600, 0.6, 'sine', 0.1, 0, 280]] },                                                                                    // caracol
+  { f: [[330, 300, 0.1, 0.2, 0, 'a'], [310, 280, 0.1, 0.2, 0.15, 'a'], [290, 260, 0.1, 0.2, 0.3, 'a'], [270, 230, 0.16, 0.2, 0.45, 'a']] },   // risada: ha ha ha haa
+  { f: [[330, 360, 0.07, 0.2, 0, 'i'], [345, 375, 0.07, 0.2, 0.1, 'i'], [360, 390, 0.07, 0.2, 0.2, 'i'], [345, 320, 0.07, 0.2, 0.3, 'i'], [340, 250, 0.22, 0.2, 0.4, 'a']] },   // choro de rir: hi hi hi hi haa
+  { f: [[120, 85, 0.55, 0.22, 0, 'o']], v: [[70, 0.55, 'sawtooth', 0.1, 0, 55]], c: [[0.55, 0.05, 0, 'lowpass', 450]] },   // raiva: rosnado grave
+  { c: [[0.07, 0.12, 0, 'bandpass', 2600, 5200]], v: [[1500, 0.08, 'sine', 0.1, 0.02, 2600], [62, 0.14, 'triangle', 0.18, 0.28, 48], [124, 0.12, 'sine', 0.1, 0.28, 96], [62, 0.16, 'triangle', 0.15, 0.5, 46], [124, 0.14, 'sine', 0.08, 0.5, 92]] },   // coracao: beijo e duas batidas
+  { v: [[1319, 0.4, 'sine', 0.14, 0, 1319], [1976, 0.35, 'sine', 0.07, 0, 1976], [2637, 0.25, 'sine', 0.04, 0.01, 2637]] },   // joinha: plim de sino
+  { f: [[520, 950, 0.18, 0.2, 0, 'a'], [950, 780, 0.38, 0.2, 0.16, 'a']] },   // susto: grito aaah
+  { v: [[78, 0.6, 'sawtooth', 0.16, 0, 52]], c: Array.from({ length: 16 }, (_, k) => [0.022, 0.09, k * 0.036, 'bandpass', 380]) },   // lingua: pum de lingua tremido
+  { f: [[190, 210, 0.16, 0.2, 0, 'u'], [230, 260, 0.14, 0.2, 0.14, 'a'], [250, 170, 0.3, 0.2, 0.26, 'u']] },   // oculos escuros: uaau
+  { f: [[466, 440, 0.16, 0.14, 0, 'o'], [466, 430, 0.24, 0.14, 0.24, 'o']], v: [[466, 0.16, 'square', 0.08, 0, 440], [554, 0.16, 'square', 0.05, 0, 523], [466, 0.24, 'square', 0.08, 0.24, 430], [554, 0.24, 'square', 0.05, 0.24, 512]] },   // palhaco: fom fom de buzina
+  { c: [[0.55, 0.12, 0, 'bandpass', 260, 620], [0.5, 0.03, 0.7, 'bandpass', 1800, 900]], v: [[1100, 0.5, 'sine', 0.06, 0.7, 620]] },   // dormindo: ronco e assobio
+  { c: [[0.9, 0.2, 0, 'lowpass', 1100, 400], ...[0.05, 0.16, 0.22, 0.31, 0.43, 0.5, 0.62, 0.74].map((t, k) => [0.018, 0.12, t, 'highpass', 2200 + (k % 3) * 900])] },   // fogo: labareda e estalos
+  { v: [[2093, 0.12, 'sine', 0.08, 0, 2093], [2637, 0.12, 'sine', 0.08, 0.09, 2637], [3136, 0.12, 'sine', 0.08, 0.18, 3136], [4186, 0.3, 'sine', 0.07, 0.27, 4186], [2637, 0.3, 'sine', 0.03, 0.3, 2637]] },   // estrelas: brilho subindo
+  { v: [[523, 0.1, 'sawtooth', 0.09, 0, 523], [523, 0.1, 'sawtooth', 0.09, 0.12, 523], [523, 0.1, 'sawtooth', 0.09, 0.24, 523], [784, 0.5, 'sawtooth', 0.1, 0.36, 784], [1047, 0.5, 'triangle', 0.06, 0.36, 1047]] },   // trofeu: ta ta ta taaa
+  { v: [[392, 0.14, 'sawtooth', 0.08, 0, 392], [523, 0.14, 'sawtooth', 0.08, 0.15, 523], [659, 0.14, 'sawtooth', 0.08, 0.3, 659], [784, 0.45, 'sawtooth', 0.09, 0.45, 784], [587, 0.45, 'triangle', 0.05, 0.45, 587]] },   // coroa: fanfarra real
+  { f: [[520, 400, 0.06, 0.2, 0, 'o'], [520, 400, 0.06, 0.2, 0.13, 'o'], [520, 400, 0.06, 0.2, 0.26, 'o'], [560, 400, 0.05, 0.2, 0.38, 'o'], [650, 1050, 0.1, 0.22, 0.46, 'a'], [1050, 700, 0.26, 0.22, 0.55, 'a']] },   // galinha: po po po po-poooc
+  { c: [[0.25, 0.04, 0, 'highpass', 3200], [0.7, 0.18, 0.2, 'bandpass', 3600, 4600], ...Array.from({ length: 9 }, (_, k) => [0.012, 0.07, 0.9 + k * 0.035, 'bandpass', 3200])] },   // cobra: sssss e chocalho
+  { v: [[170, 0.22, 'sine', 0.13, 0, 110], [150, 0.26, 'sine', 0.13, 0.5, 95]] },   // tartaruga: dois passos lentos e graves
+  { v: [[260, 0.9, 'sine', 0.1, 0, 520]], c: [[0.9, 0.025, 0, 'bandpass', 700, 1400]] },   // caracol: deslizando devagar
+  { f: [[210, 190, 0.14, 0.2, 0, 'a'], [190, 180, 0.1, 0.16, 0.12, 'u'], [220, 200, 0.14, 0.2, 0.32, 'a'], [200, 180, 0.12, 0.16, 0.44, 'u']] },   // pizza: nham nham
+  { v: [0, 0.11, 0.17, 0.3, 0.36, 0.5, 0.58].map((t, k) => [500 + (k * 137) % 400, 0.04, 'sine', 0.16, t, 1500 + (k * 211) % 700]), c: [0, 0.11, 0.17, 0.3, 0.36, 0.5, 0.58].map(t => [0.03, 0.1, t, 'highpass', 3000]) },   // pipoca: estouros
+  { v: [[1319, 0.16, 'sine', 0.1, 0, 1319], [1047, 0.16, 'sine', 0.1, 0.16, 1047], [1175, 0.16, 'sine', 0.1, 0.32, 1175], [784, 0.3, 'sine', 0.1, 0.48, 784], [2637, 0.1, 'sine', 0.03, 0, 2637], [1568, 0.25, 'sine', 0.03, 0.48, 1568]] },   // sorvete: musiquinha do carrinho
+  { f: [[170, 215, 0.3, 0.2, 0, 'u'], [215, 160, 0.35, 0.2, 0.28, 'u']] },   // rosquinha: hmmm de gostoso
+  { f: [[300, 470, 0.5, 0.18, 0, 'u'], [470, 260, 0.6, 0.18, 0.48, 'u']], v: [[600, 1.0, 'sine', 0.03, 0, 520]] },   // fantasma: uuuuuh
+  { v: Array.from({ length: 10 }, (_, k) => [k % 2 ? 1500 : 900, 0.07, 'sine', 0.1, k * 0.07, k % 2 ? 900 : 1700 + k * 60]) },   // alienigena: gorjeio de disco voador
+  { v: [[880, 0.09, 'square', 0.08, 0, 880], [440, 0.09, 'square', 0.08, 0.12, 440], [660, 0.09, 'square', 0.08, 0.24, 660], [330, 0.2, 'square', 0.08, 0.36, 220]] },   // robo: bip bup bip buuu
+  { v: [[900, 0.05, 'triangle', 0.16, 0, 880], [700, 0.05, 'triangle', 0.16, 0.09, 690], [1050, 0.05, 'triangle', 0.16, 0.16, 1030], [620, 0.05, 'triangle', 0.16, 0.27, 610], [820, 0.05, 'triangle', 0.16, 0.33, 800], [500, 0.09, 'triangle', 0.16, 0.44, 480]] },   // caveira: ossos batendo
 ];
 function mostraReacao(i, k) {
   const lista = reaSprites[i], vaga = lista.find(r => r.idade >= VIDA_REA) ?? lista.reduce((a, b) => a.idade > b.idade ? a : b);
@@ -2099,10 +2534,11 @@ function mostraReacao(i, k) {
   const el = $('reaHud' + i);
   el.textContent = REACOES[k]; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
   el.onanimationend = () => el.classList.remove('on');
-  voz(420, 0.08, 'sine', 0.12, 0, undefined, 950);      // pop
+  voz(420, 0.06, 'sine', 0.05, 0, undefined, 950);      // pop baixinho: quem fala e o som do emoji
   const t0 = (audio?.currentTime ?? 0) + 0.06;            // voz e chiado recebem o horario absoluto do audio
   for (const [f, dur, tipo, vol, atraso, fim] of SOM_REA[k]?.v ?? []) voz(f, dur, tipo, vol, t0 + atraso, undefined, fim);
-  for (const [dur, vol, atraso, filtro, f] of SOM_REA[k]?.c ?? []) chiado(dur, vol, t0 + atraso, filtro, f);
+  for (const [dur, vol, atraso, filtro, f, fAte] of SOM_REA[k]?.c ?? []) chiado(dur, vol, t0 + atraso, filtro, f, undefined, fAte);
+  for (const [f0, f0Fim, dur, vol, atraso, vogal] of SOM_REA[k]?.f ?? []) fala(f0, f0Fim, dur, vol, t0 + atraso, vogal);
   window.__reacoes[i]++;
 }
 const cartaoEl = i => document.querySelector('#placar .cartao[data-i="' + i + '"]');       // o cartao do jogador i no placar (J1 e J3 ficam juntos a esquerda)
@@ -2135,25 +2571,102 @@ function animaReacoes(dt) {
 }
 
 // ---------- vibracao dos celulares: a tela decide pelo que acontece na arena, vale para todo minijogo ----------
-const vib = [0, 1, 2, 3].map(() => ({ n: 0 }));
+const vib = LUGARES.map(() => ({ n: 0 }));
 function vibra(i, padrao, forte = false) { vib[i] = { n: vib[i].n + 1, p: padrao, forte }; }
 const VIB_EVENTO = { batida: [45], explosao: [80, 40, 80], queda: [60] };
-let vivoAntes = [true, true, true, true], faseAntes = '', vibraVisto = [undefined, undefined, undefined, undefined];
+let vivoAntes = Array(SLOTS).fill(true), faseAntes = '', vibraVisto = Array(SLOTS).fill(undefined);
 function vibracoes(eventos) {
   // minijogo que ja mandou o proprio vibra neste quadro: a tela nao vibra por cima (nao corta nem dobra)
   const jogoVibrou = todos().map(i => (p.celular[i]?.vibra ?? 0) !== (vibraVisto[i] ?? 0));
   vibraVisto = todos().map(i => p.celular[i]?.vibra);
   const vibraSe = (i, ...args) => { if (!jogoVibrou[i]) vibra(i, ...args); };
   if (p.fase === 'jogando') {
-    for (const ev of eventos) if (VIB_EVENTO[ev]) for (const i of todos()) vibraSe(i, VIB_EVENTO[ev], ev === 'explosao');
+    for (const ev of eventos) if (VIB_EVENTO[ev]) for (const i of p.duelo ?? todos()) vibraSe(i, VIB_EVENTO[ev], ev === 'explosao');       // quem so assiste nao vibra com a batida
     for (const i of todos()) if (vivoAntes[i] && !p.jogadores[i].vivo) vibraSe(i, [120, 60, 220], true);     // caiu ou foi eliminado
   }
   if (faseAntes === 'jogando' && (p.fase === 'resultado' || p.fase === 'fim'))
     for (const i of todos()) {
       if (venceu(p, i)) vibraSe(i, [40, 50, 40, 50, 140]);    // comemoracao (quem venceu, o time ou todos na vitoria em equipe)
-      else if (p.vencedor >= 0) vibraSe(i, [350]);                // perdeu a rodada
+      else if (p.vencedor >= 0 && !descansou(i)) vibraSe(i, [350]);                // perdeu a rodada (quem descansou nao perdeu nada)
     }
   vivoAntes = p.jogadores.map(j => j.vivo); faseAntes = p.fase;
+}
+
+// ---------- itens de rodada (spec 009): o que a TV mostra de cada item usado. Vale para todo minijogo: le p.itens e os tempos de cada jogador ----------
+const COR_ITEM = { bomba: 0xff8a2a, gelo: 0x9fdcff, turbo: 0xffd84d, guarda: 0xc79bff, tinta: 0x5b2bd6 };
+const fxItens = LUGARES.map(() => {       // por lugar: estrelas de tonto, bloco de gelo, guarda-chuva e mancha de tinta, soltos na cena (seguem o boneco)
+  const g = new THREE.Group(), estrelas = new THREE.Group();
+  for (let k = 0; k < 3; k++) { const e = new THREE.Sprite(new THREE.SpriteMaterial({ map: TX_RASTRO.estrela, color: 0xffe14a, transparent: true, depthWrite: false })); e.scale.setScalar(1.15); estrelas.add(e); }
+  const gelo = malha(new THREE.BoxGeometry(2.1, 2.3, 2.1), 0xbfeaff, { transparent: true, opacity: 0.62, roughness: 0.08, emissive: 0x4aa8ff, emissiveIntensity: 0.3 });
+  gelo.castShadow = false; gelo.rotation.y = 0.5; gelo.position.y = 0.25;
+  const guarda = new THREE.Group(), copa = malha(new THREE.ConeGeometry(1.3, 0.6, 8, 1, true), 0xc79bff, { side: THREE.DoubleSide, flatShading: true, emissive: 0x6a3fd0, emissiveIntensity: 0.35 });
+  const cabo = malha(new THREE.CylinderGeometry(0.05, 0.05, 1.1, 6), 0xf2f2f2); cabo.position.y = -0.55;
+  guarda.add(copa, cabo);
+  const mancha = malha(new THREE.SphereGeometry(0.62, 14, 10), 0x2a1466, { roughness: 0.2 }); mancha.scale.set(1.3, 0.5, 1.3); mancha.position.y = 0.72;
+  g.add(estrelas, gelo, guarda, mancha); g.visible = false; cena.add(g);
+  return { g, estrelas, gelo, guarda, mancha, chegando: 0, bloqueio: false };
+});
+const DUR_VOO = 0.35;       // a bomba (ou a bola de gelo, ou de tinta) voa de quem jogou ate o alvo; o efeito so aparece quando ela chega
+const projeteis = LUGARES.map(() => {
+  const g = new THREE.Group(), bomba = bombaBonita(0.45), bola = malha(new THREE.SphereGeometry(0.42, 14, 10), 0xffffff, { roughness: 0.2 });
+  g.add(bomba, bola); g.visible = false; cena.add(g);
+  return { g, bomba, bola, t: 0, de: new THREE.Vector3(), uso: null };
+});
+const EFEITOS_ITEM = [['tonto', 'Tonto', 'bomba'], ['gelo', 'Congelado', 'gelo'], ['turboItem', 'Turbo', 'turbo'], ['guarda', 'Guarda-chuva', 'guarda'], ['tinta', 'Tinta', 'tinta']];
+function chipsItem(i) {       // ficha no cartao do jogador: o efeito aparece mesmo em minijogo que esconde o boneco
+  const j = p.jogadores[i];
+  return p.fase !== 'jogando' ? '' : EFEITOS_ITEM.filter(([campo]) => j[campo] > 0 || j[campo] === true).map(([, txt, id]) => `<span class="inv efeito" style="--ci:${hex(COR_ITEM[id])}">${txt}</span>`).join('');
+}
+let logItens = null, vistosItens = 0, avisoItem = { html: '', ate: 0 };
+window.__avisoItem = () => avisoItem.html;       // para o teste automatico
+function itensNaTela(dt, t, noPalco) {
+  if (p.itens !== logItens) {       // rodada nova: registro novo
+    logItens = p.itens; vistosItens = 0; avisoItem.ate = 0;
+    for (const q of projeteis) { q.uso = null; q.g.visible = false; }
+    for (const f of fxItens) { f.chegando = 0; f.bloqueio = false; }
+  }
+  const vale = iniciou && !noPalco && (p.fase === 'jogando' || p.fase === 'resultado');
+  for (const u of (p.itens ?? []).slice(vistosItens)) {
+    vistosItens++;
+    const de = bonecos[u.de].position;
+    avisoItem = { html: `<div class="avItem" style="--ci:${hex(COR_ITEM[u.id] ?? 0xffffff)}">${limpa(fraseItem(u, nome(u.de), nome(u.para)))}</div>`, ate: performance.now() + 2600 };
+    if (u.para === u.de) { if (vale && bonecos[u.de].visible) particulas(de.x, de.y + 0.6, de.z, COR_ITEM[u.id], 24, 6); continue; }
+    const q = projeteis.find(x => !x.uso) ?? projeteis[0];
+    q.uso = u; q.t = 0; q.de.copy(de);
+    q.bomba.visible = u.id === 'bomba'; q.bola.visible = u.id !== 'bomba'; q.bola.material.color.set(COR_ITEM[u.id]);
+    fxItens[u.para].chegando++; if (u.bloqueado) fxItens[u.para].bloqueio = true;
+  }
+  for (const q of projeteis) {
+    if (!q.uso) continue;
+    const u = q.uso, alvo = bonecos[u.para], para = alvo.position, mostra = vale && alvo.visible && bonecos[u.de].visible;
+    q.t += dt;
+    const k = Math.min(1, q.t / DUR_VOO);
+    q.g.visible = mostra; q.g.position.lerpVectors(q.de, para, k); q.g.position.y += Math.sin(k * Math.PI) * 3 + 0.4; q.g.rotation.z = -k * 5;
+    if (k < 1) continue;
+    q.uso = null; q.g.visible = false;
+    const f = fxItens[u.para]; f.chegando = Math.max(0, f.chegando - 1); f.bloqueio = false;
+    vibra(u.para, [90, 40, 90], true);       // quem levou sente no celular
+    if (!mostra) continue;
+    if (u.bloqueado) { particulas(para.x, para.y + 1.5, para.z, COR_ITEM.guarda, 26, 7); particulas(para.x, para.y + 1.5, para.z, 0xffffff, 10, 5); }
+    else if (u.id === 'bomba') { particulas(para.x, para.y + 0.3, para.z, 0xff8a2a, 46, 10); particulas(para.x, para.y + 0.3, para.z, 0xffe14a, 24, 6); fumaca(para.x, para.y, para.z, 0x3a3a44, 8, 3, 1.5); tremor = Math.max(tremor, 0.6); }
+    else particulas(para.x, para.y + 0.3, para.z, COR_ITEM[u.id], 36, 7);
+  }
+  fxItens.forEach((f, i) => {
+    const j = p.jogadores[i], b = bonecos[i];
+    f.g.visible = !!j && vale && b.visible && j.vivo;
+    if (!f.g.visible) return;
+    const espera = f.chegando > 0;
+    f.g.position.copy(b.position);
+    f.estrelas.visible = j.tonto > 0 && !espera;
+    f.estrelas.children.forEach((e, k) => { const a = t * 5 + k * 2.094; e.position.set(Math.cos(a) * 1.05, 1.45 + Math.sin(t * 6 + k) * 0.08, Math.sin(a) * 1.05); e.material.rotation = -t * 3; });
+    f.gelo.visible = j.gelo > 0 && !espera;
+    f.guarda.visible = j.guarda || f.bloqueio; f.guarda.position.y = 2.05 + Math.sin(t * 3 + i) * 0.05; f.guarda.rotation.y = t * 1.5;
+    f.mancha.visible = j.tinta > 0 && !espera;
+    if (j.tinta > 0 && !espera && Math.random() < dt * 12) solta(j.x, 1.4 + j.y, j.z, COR_ITEM.tinta, false, 2);
+    if (j.liso > 0 && !(j.gelo > 0) && Math.random() < dt * 16) solta(j.x + (Math.random() - 0.5), 0.15, j.z + (Math.random() - 0.5), 0xdff6ff, false, 1.2);       // chao liso depois do gelo
+    if (j.turboItem > 0 && Math.random() < dt * 55) solta(j.x - j.vx * 0.06, 0.45 + j.y, j.z - j.vz * 0.06, Math.random() < 0.5 ? 0xffd84d : 0xff9a2a, false, 2.5);       // rastro do turbo
+  });
+  poe('hudItens', iniciou && p.fase !== 'fim' && performance.now() < avisoItem.ate ? avisoItem.html : '');
 }
 
 const CAM = new THREE.Vector3(0, 21, 17);
@@ -2162,7 +2675,7 @@ let camPropria = false;
 // Minijogo pode ter camera(p, t) -> { x, y, z, ox, oy, oz }: posicao e para onde olha. A tela suaviza o caminho.
 function cameraDoJogo(d, t) {
   try {
-    const dono = d.camera ? d : p.jogo, a = dono.camera?.call(dono, p, t);
+    const dono = d.camera ? d : p.jogo, a = dono.camera?.call(dono, vista(p), t);
     const v = a && [a.x, a.y, a.z, a.ox, a.oy, a.oz];
     if (!v || !v.every(Number.isFinite)) return false;
     camPos.set(v[0], v[1], v[2]); camMira.set(v[3], v[4], v[5]);
@@ -2176,7 +2689,7 @@ const ladoPos = [new THREE.Vector3(), new THREE.Vector3()], ladoOlho = [new THRE
 let divide = false;
 function camerasDoJogo(d, t, dt) {
   try {
-    const dono = d.cameras ? d : p.jogo, v = dono.cameras?.call(dono, p, t);
+    const dono = d.cameras ? d : p.jogo, v = dono.cameras?.call(dono, vista(p), t);
     if (!Array.isArray(v) || v.length !== 2) return false;
     const n = v.map(a => a && [a.x, a.y, a.z, a.ox, a.oy, a.oz]);
     if (!n.every(l => l && l.every(Number.isFinite))) return false;
@@ -2214,8 +2727,9 @@ function desenha(dt, t) {
     u.anel.visible = j.vivo && j.cd <= 0 && !p.jogo.semDash && !p.jogo.semMovimento;
     u.anel.material.opacity = 0.65 + Math.sin(t * 6) * 0.3;
     u.placa.visible = !p.jogo.semNome;       // o minijogo pode esconder o nome flutuante (kart: o nome do rival atras da camera atrapalha)
-    u.anelTime.visible = p.modo === 'times' && j.vivo;       // anel no chao com a cor do time
-    if (u.anelTime.visible) u.anelTime.material.color.setHex(TIMES[timeDe(p, i)]);
+    const tm = p.modo === 'times' ? timeNaRodada(p, i) : -1;
+    u.anelTime.visible = tm >= 0 && j.vivo;       // anel no chao com a cor do time
+    if (u.anelTime.visible) u.anelTime.material.color.setHex(TIMES[tm]);
     const vis = VISUAL_CARTA[j.carta], pulsa = 0.5 + Math.sin(t * 5) * 0.2;      // carta de poder: brilho e aro na cor da carta
     u.aura.visible = u.auraAro.visible = !!vis && j.vivo;
     if (vis) {
@@ -2261,6 +2775,8 @@ function desenha(dt, t) {
       if (j.vivo && Math.hypot(j.vx, j.vz) > 4 && Math.random() < dt * 45) solta(j.x - j.vx * 0.06, 0.45 + j.y, j.z - j.vz * 0.06, Math.random() < 0.5 ? 0xff7a2f : 0xffd84d, false, 2.5);
   }
   if (noPalco) { cena.fog.near = 60; cena.fog.far = 260; }
+  itensNaTela(dt, t, noPalco);
+  acompanha(dt, t, noPalco, podio);
   moveParticulas(dt);
   nuvens.rotation.y = t * 0.006;
   for (const g of decor.children) g.position.y = g.userData.y + Math.sin(t * 0.5 + g.userData.fase) * 0.4;
@@ -2283,7 +2799,7 @@ const sessao = Date.now().toString(36);
 const premios = Array(SLOTS).fill(null);
 let rodadaPremiada = 0;
 // partidas ganhas: o Classico e a Festa tem cada um o seu placar (chaves diferentes no localStorage)
-const leVitorias = chave => { try { const v = JSON.parse(localStorage.getItem(chave)); return [0, 1, 2, 3].map(i => Number(v?.[i]) || 0); } catch { return [0, 0, 0, 0]; } };
+const leVitorias = chave => { try { const v = JSON.parse(localStorage.getItem(chave)); return LUGARES.map(i => Number(v?.[i]) || 0); } catch { return Array(SLOTS).fill(0); } };
 const vitoriasPor = { vitorias: leVitorias('vitorias'), vitoriasFesta: leVitorias('vitoriasFesta') };
 const chaveVitorias = () => p.modo === 'classico' ? 'vitorias' : 'vitoriasFesta';
 const vitoriasDoModo = () => vitoriasPor[chaveVitorias()];
@@ -2294,6 +2810,7 @@ function premia() {
   const v = p.vencedor, campeoes = p.fase === 'fim' ? p.campeoes ?? [] : [];
   for (const i of todos()) {
     // venceu/partida/jogo servem para os trofeus que o celular guarda (vitoria em equipe conta para todos, em times para os dois do time)
+    if (descansou(i)) { premios[i] = null; continue; }
     premios[i] = { id: `${sessao}-${p.rodada}`, valor: moedasDaRodada(p, i), venceu: venceu(p, i), empate: v < 0 && !ehCoop(p), partida: campeoes.includes(i), jogo: p.jogo.id, nomeJogo: p.jogo.nome };
   }
   for (const i of todos()) {
@@ -2305,7 +2822,7 @@ function premia() {
   todos().forEach(i => { noite.seq[i] = Math.max(noite.seq[i], p.seq?.[i] ?? 0); });       // medalhas do podio
   for (const a of p.anuncios ?? []) if (a.tipo === 'virada' && Number.isInteger(a.quem)) noite.viradas[a.quem]++;
   if (p.fase === 'fim') {
-    for (const i of campeoes) vitoriasDoModo()[i]++;
+    for (const i of campeoes) vitoriasDoModo()[lugar(i)]++;       // o historico da casa e do lugar da pessoa, nao do indice na partida
     try { localStorage.setItem(chaveVitorias(), JSON.stringify(vitoriasDoModo())); } catch {}
     lento = 1.3;       // ponto decisivo: um instante em camera lenta
   }
@@ -2325,6 +2842,13 @@ function ofertaCelular(i) {
     cartas: lista.map(k => ({ nome: k.nome, dica: k.dica, cor: VISUAL_CARTA[k.id]?.[0] })) };
 }
 
+// Itens de rodada no celular: m = quais valem agora (um bit por item de ITENS; sem m, item nao vale nesta rodada e a barrinha some), n = usos que o
+// motor recusou (o celular treme), g = ultimo uso aceito (o celular desconta do estoque uma vez por id) e tinta = a tela dele esta manchada.
+function itensCelular(i) {
+  const j = p.jogadores[i], cabe = !ehCoop(p) && !p.jogo.semItens && (!p.duelo || p.duelo.includes(i));
+  return { m: cabe ? ITENS.reduce((a, k, n) => a | (itemLiberado(p, i, k.id) ? 1 << n : 0), 0) : undefined, n: j.itensNegados ?? 0,
+    g: j.itemGasto ? { id: sessao + '-' + j.itemGasto.n, k: ITENS.findIndex(k => k.id === j.itemGasto.id) } : undefined, tinta: (p.fase === 'jogando' && j.tinta > 0) || undefined };
+}
 let mandado = '', ultimoEnvio = 0;
 // Espera: o Jogador 1 (anfitriao) recebe o menu de modos; os outros veem so que estao conectados.
 function celularDaEspera(i) {
@@ -2332,8 +2856,8 @@ function celularDaEspera(i) {
   if (i) return { jogo: '', modo: 'espera', texto: textoAuto() || agora || nome(0) + ' está escolhendo a brincadeira', modoSala: escolhaModo, quem: nome(0) };
   const auto = autoSeg() || null, seg = seguidos();
   // qtd: quantos minijogos cada brincadeira tem com quem esta no sofa agora; nomes e cores: para as pilulas de quem esta conectado
-  const qtd = { classico: elegiveis('classico', 2).length, vs: elegiveis('vs', Math.max(2, seg)).length, times: elegiveis('times', 4).length, coop: elegiveis('coop', Math.max(2, seg)).length };
-  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, on: conectado.slice(), seg, auto, qtd, nomes: [0, 1, 2, 3].map(nome), cores: [0, 1, 2, 3].map(css),
+  const qtd = { classico: elegiveis('classico', 2).length, vs: elegiveis('vs', Math.max(2, seg)).length, times: elegiveis('times', seg >= SLOTS ? SLOTS : 4).length, coop: elegiveis('coop', Math.max(2, seg)).length };
+  return { jogo: '', modo: 'espera', texto: agora, sala: { modo: escolhaModo, par: parceiro + 1, on: conectado.slice(), seg, auto, qtd, nomes: LUGARES.map(nome), cores: LUGARES.map(css),
     faltas: Object.fromEntries(Object.keys(MODOS_TXT).map(m => [m, faltaPara(m)])) } };
 }
 // Gancho da Lanchonete (frente C): campos extras do estado de cada celular. Vazio por enquanto.
@@ -2351,15 +2875,24 @@ function ctlCelular(j) {       // o desenho do controle que o celular mostra na 
 function fraseDoFim(i) {       // o que o celular de cada um diz quando a rodada acaba
   if (venceu(p, i)) return p.modo === 'times' ? 'Ponto da sua dupla!' : ehCoop(p) ? 'Deu certo, equipe!' : 'Ponto seu!';
   if (p.vencedor === undefined) return '';
+  if (descansou(i)) return p.fase === 'fim' ? 'Acabou a partida' : 'Você volta na próxima rodada';
   if (ehCoop(p)) return 'Não foi dessa vez';
   if (p.vencedor < 0) return 'Empatou!';
-  return p.modo === 'classico' && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';
+  const jogou = !p.duelo || p.duelo.includes(i);       // quem so assistiu nao perdeu nada agora (o direito guardado dele espera a vez de jogar)
+  return jogou && p.jogadores[i].direito && p.fase !== 'fim' ? 'Quase! Na próxima você ganha uma carta' : 'Quase!';
 }
 function celularDoPodio(i) {
   const falta = 'Revanche em ' + faltaRevanche();
   if (i === 0) return { modo: 'opcoes', texto: falta, opcoes: ['Revanche', 'Trocar de brincadeira'] };
   return { modo: 'opcoes', texto: querRevanche[i] ? 'Pedido feito. ' + falta : falta, opcoes: ['Quero revanche'] };
 }
+const deFora = i => !!p.duelo && !p.duelo.includes(i) && p.fase !== 'fim';       // nesta rodada este jogador so assiste
+// Descansou no rodizio de Cada um por si: nao jogou, entao nao ganha moeda, nao perde sequencia e o celular nao diz que perdeu.
+// (Nas Duplas quem esta de fora divide o resultado do time, e no cooperativo a vitoria e de todos.)
+const timesFixos = () => p.modo === 'times' && p.n === 4;       // Duplas de 4: as duplas sao as mesmas a partida inteira
+const rodizioDuplas = () => p.modo === 'times' && p.n === SLOTS;       // Duplas com 5: um descansa e as duplas mudam a cada rodada
+const saiu = i => !!p.ausentes?.[i];       // saiu do sofa (celular sumiu): fica de fora ate voltar
+const descansou = i => !!p.duelo && !p.duelo.includes(i) && (p.modo === 'vs' || rodizioDuplas());
 function mandaCelulares(agora) {
   const ctl = p.jogo.controle ?? {};
   const explica = iniciou && aguardando(p);      // na explicacao o celular mostra o minijogo e o botao Entendi
@@ -2367,18 +2900,20 @@ function mandaCelulares(agora) {
   const doMinijogo = i => {      // texto e opcoes que o minijogo escreveu para o celular: sem texto cru e com o nome do perfil
     const c = p.celular[i] ?? {}, e = { ...c };
     if ('texto' in c) e.texto = doJogo(c.texto);
-    if (Array.isArray(c.opcoes)) e.opcoes = c.opcoes.slice(0, 4).map(o => rotulo(trocaNomes(o, nomesPerfis()), 30));
+    if (Array.isArray(c.opcoes)) e.opcoes = c.opcoes.slice(0, 4).map(o => rotulo(trocaNomes(o, nomesDoJogo()), 30));
     if ('a' in c) e.a = rotulo(c.a, 20);
     if ('b' in c) e.b = rotulo(c.b, 20);
     return e;
   };
-  const estado = !iniciou ? [0, 1, 2, 3].map(celularDaEspera)
+  const estado = !iniciou ? LUGARES.map(celularDaEspera)
     : explica ? todos().map(i => p.jogadores[i].pronto
       ? { jogo: nomeJogo, modo: 'espera', texto: faltaEntender(), pronto: true, premio: premios[i] ?? undefined }
       : { jogo: nomeJogo, modo: 'botao', a: 'Entendi', texto: '', explica: { nome: nomeJogo, dica, ctl: ctlCelular(p.jogo) }, premio: premios[i] ?? undefined })
     : todos().map(i => ({ jogo: nomeJogo, modo: ctl.modo ?? 'padrao', a: ctl.a === undefined ? undefined : rotulo(ctl.a), b: ctl.b === undefined ? undefined : rotulo(ctl.b), joy: ctl.joystick !== false, jg: p.fase === 'jogando', ...doMinijogo(i), premio: premios[i] ?? undefined }));
   if (iniciou) for (let i = p.jogadores.length; i < SLOTS; i++)      // celular de quem nao esta nesta partida (Classico so tem 2)
     estado.push({ jogo: nomeJogo, modo: 'espera', texto: 'Essa é de ' + p.jogadores.length + '. Daqui você torce' });
+  if (iniciou && p.duelo) for (const i of todos())      // quem esta de fora (parceiro nas Duplas, ou quem descansa com 5 no sofa) ja sabe na explicacao e torce
+    if (!p.duelo.includes(i)) estado[i] = { jogo: nomeJogo, modo: 'espera', texto: (timesFixos() ? 'Vez de ' + nome(p.duelo[timeDe(p, i)]) : 'Você descansa nesta rodada e volta na próxima') + '. Daqui você torce', premio: premios[i] ?? undefined };
   const fimRodada = p.fase === 'resultado' || p.fase === 'fim';
   if (p.fase === 'jogando') provocador = -1;
   estado.forEach((e, i) => {
@@ -2389,13 +2924,14 @@ function mandaCelulares(agora) {
     else if (naRevanche()) Object.assign(e, celularDoPodio(i));
     else if (fimRodada) Object.assign(e, { modo: 'espera', texto: fraseDoFim(i), opcoes: undefined });
     e.carta = cartaCelular(i);
+    e.it = itensCelular(i);
     e.provoca = provocador === i && (fimRodada || p.fase === 'intro') || undefined;
   });
   estado.forEach((e, i) => {
     if (pausado) e.pausa = { quem: quemPausou >= 0 ? nome(quemPausou) : '', manda: i === 0 };      // o celular mostra o menu da pausa (o J1 tem as acoes da partida)
     Object.assign(e, estadoExtra(i));
   });
-  const txt = JSON.stringify({ c: estado });
+  const txt = JSON.stringify({ c: estado.map((e, s) => estado[lugar(s)] ?? e) });       // o servidor entrega por lugar do celular
   if (txt === mandado || agora - ultimoEnvio < 80) return;
   mandado = txt; ultimoEnvio = agora;
   fetch('/tela', { method: 'POST', body: txt }).catch(() => { mandado = ''; });
@@ -2432,22 +2968,30 @@ function cartaoJogo(j, quase, completo) {       // apresentacao do minijogo; com
   const qs = quase.flatMap((q, i) => (q ? [i] : []));       // quem fecha a partida se vencer esta rodada
   const falta = p.mod?.pontos > 1 ? 'a uma vitória do título' : 'a um ponto do título';
   const mp = !qs.length ? '' : qs.length > 1 && qs.length === quase.length ? (qs.length === 2 ? `Os dois ${falta}!` : `Todo mundo ${falta}!`)
-    : (p.modo === 'times' ? NOME_TIME[timeDe(p, qs[0])] : qs.map(i => limpa(nome(i))).join(' e ')) + (qs.length > 1 && p.modo !== 'times' ? ' estão ' : ' está ') + falta + '!';
+    : (timesFixos() ? NOME_TIME[timeDe(p, qs[0])] : qs.map(i => limpa(nome(i))).join(' e ')) + (qs.length > 1 && !timesFixos() ? ' estão ' : ' está ') + falta + '!';
   const faixaMp = mp ? `<div class="mp tit">${mp}</div><br>` : '';
   const tempero = p.mod ? `<div class="mod tit">${limpa(textoSeguro(p.mod.nome, 20))}<small>${limpa(textoSeguro(p.mod.dica, 30))}</small></div>` : '';
   const coop = ehCoop(p) ? '<div class="coop tit">Todo mundo do mesmo lado</div><br>' : '';
   const nomeJ = limpa(textoSeguro(j.nome, 40)), dica = limpa(doJogo(j.dica, 200));
   if (!completo) return `<div class="cx mini">${coop}<h2 class="tit">${nomeJ}</h2><p>${dica}</p>${tempero}</div>`;
   const st = i => {
-    const jg = p.jogadores[i], ok = jg.pronto, escolhe = !!jg.oferta;
-    return `<div class="jg${ok ? ' ok' : ''}" style="--cor:${css(i)}"><div class="rosto"><b></b><b></b></div>${nomeHtml(i)}<em>${escolhe ? 'escolhendo carta' : ok ? 'pronto' : 'lendo'}</em>${chipCarta(jg.carta)}</div>`;
+    const jg = p.jogadores[i], ok = jg.pronto, escolhe = !!jg.oferta, fora = deFora(i);
+    return `<div class="jg${fora ? ' fora' : ok ? ' ok' : ''}" style="--cor:${css(i)}"><div class="rosto"><b></b><b></b></div>${nomeHtml(i)}<em>${fora ? (saiu(i) ? 'saiu' : timesFixos() ? 'torce' : 'descansa') : escolhe ? 'escolhendo carta' : ok ? 'pronto' : 'lendo'}</em>${chipCarta(jg.carta)}</div>`;
   };
   const quemEscolhe = todos().filter(i => p.jogadores[i].oferta);
   const oferta = quemEscolhe.length ? `<div class="oferta">${quemEscolhe.map(i => nomeHtml(i)).join(' e ')} ${quemEscolhe.length > 1 ? 'estão escolhendo' : 'está escolhendo'} uma carta</div>` : '';
   const vale = p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos!' : 'Vale 1 ponto.';
   const obs = (j.duracao > 0 ? `${Math.round(j.duracao)} segundos. ` : '') + (ehCoop(p) ? (p.mod?.pontos > 1 ? `Venceram juntos, ${p.mod.pontos} pontos para cada um. Falharam, ninguém leva` : 'Venceram juntos, ponto para todos. Falharam, ninguém leva')
-    : p.modo === 'times' ? `${p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos para o time.' : 'Ponto para o time.'} ${p.alvo} e a dupla leva` : p.mod?.pontos > 1 ? vale : `${vale} ${p.alvo} e acabou`);
-  const times = p.modo === 'times' ? `<div class="obs"><b style="color:${hex(TIMES[0])}">Laranja</b>: ${limpa(nome(0))} e ${limpa(nome(2))} &nbsp;contra&nbsp; <b style="color:${hex(TIMES[1])}">Roxo</b>: ${limpa(nome(1))} e ${limpa(nome(3))}</div>` : '';
+    : timesFixos() ? `${p.mod?.pontos > 1 ? 'Vale ' + p.mod.pontos + ' pontos para o time.' : 'Ponto para o time.'} ${p.alvo} e a dupla leva`
+    : rodizioDuplas() ? `${p.mod?.pontos > 1 ? p.mod.pontos + ' pontos' : 'Ponto'} para cada um da dupla. ${p.alvo} e acabou` : p.mod?.pontos > 1 ? vale : `${vale} ${p.alvo} e acabou`);
+  const descansa = todos().filter(i => p.duelo && !p.duelo.includes(i));
+  const folgas = descansa.map(i => `<div class="folga" style="--cor:${css(i)}">${limpa(nome(i))} ${saiu(i) ? 'saiu do sofá' : timesFixos() ? 'torce nesta rodada' : 'descansa nesta rodada<small>volta na próxima</small>'}</div>`).join(' ');
+  const duplaTxt = (a, b, c, d) => `<div class="obs"><b style="color:${hex(TIMES[0])}">Laranja</b>: ${limpa(nome(a))} e ${limpa(nome(b))} &nbsp;contra&nbsp; <b style="color:${hex(TIMES[1])}">Roxo</b>: ${limpa(nome(c))} e ${limpa(nome(d))}</div>`;
+  const d4 = p.duelo ?? [];
+  const times = rodizioDuplas() && d4.length === 4 ? duplaTxt(d4[0], d4[2], d4[1], d4[3]) + folgas       // as duplas desta rodada
+    : p.duelo && timesFixos() ? `<div class="obs vez">Nesta rodada: ${nomeHtml(d4[0])} contra ${nomeHtml(d4[1])}</div>` + folgas
+    : p.duelo ? folgas
+    : p.modo === 'times' ? duplaTxt(0, 2, 1, 3) : '';
   const mini = p.jogadores.length > 2, chama = '<div class="chama">Leu? Toque em <b>Entendi</b><br>no celular</div>';
   return `<div class="cx${p.jogadores.length > 2 ? ' varios' : ''}">${tempero}${faixaMp}${coop}<div class="rot">Agora é</div><h2 class="tit">${nomeJ}</h2><p>${dica}</p>${oferta}` +
     `<div class="como">${ilustra(j)}<div class="ctl">${resumoControle(j)}</div></div><div class="obs">${obs}</div>${times}` +
@@ -2478,9 +3022,10 @@ const COR_INV = { Bombas: '#ff4a4a', Fogo: '#ff8a1a', Patins: '#4aa8ff', Atraves
 const naRodada = () => p.fase === 'jogando' || p.fase === 'resultado';
 function extras(i) {
   if (p.fase === 'fim') return '';
-  const inv = naRodada() ? p.dados.inventario?.[i] : null;
+  const k = p.duelo ? p.duelo.indexOf(i) : i;       // em duelo o minijogo de 2 lista os itens pelos dois da vez
+  const inv = naRodada() && k >= 0 ? p.dados.inventario?.[k] : null;
   const itens = Array.isArray(inv) ? inv.slice(0, 5).filter(t => typeof t === 'string').map(t => doJogo(t).slice(0, 18)).filter(Boolean) : [];
-  const html = chipCarta(p.jogadores[i].carta) + itens.map(t => {
+  const html = chipCarta(p.jogadores[i].carta) + chipsItem(i) + itens.map(t => {
     const m = /^(.*?)(\d+)$/.exec(t);
     const cor = COR_INV[t.split(' ')[0]];      // itens conhecidos ganham um icone na cor do item da arena
     return `<span class="inv">${cor ? `<i class="ptInv" style="background:${cor}"></i>` : ''}${m ? `${limpa(m[1])}<b>${m[2]}</b>` : limpa(t)}</span>`;
@@ -2514,14 +3059,30 @@ function chegou(i) {
   novidade(nome(i) + ' sentou no sofá');
   const logo = $('logo'); logo.classList.remove('afunda'); void logo.offsetWidth; logo.classList.add('afunda');
 }
+// Quem saiu do sofa no meio da partida: depois de T_AUSENTE sem sinal do celular, a pessoa fica de fora das proximas rodadas (o motor le p.ausentes)
+// e volta sozinha quando o celular reconectar. So vale para quem ja jogou nesta partida com celular (teclado e lugar nunca ocupado nao contam).
+// O prazo e folgado porque celular que so bloqueou a tela tambem para de dar sinal; com a partida pausada o tempo nao corre.
+// A tela nunca encerra a partida por conta disso: sem gente suficiente o motor ignora a ausencia e a rodada segue como sempre.
+const T_AUSENTE = 25000, sumiuEm = Array(SLOTS).fill(0), jaJogou = Array(SLOTS).fill(false);
+let ausentesEm = 0;
+function confereAusentes(agora) {
+  if (!iniciou) { jaJogou.fill(false); p.ausentes = null; ausentesEm = 0; return; }
+  if (pausado || ajustesAberto) { ausentesEm = 0; return; }
+  if (!ausentesEm) for (const i of LUGARES) if (sumiuEm[i]) sumiuEm[i] = agora;       // voltou da pausa (ou a partida comecou): o prazo de quem esta sumido recomeca
+  ausentesEm = agora;
+  p.ausentes = LUGARES.map(i => i < p.jogadores.length && jaJogou[i] && !conectado[i] && sumiuEm[i] > 0 && agora - sumiuEm[i] > T_AUSENTE);
+}
 let faseVista = '', rodadaVista = -1, contaVista = '', segVisto = -1, iniciouVisto = null, pontosVistos = [0, 0];
 function hud(agora) {
   const on = visto.map(v => v && agora - v < 2000);
   visto.forEach((v, i) => {
     if (v && !on[i]) { entrada(p, i, { x: 0, y: 0, d: false, b: false }); visto[i] = 0; }   // celular sumiu: solta o controle
     if (on[i] && !conectado[i] && !iniciou) chegou(i);
+    if (conectado[i] && !on[i]) sumiuEm[i] = agora;
+    if (on[i]) { sumiuEm[i] = 0; if (iniciou) jaJogou[i] = true; }
     conectado[i] = !!on[i];
   });
+  confereAusentes(agora);
   if (!iniciou && modoPadrao) {       // ninguem escolheu: 3 ou 4 no sofa jogam juntos; mudou o modo, a contagem recomeca
     const padrao = seguidos() >= 3 ? 'vs' : 'classico';
     if (padrao !== escolhaModo) { escolhaModo = padrao; autoDesde = 0; }
@@ -2557,17 +3118,19 @@ function hud(agora) {
 
   // placar: um cartao por jogador, com as estrelas da partida (o primeiro span e sempre o nome do jogador 1)
   const mini = p.jogadores.length > 2, times = p.modo === 'times';
-  const cartao = i => `<div class="cartao ${i % 2 ? 'dir' : 'esq'}${mini ? ' mini' : ''}${times ? ' time' : ''}${quase[i] ? ' quase' : ''}" data-i="${i}" style="--cor:${css(i)}${times ? ';--time:' + hex(TIMES[timeDe(p, i)]) : ''}"><div class="rosto"><b></b><b></b></div>` +
+  const tm = i => (times ? timeNaRodada(p, i) : -1);       // time de cada um nesta rodada (nas Duplas com 5 muda a cada rodada, e quem descansa nao tem)
+  const cartao = i => `<div class="cartao ${i % 2 ? 'dir' : 'esq'}${deFora(i) && !fimRodada ? ' fora' : ''}${mini ? ' mini' : ''}${tm(i) >= 0 ? ' time' : ''}${quase[i] ? ' quase' : ''}" data-i="${i}" style="--cor:${css(i)}${tm(i) >= 0 ? ';--time:' + hex(TIMES[tm(i)]) : ''}"><div class="rosto"><b></b><b></b></div>` +
     `<div class="info">${nomeHtml(i)}<div class="pips">${Array.from({ length: alvo }, (_, k) => `<i class="${k < pts[i] ? 'on' : ''}${k === pts[i] - 1 && pts[i] > pontosVistos[i] ? ' novo' : ''}"></i>`).join('')}</div></div>` +
     `<div class="num tit">${pts[i]}</div>${extras(i)}</div>`;
   poe('placar', mini ? `<div class="lado">${todos().filter(i => i % 2 === 0).map(cartao).join('')}</div><div class="lado">${todos().filter(i => i % 2).map(cartao).join('')}</div>` : cartao(0) + cartao(1));
+  $('placar').classList.toggle('cinco', p.jogadores.length > 4);
   pontosVistos = pts;
 
   poe('selo', naRodada() ? limpa(textoSeguro(j.nome, 40)) : '');
   poe('modChip', p.mod && !podio ? limpa(textoSeguro(p.mod.nome, 20)) : '');
   $('clima').className = p.mod && !podio ? String(p.mod.id).replace(/\W/g, '') : '';
   const pl = p.dados.placar;
-  const corPl = k => (p.modo === 'times' ? hex(TIMES[k]) : p.modo === 'coop' ? '#ffffff' : css(k)), suf = limpa(j.sufixo ?? '');       // em times o placar da rodada tem as cores dos times, e em coop e branco (nao e de ninguem)
+  const corPl = k => (p.modo === 'times' ? hex(TIMES[k]) : p.modo === 'coop' ? '#ffffff' : css(p.duelo?.[k] ?? k)), suf = limpa(j.sufixo ?? '');       // em times o placar da rodada tem as cores dos times, e em coop e branco (nao e de ninguem)
   // placar da rodada so aparece com numeros de verdade (minijogo com placar torto nao mostra NaN nem undefined); "pontos" nao e escrito a toa
   const plOk = Array.isArray(pl) && pl.length > 0 && pl.length <= 4 && pl.every(Number.isFinite), rot = limpa(textoSeguro(j.rotulo, 24));
   poe('rodadaPl', plOk && naRodada() ? `<div class="pl">${rot ? `<em>${rot}</em>` : ''}${pl.map((v, k) => `<b style="color:${corPl(k)}">${Math.floor(v).toLocaleString('pt-BR')}${suf}</b>`).join('<i>x</i>')}</div>` : '');
@@ -2603,26 +3166,27 @@ function hud(agora) {
 
   // resultado da rodada e fim de partida
   let res = '';
-  const camp = p.campeoes ?? [], juntos = camp.length === p.jogadores.length, cc = camp.length ? (times ? hex(TIMES[timeDe(p, camp[0])]) : css(camp[0])) : css(0);
-  const escudo = (p.anuncios ?? []).some(a => a.tipo === 'escudo');
+  const camp = p.campeoes ?? [], juntos = camp.length === p.jogadores.length, cc = camp.length ? (timesFixos() ? hex(TIMES[timeDe(p, camp[0])]) : css(camp[0])) : css(0);
+  const donoEscudo = (p.anuncios ?? []).find(a => a.tipo === 'escudo')?.quem, escudo = donoEscudo !== undefined;
   const gradEquipe = p.jogadores.length > 2 ? ` style="background:linear-gradient(90deg,${todos().map(css).join(',')})"` : ` style="--c0:${css(0)};--c1:${css(1)}"`;
   if (p.fase === 'fim' && !podio) res = `<div class="faixa tit" style="--cor:${cc}">Acabou!</div>` + anuncios();
   if (p.fase === 'resultado') res = (v >= 0 && ehCoop(p) ? `<div class="faixa tit equipe"${gradEquipe}>Deu certo!</div><small>Ponto e 10 moedas para todo mundo</small>`
     : v < 0 && ehCoop(p) ? '<div class="faixa tit">Não foi dessa vez</div><small>3 moedas de consolo para cada um</small>'
     : v < 0 ? '<div class="faixa tit">Empatou!</div><small>5 para cada um</small>'
+    : times && escudo ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">${NOME_TIME[v]} venceu, mas o escudo de ${limpa(nome(donoEscudo))} segurou!</div><small>Ponto bloqueado, 10 moedas para cada um da dupla</small>`
     : times ? `<div class="faixa tit" style="--cor:${hex(TIMES[v])}">Ponto do ${NOME_TIME[v]}!</div><small>+10 para cada um da dupla</small>`
-    : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu, mas o escudo segurou!</div><small>Ponto bloqueado, 10 moedas para ${limpa(nome(v))}</small>`
+    : escudo ? `<div class="faixa tit" style="--cor:${css(v)}">${limpa(nome(v))} venceu, mas o escudo${p.modo === 'classico' ? '' : ' de ' + limpa(nome(donoEscudo))} segurou!</div><small>Ponto bloqueado, 10 moedas para ${limpa(nome(v))}</small>`
     : `<div class="faixa tit" style="--cor:${css(v)}">Ponto de ${limpa(nome(v))}!</div><small>+10 para ${limpa(nome(v))}, +3 de consolo</small>`) + anuncios();
   poe('resultado', res);
   $('fim').classList.toggle('on', podio);
   const coopVenceu = p.noites.vencidas * 2 > NOITES_COOP;
-  const titulo = p.modo === 'coop' ? `Sobreviveram a ${p.noites.vencidas} de ${NOITES_COOP} noites` : !camp.length ? '' : times ? `${NOME_TIME[timeDe(p, camp[0])]}!` : juntos ? (camp.length === 2 ? 'Empate no topo!' : 'Todo mundo campeão!')
+  const titulo = p.modo === 'coop' ? `Sobreviveram a ${p.noites.vencidas} de ${NOITES_COOP} noites` : !camp.length ? '' : timesFixos() ? `${NOME_TIME[timeDe(p, camp[0])]}!` : juntos ? (camp.length === 2 ? 'Empate no topo!' : 'Todo mundo campeão!')
     : camp.length === 1 ? `${limpa(nome(camp[0]))}!` : camp.slice(0, -1).map(i => limpa(nome(i))).join(', ') + ' e ' + limpa(nome(camp.at(-1))) + '!';
-  const t1 = p.modo === 'coop' ? (coopVenceu ? 'Vitória' : 'Fica para a próxima') : camp.length > 1 || times ? 'Campeões da noite' : 'Campeão da noite';
+  const t1 = p.modo === 'coop' ? (coopVenceu ? 'Vitória' : 'Fica para a próxima') : camp.length > 1 || timesFixos() ? 'Campeões da noite' : 'Campeão da noite';
   const linha = (f, sep) => todos().map(f).join(sep), dois = p.jogadores.length === 2;
   if (podio) poe('fim', `<div><div class="t1 tit">${t1}</div><div class="t2 tit" style="color:${cc}">${titulo}</div>${medalhas()}</div>` +
     `<div><div class="final">${dois ? `${nomeHtml(0)}<b class="tit">${pts[0]}</b><i>x</i><b class="tit">${pts[1]}</b>${nomeHtml(1)}` : linha(i => `${nomeHtml(i)}<b class="tit">${pts[i]}</b>`, '<i>x</i>')}</div>` +
-    `<div class="hist">No histórico da casa: ${linha(i => `${nomeHtml(i)} <em>${vitoriasDoModo()[i]}</em>`, ', ')}.${camp.length ? ' +30 moedas para quem levou' : ''}</div>` +
+    `<div class="hist">No histórico da casa: ${linha(i => `${nomeHtml(i)} <em>${vitoriasDoModo()[lugar(i)]}</em>`, ', ')}.${camp.length ? ' +30 moedas para quem levou' : ''}</div>` +
     `<div class="revanche">Revanche em ${faltaRevanche()}</div></div>`);
   if (pausado && $('qrPausa')._ok !== enderecoCelular && $('qr').width > 1) {       // pausa e quando alguem chega: o QR aparece pequeno
     const q = $('qrPausa'); q.width = $('qr').width; q.height = $('qr').height; q.getContext('2d').drawImage($('qr'), 0, 0); q._ok = enderecoCelular;
@@ -2631,6 +3195,7 @@ function hud(agora) {
 
   // transicoes
   if (p.rodada !== rodadaVista) {
+    if (iniciou) for (const i of todos()) if (deFora(i)) vibra(i, [180, 90, 180]);       // o celular de quem fica de fora avisa na mao
     if (iniciou && rodadaVista >= 0) cortina();
     rodadaVista = p.rodada;
     if (iniciou && quase.some(Boolean)) vinheta('alerta');

@@ -106,6 +106,9 @@
   #menuLado{width:30%;min-width:150px;display:flex;flex-direction:column;gap:8px;align-items:stretch}
   #menuConectados{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center}
   #menuConectados i{font-style:normal;padding:1px 10px 2px;border-radius:99px;font-size:14px;font-weight:800;background:var(--pc);color:var(--pt,#fff);max-width:7em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #menuConectados i.toca{cursor:pointer;outline:2px dashed #fff8;outline-offset:1px}
+  #menuConectados i.par{outline:3px solid #ff7a1a;outline-offset:1px;box-shadow:0 0 0 5px #ff7a1a55}
+  #menuDuplaTx{font-size:13px;font-weight:800;text-align:center;color:#ffb37a}
   #menuConectados i.pula{animation:pulinho .45s cubic-bezier(.2,1.6,.4,1)}
   @keyframes pulinho{40%{transform:translateY(-8px) scale(1.1)}}
   #menuNome{font-size:14px;font-weight:700;color:#ffe08a;text-decoration:underline;padding:2px}
@@ -171,6 +174,19 @@
   @keyframes chamaRea{to{box-shadow:0 4px 0 #6b4604,0 0 16px 3px rgba(255,214,90,.7)}}
   #cartaChip{display:none;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;font-weight:900;font-size:14px;color:#141a36;white-space:nowrap;background:linear-gradient(#fff,var(--cc,#ffc531));box-shadow:0 0 10px var(--cc,#ffc531)}
   #cartaChip.on{display:inline-flex}
+  /* ---------- itens de rodada: barrinha no topo (so durante a rodada e so do que o jogador tem) e mancha de tinta ---------- */
+  .i-bomba{--ci:#ff8a5c}.i-gelo{--ci:#8fd8ff}.i-turbo{--ci:#ffd84d}.i-guarda{--ci:#c79bff}.i-tinta{--ci:#a78bff}
+  #barraItens{display:none;gap:6px;flex:none}
+  #barraItens.on{display:flex}
+  #barraItens button{position:relative;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:21px;color:var(--ci);background:linear-gradient(#2c3460,#1c2244);border:2px solid var(--ci);box-shadow:0 2px 0 #0a0d1a}
+  #barraItens button b{position:absolute;right:-5px;bottom:-4px;min-width:18px;height:18px;border-radius:9px;padding:0 3px;box-sizing:border-box;background:#fff;color:#141a36;font-size:13px;line-height:18px;font-weight:900}
+  #barraItens button.off{filter:grayscale(1);opacity:.4;box-shadow:none}
+  #barraItens button:active{transform:translateY(2px);box-shadow:none}
+  #barraItens.nega{animation:balanca .2s 2}
+  #tinta{position:fixed;inset:0;z-index:7;pointer-events:none;display:none;overflow:hidden}
+  #tinta.on{display:block}
+  #tinta i{position:absolute;border-radius:47% 53% 44% 56%/55% 45% 58% 42%;background:radial-gradient(circle at 32% 28%,#6a4fd0 0 7%,#2f177a 28%,#170a40 72%);box-shadow:0 0 0 4px #170a40,3vmin 5vmin 0 -1.5vmin #170a40,-4vmin 2vmin 0 -2vmin #170a40,1vmin -5vmin 0 -2.2vmin #170a40;animation:mancha .28s cubic-bezier(.2,1.6,.4,1) both}
+  @keyframes mancha{from{transform:scale(.1)}}
   #opcoes button:active{transform:translateY(3px);filter:brightness(1.2)}
   #opcoes button.carta{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:6px 8px;border:3px solid var(--cc,#ffc531);flex:1 1 28%}
   #opcoes button.carta small{font-size:14px;font-weight:600;opacity:.85;line-height:1.15}
@@ -202,10 +218,12 @@
   #trocar{position:relative;overflow:hidden;align-self:center;display:flex;align-items:center;gap:5px;font-size:12px;color:#8f98c4;padding:3px 10px}
   #direita{display:flex;flex-direction:column;gap:6px;min-width:0;min-height:0}
   #cabeca{display:flex;gap:8px;align-items:center}
-  #abas{flex:1;display:flex;gap:3px;padding:3px;min-width:0;background:#12162a;border-radius:12px}
-  .aba{flex:1;height:36px;border-radius:9px;font-size:14px;font-weight:700;color:#8f98c4;position:relative}
+  #abas{flex:1;display:flex;gap:3px;padding:3px;min-width:0;background:#12162a;border-radius:12px;overflow-x:auto;scrollbar-width:none}
+  #abas::-webkit-scrollbar{display:none}
+  .aba{flex:1 0 auto;padding:0 9px;height:36px;border-radius:9px;font-size:14px;font-weight:700;color:#8f98c4;position:relative}
   .aba.ativa{background:linear-gradient(#4a58a6,#36418a);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 2px 0 #1b2147}
   .aba .novo{top:4px;right:6px;border-color:#12162a}
+  @media (max-width:900px){ .aba{font-size:13px;padding:0 4px} }      /* seis abas no celular deitado: apertam e, se ainda faltar, a faixa rola */
   #fechar{height:48px;padding:0 16px;border-radius:12px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:6px;background:linear-gradient(#45d683,#1fa158);box-shadow:0 3px 0 #0f6a37}
   #fechar:active,.item:active,#comprar:active{transform:translateY(2px)}
   #paineis{flex:1;min-height:0;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;touch-action:pan-x pan-y;scrollbar-width:none;border-radius:14px;background:rgba(10,13,28,.55);border:1px solid #2b3360}
@@ -226,6 +244,16 @@
   .item.falta .etq{color:#ff9aa5;font-size:11px;padding:0 6px;gap:3px}
   .olho{position:absolute;top:3px;right:3px;width:28px;height:28px;border-radius:50%;background:rgba(8,10,24,.7);color:#cfe0ff;display:grid;place-items:center;font-size:14px}
   .vendo + .olho{background:#7fb0ff;color:#0d1330}
+  /* itens de rodada na loja: compra por unidade, o cartao diz quantos voce tem */
+  .regraItens{margin:0 0 6px;font-size:13px;font-weight:700;color:#ffe08a}
+  #lojaItens{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .itemRod{height:auto;min-height:112px;gap:3px;padding:6px}
+  .itemRod .cab{display:flex;align-items:center;gap:6px}
+  .icItem{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:19px;color:var(--ci);background:#12162a;border:2px solid var(--ci);flex:none}
+  .itemRod .nm{font-size:15px;font-weight:800;color:#fff}
+  .itemRod small{font-size:11px;line-height:1.15;color:#a9b1d8;text-align:center}
+  .itemRod .tem{font-size:11px;font-weight:800;color:#fff}
+  .itemRod.falta .icItem{filter:grayscale(.55) brightness(.7)}
 
   /* ---------- trofeus ---------- */
   #resumo{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
@@ -264,6 +292,7 @@
   #aviso span span{font-size:12px;color:#e9dfb5}
 
   @media (max-width:480px){ #abrePerfil span,#pausar span{display:none} #abrePerfil,#pausar,#reagir{padding:6px 9px;font-size:16px} #fechar{padding:0 12px} .aba{font-size:13px} }
+  @media (orientation:portrait){ #topo{flex-wrap:wrap} #barraItens{order:9;flex-basis:100%;justify-content:center;padding:2px 0 4px} }      /* em pe o topo nao tem largura: os itens descem para uma linha propria */
   @media (orientation:portrait){ #perfil{grid-template-columns:1fr;grid-template-rows:minmax(230px,42%) 1fr} 
     /* em pe: joystick embaixo a esquerda, botoes empilhados embaixo a direita (dois polegares) */
     #base{align-self:flex-end;margin:0 auto 9vh}
@@ -293,9 +322,13 @@
   <symbol id="i-cofre" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></symbol>
   <symbol id="i-chapeu" viewBox="0 0 24 24"><path d="M3 18h18M7 18V7h10v11M7 14h10"/></symbol>
   <symbol id="i-gota" viewBox="0 0 24 24"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></symbol>
+  <symbol id="i-pata" viewBox="0 0 24 24"><circle cx="6.5" cy="10" r="1.7"/><circle cx="10" cy="6" r="1.7"/><circle cx="14" cy="6" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/><path d="M12 11.5c-2.8 0-5 2.8-5 5 0 2.6 2.8 2.4 5 1.7 2.2.7 5 .9 5-1.7 0-2.2-2.2-5-5-5z"/></symbol>
   <symbol id="i-carinha" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.500 14c1 1.600 2.200 2.300 3.500 2.300s2.500-.7 3.500-2.300"/><path d="M9 9.500h.01M15 9.500h.01" stroke-width="3"/></symbol>
   <symbol id="i-igual" viewBox="0 0 24 24"><path d="M6 9.500h12M6 14.500h12" stroke-width="3"/></symbol>
   <symbol id="i-raio" viewBox="0 0 24 24"><path d="M13 3L5 13h6l-1 8 8-10h-6z"/></symbol>
+  <symbol id="i-bomba" viewBox="0 0 24 24"><circle cx="10.5" cy="14" r="6.5"/><path d="M15 9.300l2.200-2.200M17.200 7.100c.6-2 1.800-2.800 3.800-2.600"/></symbol>
+  <symbol id="i-floco" viewBox="0 0 24 24"><path d="M12 3v18M4.200 7.500l15.600 9M19.800 7.500l-15.600 9M9.500 4.500L12 7l2.500-2.500M9.500 19.500L12 17l2.500 2.500"/></symbol>
+  <symbol id="i-guarda" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 18 0zM12 3v-.5M12 12v6.500a2 2 0 0 1-4 0"/></symbol>
 </svg>
 
 <div id="escolha">
@@ -309,6 +342,7 @@
     <i class="carinha"></i><b id="meuNome"></b>
     <span class="saldo" id="saldoTopo"><i class="moeda"></i><span id="moedasVis">0</span><b class="oculto" id="moedas">0</b></span>
     <span id="cartaChip"></span>
+    <div id="barraItens" aria-label="Itens"></div>
     <span class="esp" id="nomeJogo"></span>
     <button id="reagir" aria-label="Reações" aria-expanded="false"><svg class="ic"><use href="#i-carinha"/></svg></button>
     <button id="pausar" aria-label="Tempo"><svg class="ic"><use href="#i-pausa"/></svg><span>Tempo</span></button>
@@ -330,7 +364,7 @@
       <button data-m="times" style="--cor:#ff7a1a;--tinta:#1a0c00"><svg class="des" viewBox="0 0 58 34" aria-hidden="true"><circle cx="8" cy="19" r="6.5"/><circle cx="20" cy="19" r="6.5"/><circle cx="38" cy="19" r="6.5"/><circle cx="50" cy="19" r="6.5"/></svg><b>Duplas</b><small class="lin"></small><small class="qtd"></small></button>
       <button data-m="coop" style="--cor:#35c26b;--tinta:#06210f"><svg class="des" viewBox="0 0 58 34" aria-hidden="true"><path d="M8 24H50" stroke="currentColor" stroke-width="3"/><circle cx="8" cy="16" r="6.5"/><circle cx="22" cy="16" r="6.5"/><circle cx="36" cy="16" r="6.5"/><circle cx="50" cy="16" r="6.5"/></svg><b>Todos juntos</b><small class="lin"></small><small class="qtd"></small></button>
     </div>
-    <div id="menuLado"><div id="menuConectados" aria-label="Quem está no sofá"></div><button id="menuNome" hidden>Como te chamam?</button><button id="menuGo">Começar</button><div id="menuDica"></div></div>
+    <div id="menuLado"><div id="menuDuplaTx" hidden>Toque em quem joga com você</div><div id="menuConectados" aria-label="Quem está no sofá"></div><button id="menuNome" hidden>Como te chamam?</button><button id="menuGo">Começar</button><div id="menuDica"></div></div>
   </div>
   <div class="area" id="espera"><div id="esperaTx"><i class="carinha"></i><span class="visto"><svg class="ic"><use href="#i-check"/></svg></span><span id="esperaMsg">De olho na TV</span></div>
     <div id="nomeIni" hidden><span>Como te chamam?</span><input id="nomeNovo" maxlength="10" placeholder="Seu nome" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"><button id="bora">Bora</button><button id="depois" class="leve">Depois eu ponho</button></div>
@@ -345,6 +379,8 @@
 <div id="barraRea" role="menu" aria-label="Reações"></div>
 <!-- iPhone: o Safari nao tem API de vibracao, mas da um toque haptico quando um "switch" muda -->
 <label id="haptico" aria-hidden="true" style="position:fixed;left:-200px;top:0;width:1px;height:1px;opacity:0;pointer-events:none"><input type="checkbox" switch tabindex="-1"></label>
+<!-- item Tinta: manchas por cima do controle por 3 s (so atrapalha a vista; o toque passa) -->
+<div id="tinta" aria-hidden="true"><i style="left:4%;top:16%;width:46vmin;height:40vmin"></i><i style="left:36%;top:44%;width:52vmin;height:44vmin;transform:rotate(40deg)"></i><i style="left:66%;top:12%;width:44vmin;height:42vmin;transform:rotate(-25deg)"></i><i style="left:78%;top:58%;width:36vmin;height:34vmin;transform:rotate(80deg)"></i><i style="left:12%;top:66%;width:34vmin;height:30vmin;transform:rotate(-60deg)"></i></div>
 <div id="flash" style="position:fixed;inset:0;pointer-events:none;opacity:0;z-index:99;box-shadow:inset 0 0 0 10px #ff4d5e,inset 0 0 70px 20px #ff4d5e99"></div>
 
 <div id="perfil">
@@ -371,6 +407,9 @@
         <button class="aba ativa">Cores</button>
         <button class="aba">Chapéus</button>
         <button class="aba">Reações</button>
+        <button class="aba">Pets</button>
+        <button class="aba">Rastros</button>
+        <button class="aba">Itens</button>
         <button class="aba">Troféus<i class="novo"></i></button>
         <button class="aba" hidden>Lanchonete</button>
       </div>
@@ -380,6 +419,9 @@
       <div class="painel"><div class="grade" id="lojaCores"></div></div>
       <div class="painel"><div class="grade" id="lojaChapeus"></div></div>
       <div class="painel"><div class="grade" id="lojaReacoes"></div></div>
+      <div class="painel"><div class="grade" id="lojaPets"></div></div>
+      <div class="painel"><div class="grade" id="lojaRastros"></div></div>
+      <div class="painel"><p class="regraItens">Para usar na rodada, pelo celular. Cada um usa 1 por rodada e 3 por partida.</p><div class="grade" id="lojaItens"></div></div>
       <div class="painel"><div id="resumo"></div><div id="trofeus"></div></div>
       <div class="painel" hidden><div id="lanchonete"></div></div>
     </div>
@@ -390,22 +432,70 @@
 
 <script>
 // ---------- catalogo (a tela do PC usa os mesmos indices) ----------
+// @catalogo (o controle.test.mjs le este trecho: so dados e funcoes sem DOM)
 const CORES = [['#2f7df6', 0], ['#f0458f', 0], ['#35c26b', 15], ['#ffc531', 15], ['#9b5cf6', 15], ['#ff7a2f', 15], ['#22c7d6', 15], ['#e5383b', 15], ['#f2f2f2', 40], ['#30343f', 40],
   // novas (sempre no final): o terceiro item e o fundo da bolinha da loja
   ['#d4a017', 60, 'linear-gradient(135deg,#fff3b0,#e8b923 40%,#9a6a00 75%,#ffe27a)'],
   ['#ff4fa3', 80, 'conic-gradient(#ff4d5e,#ffc531,#35c26b,#22c7d6,#2f7df6,#9b5cf6,#ff4d5e)'],
   ['#5b3fd6', 70, 'radial-gradient(circle at 65% 35%,#ff5ac8 0 10%,#0000 35%),radial-gradient(circle at 25% 70%,#fff 0 4%,#0000 5%),radial-gradient(circle at 45% 25%,#fff 0 3%,#0000 4%),radial-gradient(circle at 75% 75%,#fff 0 3%,#0000 4%),radial-gradient(#6a35d0,#0d1a6b)'],
-  ['#39ff14', 50, 'radial-gradient(circle,#c9ffb8 0 20%,#39ff14 60%,#12a800)']];
-const NOMES_CORES = ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon'];
-const CHAPEUS = [['Nenhum', 0], ['Cartola', 20], ['Coroa', 50], ['Orelhas', 30], ['Chifres', 30], ['Hélice', 40], ['Cone', 20], ['Antenas', 25], ['Pirata', 40], ['Chef', 30], ['Auréola', 80], ['Viking', 45], ['Faixa ninja', 35]];
+  ['#39ff14', 50, 'radial-gradient(circle,#c9ffb8 0 20%,#39ff14 60%,#12a800)'],
+  // skins com textura, reflexo ou brilho proprio na TV (14 a 21)
+  ['#ff4a12', 90, 'linear-gradient(115deg,#0000 30%,#ffd24a 34% 38%,#0000 43%),linear-gradient(40deg,#0000 52%,#ffd24a 56% 60%,#0000 65%),linear-gradient(160deg,#0000 56%,#ff8a1a 61% 66%,#0000 71%),radial-gradient(circle,#ff5a12,#5a0f04 90%)'],
+  ['#9fdcff', 70, 'linear-gradient(115deg,#0000 42%,#ffffffd0 47%,#0000 52%),linear-gradient(55deg,#0000 60%,#ffffffa0 64%,#0000 68%),linear-gradient(160deg,#f4fcff,#a9dcff 55%,#5fa8e8)'],
+  ['#aab4c4', 100, 'linear-gradient(180deg,#eef6ff 0%,#8fb4e0 34%,#ffffff 47%,#465064 53%,#9aa6b8 74%,#6b7688 100%)'],
+  ['#e6e6e6', 60, 'repeating-linear-gradient(100deg,#f6f6f6 0 5px,#17181c 5px 9px)'],
+  ['#2438a8', 50, 'radial-gradient(circle,#fff 0 2.6px,#0000 3.2px) 1px 1px/12px 12px,#2438a8'],
+  ['#5f7a3a', 55, 'radial-gradient(circle at 25% 30%,#2f4420 0 17%,#0000 18%),radial-gradient(circle at 72% 24%,#7a5a36 0 15%,#0000 16%),radial-gradient(circle at 62% 72%,#2f4420 0 19%,#0000 20%),radial-gradient(circle at 24% 76%,#b5a97a 0 13%,#0000 14%),radial-gradient(circle at 48% 50%,#7a5a36 0 9%,#0000 10%),#5f7a3a'],
+  ['#d9ccff', 80, 'radial-gradient(circle,#ffffffd0 0 22%,#d9ccff90 58%,#a48cff50)'],
+  ['#ff4d5e', 65, 'radial-gradient(circle at 34% 30%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 62% 24%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 50% 44%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 74% 42%,#1a1114 0 3.5%,#0000 4.5%),radial-gradient(circle at 26% 46%,#1a1114 0 3.5%,#0000 4.5%),linear-gradient(180deg,#ff4d5e 0 62%,#f4ffe0 62% 68%,#2f9e44 68%)'],
+  // cores chapadas baratas (22 a 27)
+  ['#0fa3a3', 15], ['#8e1b3a', 20], ['#b6e31c', 20], ['#ffb38a', 25], ['#b9a7f5', 30], ['#8a5a34', 15]];
+const NOMES_CORES = ['Azul', 'Rosa', 'Verde', 'Amarelo', 'Roxo', 'Laranja', 'Ciano', 'Vermelho', 'Branco', 'Grafite', 'Dourado', 'Arco-íris', 'Galáxia', 'Neon',
+  'Lava', 'Gelo', 'Cromado', 'Zebra', 'Bolinhas', 'Camuflado', 'Fantasma', 'Melancia',
+  'Turquesa', 'Vinho', 'Lima', 'Pêssego', 'Lavanda', 'Marrom'];
+const CHAPEUS = [['Nenhum', 0], ['Cartola', 20], ['Coroa', 50], ['Orelhas', 30], ['Chifres', 30], ['Hélice', 40], ['Cone', 20], ['Antenas', 25], ['Pirata', 40], ['Chef', 30], ['Auréola', 80], ['Viking', 45], ['Faixa ninja', 35],
+  ['Boné', 20], ['Bruxo', 45], ['Cowboy', 40], ['Flor', 25], ['Gorro', 30], ['Fone', 40], ['Laço', 25], ['Cogumelo', 45], ['Festa', 30], ['Louros', 60]];
+// Pet: bichinho que segue o boneco na TV (0 e nenhum). O item de desejo da loja, por isso o preco alto.
+const PETS = [['Nenhum', 0], ['Pintinho', 80], ['Gato', 100], ['Cachorro', 100], ['Patinho', 90], ['Robozinho', 150], ['Fantasminha', 130], ['Dragãozinho', 220], ['Óvni', 250]];
+// Rastro: particulas que saem do boneco quando ele anda. O terceiro item e a forma (a mesma textura da tela) e o quarto as cores.
+const RASTROS = [['Nenhum', 0], ['Estrelas', 40, 'estrela', ['#ffe14a', '#fff3a8']], ['Bolhas', 50, 'bolha', ['#bff2ff', '#8fd8ff']], ['Corações', 60, 'coracao', ['#ff4d7a', '#ff86a8']],
+  ['Fogo', 90, 'chama', ['#ff4a12', '#ff9a1a', '#ffd84d']], ['Arco-íris', 120, 'arco', ['#ff4d5e', '#ff9a1a', '#ffd84d', '#35c26b', '#2f7df6', '#9b5cf6']]];
+// O que vai para a tela pelo /perfil (limite de 500 bytes no servidor): so nome e indices, nunca moedas nem listas.
+const corpoPerfil = (j, p) => JSON.stringify({ j, nome: p.nome, cor: p.cor, chapeu: p.chapeu, pet: p.pet, rastro: p.rastro });
+// Indice salvo no celular: so inteiro que existe na lista vale (perfil antigo ou estragado volta ao padrao).
+const noCatalogo = (lista, i) => Number.isInteger(i) && i >= 0 && i < lista.length;
+// Itens de rodada (spec 009): [id, nome, preco, dica, icone], na mesma ordem do ITENS do logica.mjs (so o indice viaja pela rede).
+// Compra por unidade, ate ESTOQUE_MAX de cada. O estoque mora no perfil deste celular e so desce quando a tela confirma o uso.
+const ITENS = [['bomba', 'Bomba', 30, 'Atordoa o rival mais perto', 'bomba'], ['gelo', 'Gelo', 25, 'Congela o rival e deixa o chão liso', 'floco'], ['turbo', 'Turbo', 20, 'Você corre mais por 4 segundos', 'raio'],
+  ['guarda', 'Guarda-chuva', 25, 'Segura o próximo item jogado em você', 'guarda'], ['tinta', 'Tinta', 15, 'Mancha o celular do rival', 'gota']];
+const ESTOQUE_MAX = 9;
+const estoqueLimpo = v => Object.fromEntries(ITENS.map(([id]) => [id, v && typeof v === 'object' && Number.isInteger(v[id]) ? Math.max(0, Math.min(ESTOQUE_MAX, v[id])) : 0]));
+function compraItem(perfil, k) {
+  const item = noCatalogo(ITENS, k) ? ITENS[k] : null;
+  if (!item || perfil.moedas < item[2] || perfil.itens[item[0]] >= ESTOQUE_MAX) return false;
+  perfil.moedas -= item[2]; perfil.itens[item[0]]++;
+  return true;
+}
+// g = { id, k }: confirmacao da tela de que o motor aceitou o uso do item k. Cada id desconta uma vez so (o mesmo estado chega varias vezes).
+// meu = false: a confirmacao nao e de um toque deste celular (outro aparelho usou neste lugar): fica registrada, sem descontar.
+function gastaItem(perfil, g, meu = true) {
+  if (!g || typeof g.id !== 'string' || !g.id || g.id.length > 40 || !noCatalogo(ITENS, g.k) || perfil.gastos.includes(g.id)) return false;
+  perfil.gastos = [...perfil.gastos, g.id].slice(-12);
+  if (!meu) return false;
+  perfil.itens[ITENS[g.k][0]] = Math.max(0, perfil.itens[ITENS[g.k][0]] - 1);
+  return true;
+}
+// @fim-catalogo
 // Reacoes: a tela usa a mesma lista de emojis na mesma ordem (so o indice viaja pela rede). 0 a 5 sao de graca.
 const REACOES = [['\u{1F604}', 'Risada'], ['\u{1F602}', 'Choro de rir'], ['\u{1F621}', 'Raiva'], ['❤️', 'Coração'], ['\u{1F44D}', 'Joinha'], ['\u{1F631}', 'Susto'],
   ['\u{1F61B}', 'Língua'], ['\u{1F60E}', 'Óculos escuros'], ['\u{1F921}', 'Palhaço'], ['\u{1F634}', 'Dormindo'],
   ['\u{1F525}', 'Fogo'], ['\u{1F31F}', 'Estrelas'], ['\u{1F3C6}', 'Troféu'], ['\u{1F451}', 'Coroa'],
-  ['\u{1F414}', 'Galinha'], ['\u{1F40D}', 'Cobra'], ['\u{1F422}', 'Tartaruga'], ['\u{1F40C}', 'Caracol']];
+  ['\u{1F414}', 'Galinha'], ['\u{1F40D}', 'Cobra'], ['\u{1F422}', 'Tartaruga'], ['\u{1F40C}', 'Caracol'],
+  ['\u{1F355}', 'Pizza'], ['\u{1F37F}', 'Pipoca'], ['\u{1F366}', 'Sorvete'], ['\u{1F369}', 'Rosquinha'],
+  ['\u{1F47B}', 'Fantasma'], ['\u{1F47D}', 'Alienígena'], ['\u{1F916}', 'Robô'], ['\u{1F480}', 'Caveira']];
 const GRATIS = [0, 1, 2, 3, 4, 5];
-const PACOTES = [['Provocação', 25, [6, 7, 8, 9]], ['Festa', 35, [10, 11, 12, 13]], ['Bichos', 30, [14, 15, 16, 17]]];
-const LOJAS = { cor: [CORES, 'cores', 'lojaCores'], chapeu: [CHAPEUS, 'chapeus', 'lojaChapeus'], reacao: [PACOTES, 'pacotes', 'lojaReacoes'] };
+const PACOTES = [['Provocação', 25, [6, 7, 8, 9]], ['Festa', 35, [10, 11, 12, 13]], ['Bichos', 30, [14, 15, 16, 17]], ['Lanche', 30, [18, 19, 20, 21]], ['Monstros', 40, [22, 23, 24, 25]]];
+const LOJAS = { cor: [CORES, 'cores', 'lojaCores'], chapeu: [CHAPEUS, 'chapeus', 'lojaChapeus'], reacao: [PACOTES, 'pacotes', 'lojaReacoes'], pet: [PETS, 'pets', 'lojaPets'], rastro: [RASTROS, 'rastros', 'lojaRastros'] };
 // Estatisticas guardadas no perfil a partir do premio de cada rodada. porJogo: { id: [nome, vitorias] }.
 const EST0 = { rodadas: 0, vitorias: 0, partidas: 0, empates: 0, seq: 0, maiorSeq: 0, ganho: 0, reacoes: 0, porJogo: {} };
 // id, icone, nome, descricao, meta, bonus em moedas, valor atual
@@ -429,6 +519,11 @@ const TROFEUS = [
   ['rp1', 'carinha', 'Boca no mundo', 'Compre um pacote de reações', 1, 5, () => perfil.pacotes.length],
   ['rpT', 'carinha', 'Repertório', 'Todos os pacotes', PACOTES.length, 25, () => perfil.pacotes.length],
   ['rt50', 'carinha', 'Tagarela', 'Mande 50 reações', 50, 10, e => e.reacoes],
+  ['pet1', 'pata', 'Melhor amigo', 'Adote um pet', 1, 10, () => perfil.pets.length - 1],
+  ['pet4', 'pata', 'Casa cheia', 'Adote 4 pets', 4, 30, () => perfil.pets.length - 1],
+  ['petT', 'pata', 'Zoológico', 'Todos os pets', PETS.length - 1, 80, () => perfil.pets.length - 1],
+  ['ras1', 'estrela', 'Deixando rastro', 'Compre um rastro', 1, 5, () => perfil.rastros.length - 1],
+  ['rasT', 'estrela', 'Cometa', 'Todos os rastros', RASTROS.length - 1, 30, () => perfil.rastros.length - 1],
 ];
 
 const $ = id => document.getElementById(id);
@@ -454,6 +549,7 @@ function le(chave) { try { return JSON.parse(localStorage.getItem(chave)); } cat
 // Os contadores garantem que toque curto nunca se perde.
 let j = 0, x = 0, y = 0, d = false, n = 0, b = false, nb = 0, op = -1, nop = 0, r = -1, nr = 0, nt = 0;      // r/nr: reacao (indice) e contador; nt: torcida
 let perfil = null, modo = '';
+let it = -1, ni = 0;       // item de rodada usado (indice em ITENS) e contador, como r/nr
 let aberto = false, previa = null;      // perfil aberto; item sendo experimentado { campo, i }
 
 // Um envio por vez: enquanto um esta a caminho, o proximo espera e leva o estado mais novo.
@@ -473,10 +569,10 @@ const SESSAO = Date.now();   // hora em que esta aba abriu: com duas abas no mes
 let seq = 0;
 function envia() {
   if (!j) return;
-  if (ws?.readyState === 1) { ultimo = Date.now(); ws.send(JSON.stringify({ j, x, y, d, n, b, nb, op, nop, r, nr, nt, s: SESSAO, q: ++seq })); return; }
+  if (ws?.readyState === 1) { ultimo = Date.now(); ws.send(JSON.stringify({ j, x, y, d, n, b, nb, op, nop, r, nr, nt, it, ni, s: SESSAO, q: ++seq })); return; }
   if (enviando) { pendente = true; return; }
   enviando = true; pendente = false; ultimo = Date.now();
-  fetch('/in', { method: 'POST', body: JSON.stringify({ j, x, y, d, n, b, nb, op, nop, r, nr, nt, s: SESSAO, q: ++seq }), signal: AbortSignal.timeout(1000) })
+  fetch('/in', { method: 'POST', body: JSON.stringify({ j, x, y, d, n, b, nb, op, nop, r, nr, nt, it, ni, s: SESSAO, q: ++seq }), signal: AbortSignal.timeout(1000) })
     .catch(() => {})
     .finally(() => { enviando = false; if (pendente) envia(); });
 }
@@ -542,7 +638,7 @@ function salvaPerfil() {
   $('meuNome').textContent = perfil.nome || 'Jogador ' + j;
   mostraMoedas();
   if (aberto) { desenhaLoja(); desenhaTrofeus(); }
-  fetch('/perfil', { method: 'POST', body: JSON.stringify({ j, nome: perfil.nome, cor: perfil.cor, chapeu: perfil.chapeu }) }).catch(() => {});
+  fetch('/perfil', { method: 'POST', body: corpoPerfil(j, perfil) }).catch(() => {});
 }
 
 // Um toque no cartao: usa se ja tem, compra e usa se o saldo da, senao mostra a previa com quanto falta.
@@ -589,9 +685,10 @@ function loja(campo) {
       fila.className = 'miniRea emoji';
       for (const k of PACOTES[i][2]) { const e = document.createElement('span'); e.textContent = REACOES[k][0]; fila.append(e); }
       bt.append(fila); nome.textContent = rotulo;
-    } else { bt.append(miniChapeu(i)); nome.textContent = rotulo; }
+    } else { bt.append(campo === 'pet' ? miniPet(i) : campo === 'rastro' ? miniRastro(i) : miniChapeu(i)); nome.textContent = rotulo; }
     etq.className = 'etq';
-    etq.innerHTML = usando ? ic('check') + 'Vestindo' : tem ? (campo === 'reacao' ? ic('check') + 'É seu' : 'Vestir') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
+    const leva = campo === 'pet' || campo === 'rastro';       // pet e rastro nao se vestem
+    etq.innerHTML = usando ? ic('check') + (leva ? 'Usando' : 'Vestindo') : tem ? (campo === 'reacao' ? ic('check') + 'É seu' : leva ? 'Usar' : 'Vestir') : falta > 0 ? `Faltam ${MOEDA}${falta}` : MOEDA + preco;
     bt.append(nome, etq);
     bt.onclick = () => toca(campo, i);
     cartao.append(bt);
@@ -605,7 +702,61 @@ function loja(campo) {
     grade.append(cartao);
   });
 }
-function desenhaLoja() { loja('cor'); loja('chapeu'); loja('reacao'); }
+function desenhaLoja() { for (const campo in LOJAS) loja(campo); lojaItens(); }
+
+// ---------- itens de rodada: loja por unidade, barrinha no topo durante a rodada, estoque descontado quando a tela confirma ----------
+function lojaItens() {
+  const grade = $('lojaItens');
+  grade.textContent = '';
+  ITENS.forEach(([id, nome, preco, dica, icone], k) => {
+    const tem = perfil.itens[id], cheio = tem >= ESTOQUE_MAX, falta = preco - perfil.moedas;
+    const bt = document.createElement('button');
+    bt.className = `item itemRod i-${id}` + (cheio ? '' : falta > 0 ? ' falta' : ' compra');
+    bt.dataset.item = id;
+    bt.innerHTML = `<span class="cab"><span class="icItem">${ic(icone)}</span><span class="nm">${nome}</span></span><small>${dica}</small><span class="tem">Você tem ${tem}</span>`
+      + `<span class="etq">${cheio ? 'Estoque cheio' : falta > 0 ? `Faltam ${MOEDA}${falta}` : `Comprar por ${MOEDA}${preco}`}</span>`;
+    bt.onclick = () => {
+      if (!compraItem(perfil, k)) return treme([30, 60, 30]);
+      flutua('-' + preco); treme(40);
+      guarda('perfil' + j, perfil); mostraMoedas(); desenhaLoja(); itensVis = '';       // sem salvaPerfil: ele reenvia o perfil e a tela refaria o boneco no meio da rodada
+    };
+    grade.append(bt);
+  });
+}
+let itMasc = 0, itNeg = null, itemEm = 0, itensVis = '', itemPendente = false;       // itens liberados agora (bits), recusas ja vistas, hora do ultimo toque, o que a barra mostra e se ha uso esperando a resposta da tela
+function tocaItem(k) {
+  if (!jogando || Date.now() - itemEm < 700 || !(itMasc >> k & 1) || !(perfil.itens[ITENS[k][0]] > 0)) return treme([20, 40, 20]);
+  itemEm = Date.now(); itemPendente = true; it = k; ni++; treme(40); envia();
+}
+// s.it vem da tela: m = itens que valem agora (um bit por item; sem m, item nao vale nesta rodada), n = usos recusados, g = uso confirmado, tinta = tela manchada
+function mostraItens(s) {
+  const e = s.it && typeof s.it === 'object' ? s.it : {}, barra = $('barraItens'), vale = jogando && Number.isInteger(e.m);
+  const vistos = perfil.gastos.length && perfil.gastos.at(-1);
+  if (gastaItem(perfil, e.g, itemPendente)) { itemPendente = false; if (aberto) desenhaLoja(); }
+  if (perfil.gastos.at(-1) !== vistos) guarda('perfil' + j, perfil);
+  if (Number.isInteger(e.n)) {
+    if (itNeg !== null && e.n > itNeg) { itemPendente = false; treme([30, 60, 30]); barra.classList.remove('nega'); void barra.offsetWidth; barra.classList.add('nega'); }      // o motor recusou (alvo protegido, limite): nada foi gasto
+    itNeg = e.n;
+  }
+  itMasc = vale ? e.m : 0;
+  $('tinta').classList.toggle('on', jogando && e.tinta === true);
+  const tenho = ITENS.map(([id]) => perfil.itens[id]), chave = JSON.stringify([vale, itMasc, tenho]);
+  if (chave === itensVis) return;
+  itensVis = chave;
+  const on = vale && tenho.some(q => q > 0);
+  barra.textContent = ''; barra.classList.toggle('on', on);
+  if (!on) return;
+  ITENS.forEach(([id, nome, , , icone], k) => {
+    if (!tenho[k]) return;
+    const bt = document.createElement('button'), q = document.createElement('b');
+    bt.className = 'i-' + id + (itMasc >> k & 1 ? '' : ' off'); bt.dataset.item = id;
+    bt.innerHTML = ic(icone); bt.setAttribute('aria-label', `${nome}, você tem ${tenho[k]}`);
+    q.textContent = tenho[k]; bt.append(q);
+    bt.addEventListener('touchstart', ev => { ev.preventDefault(); tocaItem(k); });
+    bt.addEventListener('click', () => tocaItem(k));
+    barra.append(bt);
+  });
+}
 
 function desenhaTrofeus() {
   const e = perfil.est, resumo = $('resumo'), lista = $('trofeus');
@@ -641,6 +792,7 @@ abas.forEach((a, i) => { a.onclick = () => paineis.scrollTo({ left: i * paineis.
 paineis.addEventListener('scroll', () => {
   const atual = Math.round(paineis.scrollLeft / paineis.clientWidth);
   abas.forEach((a, i) => a.classList.toggle('ativa', i === atual));
+  abas[atual]?.scrollIntoView({ inline: 'nearest', block: 'nearest' });       // em tela estreita as abas rolam: a ativa fica a vista
 });
 
 $('nome').oninput = () => { $('conta').textContent = $('nome').value.length + '/10'; };
@@ -803,20 +955,104 @@ function chapeu2d(c, tipo, t) {
     for (const s of [-1, 1]) poli(c, [[s * 0.5, 0.58], [s * 0.92, 0.5 - s * 0.05], [s * 0.96, 0.32], [s * 0.6, 0.5]], '#1d2a6b', SOMBRA);
     poli(c, [[-0.64, 0.46], [0.64, 0.46], [0.5, 0.62], [-0.5, 0.62]], '#1d2a6b', SOMBRA);
     poli(c, [[-0.14, 0.48], [0.14, 0.48], [0.14, 0.6], [-0.14, 0.6]], '#c8ccd8', SOMBRA);
+  } else if (tipo === 13) {             // bone: calota vermelha, aba para a frente e botao
+    c.beginPath(); c.arc(0, 0.06, 0.84, Math.PI / 2 - 0.95, Math.PI / 2 + 0.95); c.closePath(); pinta(c, '#e5383b', SOMBRA);
+    elipse(c, 0, 0.52, 0.5, 0.11, '#a81f28', SOMBRA);
+    elipse(c, 0, 0.91, 0.08, 0.05, '#ffffff', SOMBRA);
+  } else if (tipo === 14) {             // bruxo: aba larga, cone alto roxo, faixa e fivela
+    elipse(c, 0, 0.7, 0.72, 0.72 * K, '#3b2170');
+    c.beginPath(); c.moveTo(0, 1.55); c.lineTo(0.42, 0.72); c.ellipse(0, 0.72, 0.42, 0.42 * K, 0, 0, Math.PI, true); c.closePath(); pinta(c, '#4b2a8a', SOMBRA);
+    tronco(c, 0.75, 0.88, 0.405, 0.345, '#1d1036', SOMBRA);
+    poli(c, [[-0.085, 0.69], [0.085, 0.69], [0.085, 0.82], [-0.085, 0.82]], '#ffc531', SOMBRA);
+  } else if (tipo === 15) {             // cowboy: aba virada nas bordas, copa alta e fita escura
+    c.beginPath(); c.moveTo(-0.9, 0.88); c.quadraticCurveTo(-0.7, 0.56, 0, 0.56); c.quadraticCurveTo(0.7, 0.56, 0.9, 0.88);
+    c.quadraticCurveTo(0.6, 0.76, 0, 0.76); c.quadraticCurveTo(-0.6, 0.76, -0.9, 0.88); pinta(c, '#9a6a36', SOMBRA);
+    tronco(c, 0.72, 1.12, 0.42, 0.34, '#9a6a36', SOMBRA);
+    elipse(c, 0, 1.12, 0.34, 0.34 * K, '#b07c44', SOMBRA);
+    tronco(c, 0.73, 0.83, 0.43, 0.415, '#3a2412', SOMBRA);
+  } else if (tipo === 16) {             // flor: seis petalas, miolo amarelo e uma folha
+    elipse(c, 0.12, 0.74, 0.2, 0.07, '#35c26b', SOMBRA);
+    for (let k = 0; k < 6; k++) elipse(c, 0.38 + Math.cos(k * Math.PI / 3 + 0.5) * 0.19, 0.86 + Math.sin(k * Math.PI / 3 + 0.5) * 0.19, 0.13, 0.13, '#ff7ab8', SOMBRA);
+    elipse(c, 0.38, 0.86, 0.11, 0.11, '#ffc531', SOMBRA);
+  } else if (tipo === 17) {             // gorro de inverno: calota vermelha, dobra branca e pompom
+    c.beginPath(); c.arc(0, 0.05, 0.85, Math.PI / 2 - 0.9, Math.PI / 2 + 0.9); c.closePath(); pinta(c, '#d92b3a', SOMBRA);
+    elipse(c, 0, 1.02, 0.2, 0.2, '#ffffff', SOMBRA);
+    c.beginPath(); c.moveTo(-0.68, 0.6); c.lineTo(0.68, 0.6); c.lineCap = 'round';
+    c.lineWidth = 0.24; c.strokeStyle = SOMBRA; c.stroke(); c.lineWidth = 0.2; c.strokeStyle = '#ffffff'; c.stroke();
+  } else if (tipo === 18) {             // fone de ouvido: arco por cima e uma concha de cada lado
+    c.beginPath(); c.ellipse(0, 0.3, 0.82, 0.58, 0, 0, Math.PI); c.lineCap = 'round';
+    c.lineWidth = 0.13; c.strokeStyle = LUZ; c.stroke(); c.lineWidth = 0.09; c.strokeStyle = '#22252e'; c.stroke();
+    for (const s of [-1, 1]) { elipse(c, s * 0.84, 0.3, 0.13, 0.25, '#22252e'); elipse(c, s * 0.9, 0.3, 0.05, 0.16, '#e5383b', null); }
+  } else if (tipo === 19) {             // laco: duas asas vermelhas e o no no meio
+    for (const s of [-1, 1]) poli(c, [[0, 0.92], [s * 0.48, 1.16], [s * 0.48, 0.68]], '#e5383b', SOMBRA);
+    elipse(c, 0, 0.92, 0.11, 0.11, '#b3262a', SOMBRA);
+  } else if (tipo === 20) {             // cogumelo: chapeu vermelho de pintas brancas
+    elipse(c, 0, 0.55, 0.8, 0.8 * K, '#fff4e6', SOMBRA);
+    c.beginPath(); c.ellipse(0, 0.55, 0.8, 0.56, 0, 0, Math.PI); c.ellipse(0, 0.55, 0.8, 0.8 * K, 0, Math.PI, 2 * Math.PI, false); c.closePath(); pinta(c, '#e5383b', SOMBRA);
+    for (const [px, py, r] of [[0, 0.98, 0.13], [-0.45, 0.74, 0.12], [0.45, 0.74, 0.12], [-0.12, 0.6, 0.1], [0.2, 0.68, 0.08]]) elipse(c, px, py, r, r * 0.8, '#ffffff', null);
+  } else if (tipo === 21) {             // chapeu de festa: cone listrado torto, com pompom
+    c.save(); c.rotate(-0.2);
+    for (let k = 0; k < 4; k++) tronco(c, 0.68 + k * 0.19, 0.87 + k * 0.19, 0.34 * (4 - k) / 4, 0.34 * (3 - k) / 4 + 0.001, k % 2 ? '#ffc531' : '#22c7d6', SOMBRA);
+    c.beginPath(); c.ellipse(0, 0.68, 0.34, 0.34 * K, 0, 0, Math.PI, true); c.lineCap = 'round'; c.lineWidth = 0.08; c.strokeStyle = '#f0458f'; c.stroke();
+    elipse(c, 0, 1.47, 0.11, 0.11, '#f0458f', SOMBRA);
+    c.restore();
+  } else if (tipo === 22) {             // coroa de louros: folhas verdes dos dois lados, aberta na frente
+    for (const s of [-1, 1]) for (let k = 7; k >= 0; k--) for (const sobe of [-1, 1]) {
+      const a = 0.35 + k * 0.37, px = s * Math.sin(a) * 0.6, py = 0.7 - Math.cos(a) * 0.6 * K + sobe * 0.07;
+      c.beginPath(); c.ellipse(px, py, 0.17, 0.065, s * (sobe * 0.55 + Math.cos(a) * 0.5), 0, 7); pinta(c, sobe > 0 ? '#4c9a3a' : '#3a7d2c', SOMBRA);
+    }
   }
 }
 function estiloCor(c, idx, t) {          // cor de preenchimento do corpo: lisa, ou gradiente nas cores especiais
   if (idx === 10) { const g = c.createLinearGradient(-0.6, 0.7, 0.6, -0.7); [[0, '#fff3b0'], [0.35, '#e8b923'], [0.7, '#b8860b'], [1, '#ffe27a']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
   if (idx === 11) return `hsl(${(t * 72) % 360},85%,56%)`;
   if (idx === 12) { const g = c.createRadialGradient(-0.2, 0.3, 0, 0, 0, 0.95); g.addColorStop(0, '#8a55ee'); g.addColorStop(1, '#14104a'); return g; }
+  if (idx === 14) { const g = c.createRadialGradient(0, 0, 0.1, 0, 0, 0.85); g.addColorStop(0, '#ff5a12'); g.addColorStop(1, '#4a0c03'); return g; }
+  if (idx === 15) { const g = c.createLinearGradient(-0.5, 0.8, 0.5, -0.8); [[0, '#f4fcff'], [0.55, '#a9dcff'], [1, '#5fa8e8']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
+  if (idx === 16) { const g = c.createLinearGradient(0, 0.8, 0, -0.8); [[0, '#eef6ff'], [0.34, '#8fb4e0'], [0.47, '#ffffff'], [0.53, '#465064'], [0.74, '#9aa6b8'], [1, '#6b7688']].forEach(([p, k]) => g.addColorStop(p, k)); return g; }
+  if (idx === 20) { const g = c.createRadialGradient(0, 0.1, 0.1, 0, 0, 0.8); g.addColorStop(0, 'rgba(255,255,255,.9)'); g.addColorStop(1, 'rgba(200,184,255,.6)'); return g; }
   return CORES[idx][0];
+}
+// Desenho por cima da cor nas skins de textura (ja recortado no circulo do corpo); as mesmas ideias das texturas da tela.
+const RISCOS = [[-0.7, 0.3, -0.25, 0.1, 0.1, 0.35, 0.6, 0.15], [-0.5, -0.5, -0.1, -0.25, 0.3, -0.45, 0.7, -0.2], [-0.25, 0.1, -0.15, -0.3, 0.3, -0.45, 0.35, -0.8], [0.1, 0.35, 0.2, 0.75, 0.2, 0.75, 0.2, 0.75]];
+const MANCHAS = [[-0.45, 0.45, 0.3, 0.17, '#2f4420'], [0.4, 0.5, 0.26, 0.15, '#7a5a36'], [0.1, -0.05, 0.2, 0.12, '#b5a97a'], [-0.5, -0.25, 0.26, 0.16, '#7a5a36'], [0.45, -0.35, 0.32, 0.18, '#2f4420'], [-0.05, -0.6, 0.24, 0.12, '#2f4420'], [0, 0.7, 0.2, 0.1, '#b5a97a']];
+function pele2d(c, idx, t) {
+  if (idx === 14 || idx === 15) {        // lava: rachaduras de magma que pulsam; gelo: riscos brancos
+    c.lineCap = c.lineJoin = 'round';
+    for (const [larg, cor] of idx === 14 ? [[0.11, '#ff7a1a'], [0.045, `rgba(255,220,90,${0.75 + Math.sin(t * 3.2) * 0.25})`]] : [[0.035, 'rgba(255,255,255,.85)']]) {
+      c.lineWidth = larg; c.strokeStyle = cor;
+      for (const r of RISCOS) { c.beginPath(); c.moveTo(r[0], r[1]); for (let k = 2; k < 8; k += 2) c.lineTo(r[k], r[k + 1]); c.stroke(); }
+    }
+  } else if (idx === 17) {               // zebra
+    c.fillStyle = '#17181c';
+    for (let k = -3; k <= 3; k++) {
+      c.beginPath();
+      for (let y = -0.8; y <= 0.81; y += 0.1) c.lineTo(k * 0.27 + Math.sin(y * 5 + k * 1.7) * 0.06 - 0.03 - Math.cos(y * 1.9) * 0.035, y);
+      for (let y = 0.8; y >= -0.81; y -= 0.1) c.lineTo(k * 0.27 + Math.sin(y * 5 + k * 1.7) * 0.06 + 0.03 + Math.cos(y * 1.9) * 0.035, y);
+      c.fill();
+    }
+  } else if (idx === 18) {               // bolinhas
+    c.fillStyle = '#ffffff';
+    for (let l = -3; l <= 3; l++) for (let k = -3; k <= 3; k++) { c.beginPath(); c.arc(k * 0.34 + (l & 1) * 0.17, l * 0.26, 0.075, 0, 7); c.fill(); }
+  } else if (idx === 19) {               // camuflado
+    for (const [px, py, rx, ry, cor] of MANCHAS) { c.fillStyle = cor; c.beginPath(); c.ellipse(px, py, rx, ry, px * 2, 0, 7); c.ellipse(px + rx * 0.6, py - ry * 0.6, rx * 0.6, ry * 0.8, py * 3, 0, 7); c.fill(); }
+  } else if (idx === 21) {               // melancia: casca embaixo e sementes
+    c.fillStyle = '#f4ffe0'; c.fillRect(-1, -0.27, 2, 0.1);
+    c.fillStyle = '#2f9e44'; c.fillRect(-1, -1, 2, 0.75);
+    c.fillStyle = '#1b6e2c'; for (let k = -4; k <= 4; k++) c.fillRect(k * 0.2 - 0.03, -1, 0.06, 0.73);
+    c.fillStyle = '#1a1114';
+    for (const [px, py] of [[-0.55, 0.5], [0, 0.6], [0.55, 0.5], [-0.62, 0.02], [0.62, 0.02], [0, 0.42]]) { c.beginPath(); c.ellipse(px, py, 0.035, 0.06, px * 0.5, 0, 7); c.fill(); }
+  }
 }
 const ESTRELAS = [[-0.5, 0.45, 0.035], [0.35, 0.6, 0.03], [0.1, 0.2, 0.025], [-0.2, -0.3, 0.04], [0.5, -0.1, 0.03], [-0.6, -0.1, 0.025], [0.2, -0.55, 0.03], [0.6, 0.3, 0.02], [-0.05, 0.7, 0.025], [-0.4, -0.6, 0.02]];
 function boneco(c, idx, tipo, t, pisca) {
   if (ESPETADO.includes(tipo)) chapeu2d(c, tipo, t);
   c.beginPath(); c.arc(0, 0, 0.8, 0, 7);
   if (idx === 13) { c.shadowColor = '#39ff14'; c.shadowBlur = 14; }      // neon brilha
+  if (idx === 14) { c.shadowColor = '#ff5a12'; c.shadowBlur = 8 + Math.sin(t * 3.2) * 4; }      // lava pulsa
+  if (idx === 20) { c.shadowColor = '#c9b8ff'; c.shadowBlur = 16; }      // fantasma: meio transparente, com halo
   c.fillStyle = estiloCor(c, idx, t); c.fill(); c.shadowBlur = 0;
+  if (idx >= 14) { c.save(); c.clip(); pele2d(c, idx, t); c.restore(); c.beginPath(); c.arc(0, 0, 0.8, 0, 7); }
   if (idx === 12) {                                                       // galaxia: nuvem rosa e estrelas
     c.save(); c.clip();
     const n = c.createRadialGradient(0.35, 0.1, 0, 0.35, 0.1, 0.5); n.addColorStop(0, 'rgba(255,90,200,.6)'); n.addColorStop(1, 'rgba(255,90,200,0)');
@@ -846,6 +1082,103 @@ function miniChapeu(i) {                // cabeca com o chapeu, para o cartao da
   return cv;
 }
 
+// Pet visto de frente, pes no chao (y = 0), ~1 de altura: o mesmo bicho que a tela monta em 3D em pet().
+function pet2d(c, tipo, t) {
+  const olhos = (y, dx, r = 0.045) => { for (const s of [-1, 1]) elipse(c, s * dx, y, r, r * 1.15, '#111111', null); };
+  const ret = (x0, y0, x1, y1, cor, borda) => poli(c, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], cor, borda);
+  if (tipo >= 6) c.translate(0, 0.1 + Math.sin(t * 2.6) * 0.04);      // fantasminha, dragaozinho e ovni flutuam
+  if (tipo === 1) {                     // pintinho
+    for (const s of [-1, 1]) elipse(c, s * 0.12, 0.04, 0.1, 0.045, '#ff8a1a');
+    poli(c, [[-0.05, 0.84], [0.05, 0.84], [0, 1.0]], '#f5b800');
+    elipse(c, 0, 0.32, 0.3, 0.3, '#ffd93b');
+    for (const s of [-1, 1]) elipse(c, s * 0.3, 0.33, 0.07, 0.15, '#f5b800');
+    elipse(c, 0, 0.68, 0.22, 0.22, '#ffd93b');
+    olhos(0.73, 0.1);
+    poli(c, [[-0.07, 0.66], [0.07, 0.66], [0, 0.55]], '#ff8a1a', SOMBRA);
+  } else if (tipo === 2) {              // gato
+    c.beginPath(); c.moveTo(0.2, 0.15); c.quadraticCurveTo(0.52, 0.2, 0.42, 0.62);
+    c.lineCap = 'round'; c.lineWidth = 0.09; c.strokeStyle = '#c9741f'; c.stroke();
+    elipse(c, 0, 0.27, 0.28, 0.26, '#f29b3a');
+    for (const s of [-1, 1]) poli(c, [[s * 0.25, 0.7], [s * 0.2, 0.99], [s * 0.03, 0.8]], '#f29b3a');
+    elipse(c, 0, 0.62, 0.26, 0.23, '#f29b3a');
+    elipse(c, 0, 0.55, 0.11, 0.075, '#fff3e0', null); elipse(c, 0, 0.59, 0.03, 0.022, '#ff7a8a', null);
+    olhos(0.68, 0.11);
+  } else if (tipo === 3) {              // cachorro
+    elipse(c, 0, 0.28, 0.29, 0.27, '#b97a48');
+    elipse(c, 0, 0.64, 0.26, 0.24, '#b97a48');
+    for (const s of [-1, 1]) elipse(c, s * 0.27, 0.6, 0.075, 0.18, '#6b4226');
+    elipse(c, 0.1, 0.71, 0.085, 0.085, '#6b4226', null);
+    elipse(c, 0, 0.54, 0.14, 0.1, '#f0d9b5', null); elipse(c, 0, 0.45, 0.04, 0.05, '#ff6f91', null); elipse(c, 0, 0.59, 0.05, 0.035, '#111111', null);
+    olhos(0.71, 0.1);
+  } else if (tipo === 4) {              // patinho
+    for (const s of [-1, 1]) elipse(c, s * 0.13, 0.04, 0.11, 0.04, '#ff9a1a');
+    elipse(c, 0, 0.29, 0.31, 0.26, '#ffffff', SOMBRA);
+    for (const s of [-1, 1]) elipse(c, s * 0.29, 0.3, 0.06, 0.15, '#dfe6f0', SOMBRA);
+    elipse(c, 0, 0.68, 0.21, 0.21, '#ffffff', SOMBRA);
+    olhos(0.74, 0.1);
+    elipse(c, 0, 0.61, 0.14, 0.055, '#ff9a1a', SOMBRA);
+  } else if (tipo === 5) {              // robozinho
+    for (const s of [-1, 1]) { elipse(c, s * 0.2, 0.12, 0.07, 0.12, '#22252e'); ret(s * 0.23, 0.22, s * 0.32, 0.46, '#e8edf5'); }
+    ret(-0.22, 0.16, 0.22, 0.5, '#ff8a3c'); elipse(c, 0, 0.36, 0.05, 0.05, '#ffd84d', null);
+    ret(-0.015, 0.84, 0.015, 0.97, '#5d6880', null); elipse(c, 0, 1.0, 0.055, 0.055, '#ff4d5e');
+    ret(-0.19, 0.56, 0.19, 0.84, '#e8edf5'); ret(-0.15, 0.65, 0.15, 0.77, '#111827', null);
+    for (const s of [-1, 1]) elipse(c, s * 0.07, 0.71, 0.04, 0.04, '#22e0ff', null);
+  } else if (tipo === 6) {              // fantasminha
+    c.beginPath(); c.arc(0, 0.6, 0.3, 0, Math.PI);
+    for (const [x, y] of [[-0.3, 0.16], [-0.2, 0.05], [-0.1, 0.16], [0, 0.05], [0.1, 0.16], [0.2, 0.05], [0.3, 0.16]]) c.lineTo(x, y);
+    c.closePath(); c.shadowColor = '#b9c4ff'; c.shadowBlur = 10; pinta(c, 'rgba(255,255,255,.93)'); c.shadowBlur = 0;
+    for (const s of [-1, 1]) elipse(c, s * 0.11, 0.62, 0.05, 0.08, '#111111', null);
+    elipse(c, 0, 0.45, 0.04, 0.05, '#111111', null);
+  } else if (tipo === 7) {              // dragaozinho
+    const bate = Math.sin(t * 9) * 0.12;
+    for (const s of [-1, 1]) poli(c, [[s * 0.14, 0.55], [s * 0.58, 0.82 + bate], [s * 0.5, 0.36]], '#ff6b3d');
+    elipse(c, 0, 0.3, 0.28, 0.28, '#3fbf5f'); elipse(c, 0, 0.26, 0.17, 0.19, '#ffe08a', null);
+    for (const s of [-1, 1]) poli(c, [[s * 0.16, 0.8], [s * 0.13, 1.0], [s * 0.06, 0.82]], '#fff3d0', SOMBRA);
+    elipse(c, 0, 0.66, 0.23, 0.22, '#3fbf5f');
+    elipse(c, 0, 0.57, 0.13, 0.09, '#35a852', null);
+    for (const s of [-1, 1]) elipse(c, s * 0.05, 0.58, 0.02, 0.025, '#14301c', null);
+    olhos(0.72, 0.11);
+  } else if (tipo === 8) {              // ovni
+    elipse(c, 0, 0.44, 0.09, 0.09, '#7dff6a', null); olhos(0.46, 0.04, 0.02);
+    c.beginPath(); c.arc(0, 0.34, 0.23, 0, Math.PI); pinta(c, 'rgba(159,232,255,.5)', 'rgba(255,255,255,.6)');
+    elipse(c, 0, 0.2, 0.13, 0.05, '#ffe14a', null);
+    elipse(c, 0, 0.3, 0.45, 0.12, '#b8c2d6');
+    for (let k = -2; k <= 2; k++) elipse(c, k * 0.17, 0.28 - Math.abs(k) * 0.012, 0.04, 0.04, (k + Math.floor(t * 3)) & 1 ? '#ff4fa3' : '#ffe14a', null);
+  }
+}
+function nenhum2d(c, y) {               // cartao "Nenhum" de pet e de rastro: circulo cortado
+  c.beginPath(); c.arc(0, y, 0.34, 0, 7); c.moveTo(-0.24, y - 0.24); c.lineTo(0.24, y + 0.24);
+  c.lineWidth = 0.07; c.lineCap = 'round'; c.strokeStyle = '#6b74a3'; c.stroke();
+}
+function mini(desenha, escala, base) {  // desenho pequeno do cartao da loja, com y para cima e o zero em "base" px
+  const cv = document.createElement('canvas'), q = Math.min(devicePixelRatio || 1, 3);
+  cv.width = 56 * q; cv.height = 40 * q; cv.className = 'mini';
+  const c = cv.getContext('2d');
+  c.setTransform(escala * q, 0, 0, -escala * q, 28 * q, base * q);
+  desenha(c);
+  return cv;
+}
+function miniPet(i) { return mini(c => i ? pet2d(c, i, 0.3) : nenhum2d(c, 0.5), 35, 38); }
+// Uma particula do rastro (mesmas formas das texturas TX_RASTRO da tela), centrada em (x, y) com raio r.
+function forma2d(c, forma, x, y, r, cor) {
+  c.fillStyle = c.strokeStyle = cor; c.beginPath();
+  if (forma === 'estrela') { for (let k = 0; k < 10; k++) { const a = k * Math.PI / 5 + Math.PI / 2, q = k % 2 ? r * 0.45 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.fill(); }
+  else if (forma === 'bolha') { c.arc(x, y, r * 0.85, 0, 7); c.lineWidth = r * 0.22; c.stroke(); c.beginPath(); c.arc(x, y, r * 0.5, 2.2, 3.4); c.stroke(); }
+  else if (forma === 'coracao') { c.moveTo(x, y - r); c.bezierCurveTo(x - r * 1.9, y + r * 0.2, x - r * 0.9, y + r * 1.5, x, y + r * 0.5); c.bezierCurveTo(x + r * 0.9, y + r * 1.5, x + r * 1.9, y + r * 0.2, x, y - r); c.fill(); }
+  else if (forma === 'chama') { c.moveTo(x, y + r * 1.4); c.bezierCurveTo(x + r * 1.2, y + r * 0.2, x + r * 0.9, y - r, x, y - r); c.bezierCurveTo(x - r * 0.9, y - r, x - r * 1.2, y + r * 0.2, x, y + r * 1.4); c.fill(); }
+  else if (forma === 'arco') { c.arc(x, y, r * 0.8, 0, 7); c.fill(); }
+}
+function rastro2d(c, tipo, t, x0, x1, y0, r) {       // fila de particulas que nasce em x0 e some em x1
+  const [, , forma, cores] = RASTROS[tipo], n = 6, parado = forma === 'arco';
+  for (let k = 0; k < n; k++) {
+    const f = (t * 0.7 + k / n) % 1;
+    c.globalAlpha = Math.min(1, (1 - f) * 2.5);
+    forma2d(c, forma, x0 + (x1 - x0) * f, y0 + (parado ? 0 : f * r * 2.5 + Math.sin(k * 2.4) * r * 0.7), r * (1 - f * 0.4), cores[k % cores.length]);
+  }
+  c.globalAlpha = 1;
+}
+function miniRastro(i) { return mini(c => i ? rastro2d(c, i, 0.1, 0.45, -0.9, -0.1, 0.2) : nenhum2d(c, 0), 28, 20); }
+
 // palco do perfil: so anima com o perfil aberto, para nao gastar nada durante o jogo
 const palco = $('palco'), tela = $('previa'), ctx = tela.getContext('2d');
 let confete = [], pulo = 0, antes = 0;
@@ -865,16 +1198,24 @@ function quadro(agora) {
   const t = agora / 1000, dt = Math.min(0.05, t - antes); antes = t;
   const u = Math.min(h / 2.95, w / 1.9);
   const cor = previa?.campo === 'cor' ? previa.i : perfil.cor, tipo = previa?.campo === 'chapeu' ? previa.i : perfil.chapeu;
+  const bicho = previa?.campo === 'pet' ? previa.i : perfil.pet, risco = previa?.campo === 'rastro' ? previa.i : perfil.rastro;
   pulo = Math.max(0, pulo - dt * 1.4);
   const alto = Math.abs(Math.sin(pulo * Math.PI * 2)) * 0.3 * pulo, s = 1 + 0.03 * Math.sin(t * 2.6);
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h);
   ctx.setTransform(u, 0, 0, -u, w / 2, h / 2 + 0.3 * u);
   elipse(ctx, 0, -0.88, 0.95, 0.17, 'rgba(255,255,255,.07)', 'rgba(255,255,255,.12)');   // chao do palco
   elipse(ctx, 0, -0.88, 0.66 - alto * 0.5, 0.1, 'rgba(0,0,0,.4)', null);
+  if (risco) for (const lado of [-1, 1]) rastro2d(ctx, risco, t + (lado > 0 ? 0.6 : 0), lado * 0.5, lado * 0.9, -0.74, 0.1);      // sai de tras do boneco, rente ao chao
   ctx.save();
   ctx.translate(0, -0.88 + alto); ctx.scale(2 - s, s); ctx.translate(0, 0.88);           // respira apoiado nos pes
   boneco(ctx, cor, tipo, t, t % 3.4 < 0.13);
   ctx.restore();
+  if (bicho) {                          // o pet fica na frente, ao lado do pe, e da um pulinho de vez em quando
+    ctx.save();
+    ctx.translate(0.62, -0.93 + Math.max(0, Math.sin(t * 1.9)) ** 10 * 0.12 + alto * 0.6); ctx.scale(0.5, 0.5);
+    pet2d(ctx, bicho, t);
+    ctx.restore();
+  }
   confete = confete.filter(p => (p.vida -= dt) > 0);
   for (const p of confete) {
     p.vy -= 3.2 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.g += dt * 9;
@@ -947,6 +1288,7 @@ function aplica(s) {
   chip.textContent = carta ? textoSeguro(carta.nome, 30) : '';
   chip.style.setProperty('--cc', COR_OK.test(carta?.cor) ? carta.cor : '#ffc531');
   mostraProvoca(s.provoca === true);
+  mostraItens(s);
   premia(s.premio);
 }
 
@@ -1021,12 +1363,13 @@ $('torcer').addEventListener('click', torce);
 // ---------- menu de modos do anfitriao ----------
 let menuVis = '';
 function mandaModo(modo, comeca) {
-  fetch('/modo', { method: 'POST', body: JSON.stringify({ j, modo, comeca }), signal: AbortSignal.timeout(2000) }).catch(() => {});
+  fetch('/modo', { method: 'POST', body: JSON.stringify({ j, modo, comeca, par: parLocal }), signal: AbortSignal.timeout(2000) }).catch(() => {});
 }
 // O modo marcado e o do proprio clique (escolhaLocal), nao o que a tela devolve 150 a 300 ms depois: o COMECAR manda so ele, numa requisicao.
 // Se a sala passa a trazer outro modo (outro aparelho do J1, a tela), a escolha local acompanha.
 let escolhaLocal = 'classico', modoDaSala = null, salaAtual = {}, autoVisto = null, onVisto = [];
-const LINHA_MODO = { classico: '2 jogadores', vs: '2 a 4', times: 'precisa de 4', coop: '2 a 4' };
+let parLocal = 3, parDaSala = null;       // Duplas: lugar (2, 3 ou 4) de quem joga com o Jogador 1; vale o toque local, e acompanha a sala quando ela muda
+const LINHA_MODO = { classico: '2 jogadores', vs: '2 a 5', times: '4 ou 5', coop: '2 a 5' };
 const objeto = v => v && typeof v === 'object' ? v : {};
 function pintaMenu() {
   const faltas = objeto(salaAtual.faltas), qtd = objeto(salaAtual.qtd);       // o que impede cada modo agora e quantos minijogos tem (a tela decide)
@@ -1046,6 +1389,15 @@ function pintaMenu() {
   const nomeSala = $('menuLista').querySelector(`[data-m="${CSS.escape(String(salaAtual.modo ?? ''))}"] b`)?.textContent ?? 'jogo';       // o nome vem do proprio botao do menu, nunca do texto da sala
   $('menuDica').textContent = falta || (auto !== null ? `Se ninguém mexer, ${nomeSala} começa em ${auto}` : '');
   $('menuNome').hidden = !!perfil?.nome;
+  // Duplas: as pilulas dos outros viram botoes; a dupla do Jogador 1 fica com o aro laranja (ele e quem ele tocou)
+  const duplas = escolhaLocal === 'times' && !faltas.times && !(Array.isArray(salaAtual.on) && salaAtual.on[4]);       // com 5 no sofa as duplas mudam a cada rodada: nao ha o que escolher
+  $('menuDuplaTx').hidden = !duplas;
+  for (const i of $('menuConectados').children) {
+    const n = Number(i.dataset.n);
+    i.classList.toggle('toca', duplas && n > 0 && n <= 3 && n + 1 !== parLocal);       // Duplas e dos 4 primeiros: o quinto lugar nao e escolha
+    i.classList.toggle('par', duplas && (n === 0 || n + 1 === parLocal));
+    if (duplas && n > 0) i.setAttribute('aria-pressed', String(n + 1 === parLocal)); else i.removeAttribute('aria-pressed');
+  }
 }
 function mostraMenu(sa) {
   const chave = JSON.stringify(sa);
@@ -1053,43 +1405,58 @@ function mostraMenu(sa) {
   menuVis = chave;
   const on = Array.isArray(sa.on) ? sa.on : [], modoSala = typeof sa.modo === 'string' ? sa.modo : 'classico';
   if (modoSala !== modoDaSala) { modoDaSala = modoSala; escolhaLocal = modoSala; }       // so muda o que o clique local ja marcou quando a sala muda de verdade
+  if ([2, 3, 4].includes(sa.par) && sa.par !== parDaSala) { parDaSala = sa.par; parLocal = sa.par; }
   salaAtual = sa;
   // pilulas com o nome e a cor de quem esta no sofa; quem acabou de chegar entra com um pulinho
   const nomes = Array.isArray(sa.nomes) ? sa.nomes : [], cores = Array.isArray(sa.cores) ? sa.cores : [];
   $('menuConectados').textContent = '';
-  for (let n = 0; n < 4; n++) {
+  for (let n = 0; n < LUGARES.length; n++) {
     if (!on[n]) continue;
     const i = document.createElement('i'), cor = COR_OK.test(cores[n]) ? cores[n] : '#3d4780';
     i.textContent = textoSeguro(nomes[n], 10) || 'Jogador ' + (n + 1);
+    i.dataset.n = n; i.setAttribute('role', 'button');
     i.style.setProperty('--pc', cor);
     const [r, g, az] = [1, 3, 5].map(k => parseInt(cor.slice(k, k + 2), 16));
     if (r * 299 + g * 587 + az * 114 > 160000) i.style.setProperty('--pt', '#141a36');
     if (onVisto.length && !onVisto[n]) i.className = 'pula';
     $('menuConectados').append(i);
   }
-  onVisto = on.slice(0, 4);
+  onVisto = on.slice(0, LUGARES.length);
   pintaMenu();
 }
 for (const bt of $('menuLista').children) bt.addEventListener('click', () => {
   if (bt.classList.contains('trava')) { treme([30, 60, 30]); bt.classList.remove('treme'); void bt.offsetWidth; bt.classList.add('treme'); return; }      // travado: vibra duas vezes e balanca
   treme(20); escolhaLocal = bt.dataset.m; pintaMenu(); mandaModo(escolhaLocal, false);
 });
+$('menuConectados').addEventListener('click', ev => {       // Duplas: tocar em alguem escolhe a dupla
+  const n = Number(ev.target?.dataset?.n);
+  if (escolhaLocal !== 'times' || !(n >= 1 && n <= 3) || objeto(salaAtual.faltas).times) return;
+  treme(20); parLocal = n + 1; pintaMenu(); mandaModo(escolhaLocal, false);
+});
 $('menuGo').addEventListener('click', () => { if (!$('menuGo').disabled) { treme([40, 40, 120]); mandaModo(escolhaLocal, true); } });
 
 function comecar(num) {
   j = num; guarda('slot', j);
   // perfil salvo antigo ou estragado: o que faltar ou vier torto volta para o padrao
-  const salvo = le('perfil' + j), lista = v => Array.isArray(v) ? v.filter(Number.isInteger) : null;
-  perfil = { nome: '', cor: j - 1, chapeu: 0, moedas: 0, cores: [0, 1], chapeus: [0], pacotes: [], premios: [], ...salvo };
+  const salvo = le('perfil' + j), lista = (v, cat) => Array.isArray(v) ? [...new Set(v.filter(i => cat ? noCatalogo(cat, i) : Number.isInteger(i)))] : null;      // sem repetido nem indice de fora: os trofeus contam o tamanho
+  perfil = { nome: '', cor: j - 1, chapeu: 0, pet: 0, rastro: 0, moedas: 0, cores: [0, 1], chapeus: [0], pets: [0], rastros: [0], pacotes: [], premios: [], ...salvo };
   perfil.nome = String(perfil.nome ?? '').slice(0, 10);
   perfil.moedas = Math.max(0, perfil.moedas | 0);
-  perfil.cores = lista(perfil.cores) ?? [0, 1];
+  perfil.cores = lista(perfil.cores, CORES) ?? [0, 1];
   if (!perfil.cores.includes(j - 1)) perfil.cores.push(j - 1);       // a cor padrao do lugar (verde no 3, amarelo no 4) ja e do jogador
-  perfil.chapeus = lista(perfil.chapeus) ?? [0];
+  perfil.chapeus = lista(perfil.chapeus, CHAPEUS) ?? [0];
+  if (!perfil.chapeus.includes(0)) perfil.chapeus.unshift(0);
   perfil.pacotes = (lista(perfil.pacotes) ?? []).filter(i => PACOTES[i]);
   if (!Array.isArray(perfil.premios)) perfil.premios = [];
-  if (!Number.isInteger(perfil.cor) || !CORES[perfil.cor]) perfil.cor = j - 1;       // so indice: "length" e cia nao passam
-  if (!Number.isInteger(perfil.chapeu) || !CHAPEUS[perfil.chapeu]) perfil.chapeu = 0;
+  perfil.itens = estoqueLimpo(perfil.itens);       // itens de rodada: perfil de antes deles nasce com zero de cada
+  perfil.gastos = Array.isArray(perfil.gastos) ? perfil.gastos.filter(g => typeof g === 'string').slice(-12) : [];
+  if (!noCatalogo(CORES, perfil.cor)) perfil.cor = j - 1;       // so indice: "length" e cia nao passam
+  if (!noCatalogo(CHAPEUS, perfil.chapeu)) perfil.chapeu = 0;
+  for (const [campo, cat, donos] of [['pet', PETS, 'pets'], ['rastro', RASTROS, 'rastros']]) {       // perfil de antes dos pets nao tem estes campos: nasce sem nenhum
+    perfil[donos] = lista(perfil[donos], cat) ?? [0];
+    if (!perfil[donos].includes(0)) perfil[donos].unshift(0);
+    if (!noCatalogo(cat, perfil[campo])) perfil[campo] = 0;
+  }
   perfil.est = { ...EST0, ganho: perfil.moedas, ...(salvo?.est && typeof salvo.est === 'object' ? salvo.est : null) };
   for (const k in EST0) if (k !== 'porJogo') perfil.est[k] = Math.max(0, perfil.est[k] | 0);
   if (!perfil.est.porJogo || typeof perfil.est.porJogo !== 'object') perfil.est.porJogo = {};
@@ -1267,7 +1634,7 @@ document.addEventListener('touchend', () => {
 
 // ---------- escolha do lugar: nome salvo neste celular, a cor do lugar e se alguem ja esta nele ----------
 let pedeNome = false;
-const LUGARES = [['#2f7df6', 'azul'], ['#f0458f', 'rosa'], ['#35c26b', 'verde'], ['#ffc531', 'amarelo']];
+const LUGARES = [['#2f7df6', 'azul'], ['#f0458f', 'rosa'], ['#35c26b', 'verde'], ['#ffc531', 'amarelo'], ['#9b5cf6', 'roxo']];
 function montaEscolha(ocupado = []) {
   const caixa = $('lugares');
   caixa.textContent = '';
@@ -1292,7 +1659,7 @@ $('nomeNovo').addEventListener('keydown', e => { if (e.key === 'Enter') guardaNo
 $('depois').onclick = () => guardaNome('');
 
 const salvo = le('slot');
-if (Number.isInteger(salvo) && salvo >= 1 && salvo <= 4) comecar(salvo);
+if (Number.isInteger(salvo) && salvo >= 1 && salvo <= LUGARES.length) comecar(salvo);
 </script>
 </body>
 </html>

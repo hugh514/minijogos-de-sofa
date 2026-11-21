@@ -4,7 +4,7 @@ Jogo de festa para 2 a 4 jogadores na mesma sala. O PC mostra a tela 3D (three.j
 
 Há dois modos, escolhidos no menu do celular do Jogador 1 (o anfitrião) antes de começar:
 
-- **Clássico**: exatamente 2 jogadores e os minijogos sem o campo `festa` (todos os que estão neste manual, fora a seção "Modo Festa"). Nada neles muda com 3 ou 4 jogadores: os celulares 3 e 4 só assistem.
+- **Clássico**: exatamente 2 jogadores e os minijogos sem o campo `festa` (todos os que estão neste manual, fora a seção "Modo Festa"). Nada neles muda com 3 ou 4 jogadores: os celulares 3 e 4 só assistem. Em Duplas eles também entram, em revezamento: joga um de cada dupla e o minijogo recebe `vista(p)`, com `p.jogadores`, `p.celular` e `p.nomes` só dos dois da vez. Por isso use sempre `p.jogadores`, `c.cores` e `c.bonecos` (nunca o índice de um lugar fixo da tela) e devolva `0` ou `1` como sempre.
 - **Festa**: de 2 a 4 jogadores, em três submodos (todos contra todos, times 2x2 e cooperativo), com minijogos próprios que declaram `festa` (seção "Modo Festa", no fim).
 
 Um minijogo é **um arquivo** `jogos/<id>.mjs` com `export default { ... }`, mais o teste `jogos/<id>.test.mjs`. A tela confere a pasta `jogos/` a cada 8 s e põe o arquivo novo na rotação sozinha, com os celulares conectados. Por isso:
@@ -27,6 +27,9 @@ export default {
   semDash: true,        // botão A não dá o empurrão padrão
   empurrao: 1.2,        // força do choque entre os dois bonecos (parâmetro k de colide; padrão 1.2, a batata quente usa 2.3)
   semPulo: true,        // botão B não pula
+  semMod: ['lua'],      // modificadores de rodada que não podem sair neste minijogo (ids: ouro, gelo, foguete, espelho, lua)
+  semCarta: ['pulo'],   // cartas de poder que não são oferecidas neste minijogo (ids: dobro, moedas, escudo, turbo, dash, pulo)
+  semItens: true,       // itens de rodada (bomba, gelo, turbo, guarda-chuva, tinta) não valem neste minijogo (ver "Itens de rodada")
   rotulo: 'moedas',     // texto do placar da rodada, se você mantiver p.dados.placar = [a, b]
   duracao: 25,          // se a rodada tem tempo fixo, a tela mostra a contagem regressiva
   coop: true,           // cooperativo: os dois jogam juntos (ver "Minijogo cooperativo")
@@ -176,6 +179,17 @@ Regras (todas em `logica.mjs`, sem nada para o minijogo fazer):
 - **Poucos elegíveis** (menos de 8): minijogo repetido na mesma partida volta com modificador diferente. Com menos de 6 elegíveis o alvo de pontos (`p.alvo`) é 6 em vez de `PONTOS_VITORIA` (10), e a tela mostra `p.alvo`, nunca a constante. "Todos contra todos" com 2 pessoas sorteia também os minijogos do Clássico (menos os `coop`).
 - **Cooperativo (5 noites)**: o baralho garante que as 5 noites cubram os minijogos coop distintos antes de repetir um (com 4 coop, a quinta noite é a única repetida, com modificador).
 
+## Itens de rodada (o motor cuida, o minijogo não precisa fazer nada)
+
+O jogador compra itens na Loja do celular e usa durante a rodada (spec `specs/009-itens-de-rodada`). O motor aplica tudo sozinho, igual em todo minijogo:
+Bomba e Gelo deixam o alvo sem controle por um instante (`j.ent` zerado, `j.apertouA`, `j.apertouB` e `j.escolha` não chegam), Turbo multiplica a aceleração do
+movimento padrão (não mexe em `j.turbo`), Guarda-chuva bloqueia o próximo item e Tinta só mancha o celular do alvo. O alvo é o rival mais próximo em minijogo de
+joystick e o líder do placar nos outros. Limites: 1 por rodada e 3 por partida por jogador, nada nos 3 primeiros segundos, 4 s de imunidade para quem foi atingido,
+nada no cooperativo. Os tempos ficam em `j.tonto`, `j.gelo`, `j.liso`, `j.turboItem`, `j.tinta` e `j.imuneItem` (segundos que faltam), `j.guarda` diz se o
+guarda-chuva está aberto e `p.itens` lista os usos da rodada; a tela desenha os efeitos e o aviso. Se o seu minijogo move o boneco por conta própria e lê `j.ent`,
+o atordoado já para sozinho. Se item não combina com o minijogo (rodada de um toque só, por exemplo), declare `semItens: true`. Eventos novos de som: `item-bomba`,
+`item-gelo`, `item-turbo`, `item-guarda`, `item-tinta` e `item-bloqueio`.
+
 ## Cartas de poder (o motor cuida, o minijogo não precisa fazer nada)
 
 Quem perde uma rodada escolhe no celular 1 entre 3 cartas durante a explicação da rodada seguinte, e ela vale só nessa rodada. Há também "Não quero carta", que recusa e já conta como Entendi.
@@ -185,9 +199,11 @@ do movimento padrão, e só são oferecidas em minijogo de joystick (`controle.m
 Elas não mexem em `j.turbo`, então minijogo que usa `j.turbo` continua igual. Durante a explicação a escolha das cartas usa o mesmo `op/nop`
 do celular, mas `j.escolha` do minijogo só recebe toques na fase `'jogando'`, como antes (para quem tinha carta, a partir de 0,35 s de rodada: um toque atrasado na carta não vira resposta). Evento novo de som: `'carta'` (o motor emite).
 
-## Modo Festa (2 a 4 jogadores)
+## Modo Festa (2 a 5 jogadores)
 
-Um minijogo de festa é um arquivo `jogos/<id>.mjs` como os outros, com o campo novo `festa`, e só entra na rotação da Festa. Os minijogos sem `festa` só entram no Clássico. Exemplos prontos: `tinta-festa`, `sumo-vidas`, `futebol-times` e `zumbis-coop`.
+O sofá tem 5 lugares. Minijogo com `festa.max: 4` também sai com 5 no sofá: a cada rodada um descansa (rodízio) e o minijogo recebe só os quatro da vez, como se fossem os únicos (`p.jogadores`, `p.celular` e `p.nomes` já vêm com quatro). Por enquanto declare sempre `max` até 4: o motor já aceita `max: 5`, mas `posicionaCantos`, o placar da rodada e a troca de nomes na TV ainda são só para 4.
+
+Um minijogo de festa é um arquivo `jogos/<id>.mjs` como os outros, com o campo novo `festa`, e só entra na rotação da Festa. Os minijogos sem `festa` entram no Clássico, em Cada um por si com 2 pessoas e, em revezamento, em Duplas (os cooperativos, não). Exemplos prontos: `tinta-festa`, `sumo-vidas`, `futebol-times` e `zumbis-coop`.
 
 ```js
 export default {

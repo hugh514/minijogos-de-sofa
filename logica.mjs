@@ -17,7 +17,15 @@ const ELEGIVEIS_ALVO_CURTO = 6, PONTOS_CURTO = 6;     // com menos de 6 elegivei
 // Festa: 'vs' (todos contra todos), 'times' (A = J1+J3, B = J2+J4) e 'coop' (todos juntos). Cada minijogo de festa declara
 // festa: { min, max, modos } e devolve de atualiza: vs = indice do vencedor, times = 0 ou 1 (o time), coop = 2 (todos vencem); -1 = empate ou fracasso.
 export const MODOS = ['classico', 'vs', 'times', 'coop'];
+export const MAX_JOGADORES = 5;       // lugares no sofa; a maioria dos minijogos de festa e para ate 4 (com 5, um descansa por rodada)
 export const timeDe = (p, i) => i % 2;
+// Time do jogador de verdade (indice na partida) nesta rodada. Nas Duplas de 4 e fixo (0 e 2 contra 1 e 3).
+// Nas Duplas com 5 as duplas mudam a cada rodada: vale a posicao entre os quatro da vez (p.duelo), e quem descansa nao tem time (-1).
+export function timeNaRodada(p, i) {
+  if (p.modo !== 'times' || p.n !== MAX_JOGADORES) return i % 2;
+  const k = p.duelo ? p.duelo.indexOf(i) : -1;
+  return k < 0 ? -1 : k % 2;
+}
 // Nome de quem joga, para texto de minijogo: o do perfil (a tela poe em p.nomes) ou "Jogador N".
 export const quem = (p, i) => (typeof p.nomes?.[i] === 'string' && p.nomes[i]) || 'Jogador ' + (i + 1);
 export function ehCoop(p) { return p.modo === 'coop' || (p.modo === 'classico' && !!p.jogo?.coop); }
@@ -26,21 +34,67 @@ export function venceu(p, i) {
   const v = p.vencedor;
   if (v === undefined || v < 0) return false;
   if (ehCoop(p)) return true;
-  return p.modo === 'times' ? v === timeDe(p, i) : v === i;
+  return p.modo === 'times' ? v === timeNaRodada(p, i) : v === i;
 }
 // Minijogos que podem sair na rotacao deste modo com n jogadores.
 // "Todos contra todos" com 2 pessoas usa tambem os do Classico (sem os cooperativos): os minijogos de festa sao poucos.
 export function elegiveis(modo, n) {
   if (modo === 'classico') return JOGOS.filter(j => !j.festa);
-  const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && n <= j.festa.max && j.festa.modos.includes(modo));
-  return modo === 'vs' && n === 2 ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
+  // Com 5 no sofa, minijogo feito para ate 4 tambem vale: um descansa por rodada (rodizio)
+  const festa = JOGOS.filter(j => j.festa && n >= j.festa.min && (n <= j.festa.max || (n === MAX_JOGADORES && j.festa.max === MAX_JOGADORES - 1)) && j.festa.modos.includes(modo));
+  const deDois = (modo === 'vs' && n === 2) || (modo === 'times' && n === 4);       // Duplas: os de 2 entram em revezamento (um de cada dupla por rodada). Cada um por si com 3 ou 4: so os que todos jogam juntos
+  return deDois ? [...festa, ...JOGOS.filter(j => !j.festa && !j.coop)] : festa;
+}
+
+// ---------- Duplas com minijogo de 2: joga um de cada dupla e o parceiro torce; a cada rodada de 2 a vez passa ----------
+// A ordem faz todo mundo enfrentar todo mundo: J1 x J2, J3 x J4, J1 x J4, J3 x J2. O indice 0 e sempre do time laranja (par).
+const DUELOS = [[0, 1], [2, 3], [0, 3], [2, 1]];
+const FORA = [[-11, -12], [11, -12], [-11, 12], [11, 12], [0, -14]];       // onde fica quem assiste: fora da arena, para torcida e confete nao cairem no meio da disputa
+// O minijogo recebe a vista: a mesma partida, mas jogadores, celular e nomes so de quem joga a rodada (p.duelo, indices de verdade).
+// Sem revezamento a vista e a propria partida. O motor e a tela usam p (todos) para placar, pontos e celulares.
+// Casos: Duplas de 4 com minijogo de 2 (um de cada dupla); 5 no sofa com minijogo para ate 4 (um descansa, em rodizio: J5, J4, J3, J2, J1);
+// Duplas com 5 (um descansa e os outros quatro formam duplas que mudam a cada rodada); e alguem que saiu do sofa (p.ausentes, a tela marca).
+export function vista(p) { return p.duelo ? p.vistaDuelo : p; }
+// As tres formas de dividir quatro pessoas em duas duplas: [a1, a2, b1, b2] sobre os quatro da vez em ordem.
+const PARES = [[0, 1, 2, 3], [0, 2, 1, 3], [0, 3, 1, 2]];
+function quemJoga(p) {
+  const todos = [...p.jogadores.keys()];
+  if (p.modo === 'classico') return todos;
+  if (p.modo === 'times' && p.n === 4) return p.jogo.festa ? todos : DUELOS[p.duelos % DUELOS.length];
+  const duplas = p.modo === 'times';
+  let aqui = todos.filter(i => !p.ausentes?.[i]);
+  if (aqui.length < (duplas ? 4 : 2)) aqui = todos;       // sem gente para jogar a ausencia nao vale: a tela e quem decide encerrar a partida
+  const cabem = duplas ? 4 : p.jogo.festa ? p.jogo.festa.max : aqui.length;
+  if (aqui.length > cabem) { const descansa = aqui[aqui.length - 1 - p.duelos % aqui.length]; aqui = aqui.filter(i => i !== descansa); }
+  if (!duplas) return aqui;
+  if (!p.jogo.festa) return aqui.slice(0, 2);       // minijogo de 2 forcado numa partida de Duplas com 5 (so por atalho de teste): joga um par
+  // A forma de dividir muda a cada rodada; como 3 formas e 5 descansos nao tem divisor comum, em 15 rodadas sai cada combinacao uma vez
+  const [a1, a2, b1, b2] = PARES[p.duelos % PARES.length].map(k => aqui[k]);
+  return [a1, b1, a2, b2];       // o minijogo ve o time A nos indices 0 e 2 e o B nos indices 1 e 3, como sempre
+}
+function montaDuelo(p) {
+  const par = quemJoga(p);
+  if (par.length === p.jogadores.length && par.every((i, k) => i === k)) { p.duelo = null; p.vistaDuelo = null; return; }
+  p.duelo = par;
+  p.jogadores.forEach((j, i) => { if (!par.includes(i)) [j.x, j.z] = FORA[i]; });
+  const proprio = { jogadores: par.map(i => p.jogadores[i]), celular: par.map(i => p.celular[i]), n: par.length, nomes: undefined };
+  Object.defineProperty(proprio, 'nomes', { get: () => p.nomes && par.map(i => p.nomes[i]), set: () => {}, enumerable: true });
+  p.vistaDuelo = new Proxy(p, {
+    get: (alvo, k) => (k in proprio ? proprio[k] : Reflect.get(alvo, k)),
+    set: (alvo, k, v) => (k in proprio ? (proprio[k] = v, true) : Reflect.set(alvo, k, v)),
+  });
+}
+function devolveCelular(p) {       // o minijogo pode trocar o objeto do celular inteiro: o da partida acompanha
+  if (!p.duelo) return;
+  const c = p.vistaDuelo.celular;
+  p.duelo.forEach((i, k) => { p.celular[i] = c?.[k] ?? {}; });
 }
 // Minijogo que quebrou sozinho no modo (nao havia outro para cobrir): fica na lista, mas o modo nao pode comecar.
 const QUEBRADOS = new Set();
 export const jogavel = (modo, n) => elegiveis(modo, n).some(j => !QUEBRADOS.has(j));
 function confereModo(n, modo) {
   if (!MODOS.includes(modo)) throw new Error('modo invalido: ' + modo);
-  if (!Number.isInteger(n) || n < 2 || n > 4 || (modo === 'classico' && n !== 2) || (modo === 'times' && n !== 4)) throw new Error(`${n} jogadores nao servem para o modo ${modo}`);
+  if (!Number.isInteger(n) || n < 2 || n > MAX_JOGADORES || (modo === 'classico' && n !== 2) || (modo === 'times' && n !== 4 && n !== MAX_JOGADORES)) throw new Error(`${n} jogadores nao servem para o modo ${modo}`);
 }
 const novoJogador = () => ({ pontos: 0, direito: false, ent: { x: 0, y: 0, d: false, b: false } });
 
@@ -82,7 +136,7 @@ function sorteiaModificador(p) {
 export const CARTAS = [
   { id: 'dobro', nome: 'Vale dobro', dica: 'Venceu, leva 2' },
   { id: 'moedas', nome: 'Cofre em dobro', dica: 'Moedas em dobro nesta' },
-  { id: 'escudo', nome: 'Escudo', dica: 'Se perder, ninguém pontua', atras: true },
+  { id: 'escudo', nome: 'Escudo', dica: 'Segura o ponto. 1 por partida', atras: true },
   { id: 'turbo', nome: 'Turbo', dica: 'Pernas ligeiras', anda: true, acel: 1.35 },
   { id: 'dash', nome: 'Empurrão ligeiro', dica: 'Recarrega na metade', anda: true, recarga: 0.5, precisaDash: true },
   { id: 'pulo', nome: 'Mola', dica: 'Pula bem mais alto', anda: true, pulo: 1.45, precisaPulo: true },
@@ -91,9 +145,13 @@ const CARTA = Object.fromEntries(CARTAS.map(c => [c.id, c]));
 const N_OFERTA = 3, ESPERA_CARTA = 0.35;     // segundos em que o toque na carta, se chegar atrasado, nao vale como escolha do minijogo
 
 function sorteiaCartas(p, i) {
-  const j = p.jogo, eu = p.jogadores[i], outro = p.jogadores[1 - i];
+  const j = p.jogo, eu = p.jogadores[i];
+  const rivais = p.jogadores.filter((_, k) => k !== i && (p.modo !== 'times' || p.n === MAX_JOGADORES || timeDe(p, k) !== timeDe(p, i)));       // em Duplas de 4 o parceiro nao e rival (com 5 as duplas mudam e o ponto e de cada um)
+  // Escudo com freio, senao ninguem pontua nunca: so para quem esta em ultimo (sozinho ou empatado, mas atras de alguem),
+  // uma vez por jogador na partida, e nunca na rodada seguinte a um ponto que um escudo segurou.
+  const atras = rivais.some(r => eu.pontos < r.pontos) && rivais.every(r => eu.pontos <= r.pontos) && !eu.escudos && !p.escudoSegurou;
   const servem = CARTAS.filter(c => (!c.anda || deJoystick(j)) && (!c.precisaDash || !j.semDash) && (!c.precisaPulo || !j.semPulo)
-    && (!c.atras || (eu.pontos < outro.pontos && eu.cartaAnterior !== c.id)));
+    && (!c.atras || (atras && eu.cartaAnterior !== c.id)) && !j.semCarta?.includes(c.id));       // semCarta: cartas que atrapalham ou nao fazem nada neste minijogo
   return embaralha(servem, p.rng).slice(0, N_OFERTA).map(c => c.id);
 }
 
@@ -104,6 +162,69 @@ export function moedasDaRodada(p, i) {
   if (p.fase === 'fim' && (p.campeoes ?? []).includes(i)) valor += 30;
   if (p.jogadores[i].carta === 'moedas') valor *= 2;
   return valor;
+}
+
+// ---------- itens de rodada: comprados na Loja do celular e usados durante a rodada ----------
+// O estoque e do celular (perfil local); aqui ficam as regras e os limites, iguais para todo minijogo.
+// alvo: vai no rival mais proximo (minijogo de joystick) ou no lider do placar (os outros). anda: so onde o motor move o boneco.
+// Minijogo em que item nao combina declara semItens: true.
+export const ITENS = [
+  { id: 'bomba', nome: 'Bomba', dica: 'Atordoa o rival mais perto', alvo: true },
+  { id: 'gelo', nome: 'Gelo', dica: 'Congela o rival e deixa o chão liso', alvo: true },
+  { id: 'turbo', nome: 'Turbo', dica: 'Você corre mais por 4 segundos', anda: true },
+  { id: 'guarda', nome: 'Guarda-chuva', dica: 'Segura o próximo item jogado em você' },
+  { id: 'tinta', nome: 'Tinta', dica: 'Mancha o celular do rival', alvo: true },
+];
+export const ITENS_POR_RODADA = 1, ITENS_POR_PARTIDA = 3, T_SEM_ITEM = 3, T_IMUNE_ITEM = 4;
+const T_TONTO_ITEM = 1.5, T_GELO = 2, T_GELO_PARADO = 1.2, T_LISO = 3, ATRITO_LISO = 0.55, T_TURBO_ITEM = 4, ACEL_TURBO_ITEM = 1.5, T_TINTA = 3;
+const TEMPOS_ITEM = ['tonto', 'gelo', 'liso', 'turboItem', 'tinta', 'imuneItem'];       // segundos que faltam de cada efeito, por jogador (a tela desenha a partir deles)
+const preso = j => j.tonto > 0 || j.gelo > 0;       // atordoado ou congelado: o controle nao vale
+const naRodada = (p, i) => !p.duelo || p.duelo.includes(i);
+function zeraItens(j) { for (const k of TEMPOS_ITEM) j[k] = 0; j.guarda = false; j.itensRodada = 0; j.entGuardada = null; }
+
+// O jogador i pode usar este item agora? (limites e fase; a tela usa para apagar o botao no celular. Alvo imune so se descobre ao usar.)
+export function itemLiberado(p, i, id) {
+  const j = p.jogadores[i], item = ITENS.find(k => k.id === id);
+  if (!j || !item || p.fase !== 'jogando' || p.t < T_SEM_ITEM || p.dados?.fimCedo !== undefined) return false;
+  if (ehCoop(p) || p.jogo.semItens || !naRodada(p, i) || !j.vivo || preso(j)) return false;
+  if ((j.itensRodada ?? 0) >= ITENS_POR_RODADA || (j.itensPartida ?? 0) >= ITENS_POR_PARTIDA) return false;
+  return !item.anda || deJoystick(p.jogo);
+}
+// Rival que leva o item: joga a rodada, esta de pe, nao e parceiro (Duplas) e nao esta imune. Empate vai para o proximo na roda depois de quem jogou.
+function alvoDoItem(p, i) {
+  const js = p.jogadores, n = js.length, eu = js[i], roda = k => (k - i + n) % n;
+  const rivais = [...js.keys()].filter(k => k !== i && naRodada(p, k) && js[k].vivo && !(js[k].imuneItem > 0) && (p.modo !== 'times' || timeDe(p, k) !== timeDe(p, i)));
+  const nota = deJoystick(p.jogo) ? k => -Math.hypot(js[k].x - eu.x, js[k].z - eu.z) : k => js[k].pontos;
+  return rivais.sort((a, b) => nota(b) - nota(a) || roda(a) - roda(b))[0] ?? -1;
+}
+function prende(j, campo, seg) {       // o que o dedo esta segurando fica guardado e volta a valer quando o efeito passa
+  j[campo] = seg; j.entGuardada ??= j.ent; j.ent = { x: 0, y: 0, d: false, b: false }; j.querDash = 0; j.querPulo = 0;
+}
+// Usa o item. Devolve true se valeu (so entao o celular desconta do estoque: a tela confirma com j.itemGasto).
+export function usaItem(p, i, id) {
+  if (!itemLiberado(p, i, id)) return false;
+  const j = p.jogadores[i], item = ITENS.find(k => k.id === id), para = item.alvo ? alvoDoItem(p, i) : i;
+  if (para < 0) return false;
+  const alvo = p.jogadores[para], anda = deJoystick(p.jogo), bloqueado = !!item.alvo && alvo.guarda;
+  if (item.alvo) { alvo.imuneItem = T_IMUNE_ITEM; alvo.guarda = false; }
+  if (bloqueado) { /* o guarda-chuva segurou: quem jogou gasta o item mesmo assim */ }
+  else if (id === 'bomba') prende(alvo, 'tonto', T_TONTO_ITEM);
+  else if (id === 'gelo') { prende(alvo, 'gelo', anda ? T_GELO : T_GELO_PARADO); if (anda) alvo.liso = T_GELO + T_LISO; }
+  else if (id === 'turbo') j.turboItem = T_TURBO_ITEM;
+  else if (id === 'guarda') j.guarda = true;
+  else if (id === 'tinta') alvo.tinta = T_TINTA;
+  j.itensRodada = (j.itensRodada ?? 0) + 1; j.itensPartida = (j.itensPartida ?? 0) + 1;
+  p.itensSerie = (p.itensSerie ?? 0) + 1; j.itemGasto = { n: p.itensSerie, id };
+  p.itens.push({ id, de: i, para, t: p.t, bloqueado });
+  p.eventos.push(bloqueado ? 'item-bloqueio' : 'item-' + id);
+  return true;
+}
+function passaItens(p, dt) {
+  for (const j of p.jogadores) {
+    const estava = preso(j);
+    for (const k of TEMPOS_ITEM) if (j[k] > 0) j[k] = Math.max(0, j[k] - dt);
+    if (estava && !preso(j) && j.entGuardada) { j.ent = j.entGuardada; j.entGuardada = null; }
+  }
 }
 
 // ---------- minijogos ----------
@@ -573,7 +694,7 @@ function move(p, i, j, dt) {
   const mod = p.mod ?? {}, sinal = mod.inverte ? -1 : 1;
   const ex = ativo ? j.ent.x * sinal : 0, ez = ativo ? j.ent.y * sinal : 0;
   const carta = CARTA[j.carta] ?? {};
-  const acel = ACEL * j.turbo * (mod.acel ?? 1) * (carta.acel ?? 1);
+  const acel = ACEL * j.turbo * (mod.acel ?? 1) * (carta.acel ?? 1) * (j.turboItem > 0 ? ACEL_TURBO_ITEM : 1);
   j.vx += ex * acel * dt; j.vz += ez * acel * dt;
 
   // pulo (B)
@@ -600,7 +721,7 @@ function move(p, i, j, dt) {
     p.eventos.push('dash');
   }
 
-  const at = Math.pow(mod.atrito ?? ATRITO, dt);
+  const at = Math.pow(j.liso > 0 ? Math.max(mod.atrito ?? ATRITO, ATRITO_LISO) : mod.atrito ?? ATRITO, dt);       // liso: chao do item Gelo
   j.vx *= at; j.vz *= at; j.x += j.vx * dt; j.z += j.vz * dt;
   if (p.arena.grade) blocos(p, j);
   if (p.arena.parede) paredes(p, j);
@@ -628,7 +749,7 @@ function fisica(p, dt) {
   if (bate) p.eventos.push('batida');
 }
 
-function fisicaSegura(p, dt) { try { fisica(p, dt); } catch (e) { descarta(p, p.jogo, e); } }
+function fisicaSegura(p, dt) { try { fisica(vista(p), dt); } catch (e) { descarta(p, p.jogo, e); } }
 
 function embaralha(lista, rng) {
   const l = [...lista];
@@ -777,7 +898,8 @@ function sorteiaProximo(p) {
 
 function proximaRodada(p, forcado) {
   // carta usada na ultima rodada competitiva (coop no meio nao conta); calculada uma vez, antes de qualquer nova tentativa
-  const anterior = p.jogadores.map(j => (p.jogo?.coop ? j.cartaAnterior : j.carta) ?? null);
+  // quem ficou de fora no revezamento tambem nao jogou carta: vale a da ultima rodada em que jogou
+  const anterior = p.jogadores.map((j, i) => (p.jogo?.coop || (p.duelo && !p.duelo.includes(i)) ? j.cartaAnterior : j.carta) ?? null);
   if (p.jogadores.every(j => j.pontos === 0)) p.alvo = alvoDe(p);       // a pasta de minijogos ainda pode estar carregando: o alvo acompanha a lista ate o placar andar
   for (let tentativa = 0; tentativa < 100; tentativa++) {
     p.jogo = forcado ?? sorteiaProximo(p);
@@ -788,15 +910,21 @@ function proximaRodada(p, forcado) {
         apertouA: 0, apertouB: 0, escolha: -1, pronto: false, cartaAnterior: anterior[i], carta: null, oferta: null, escolhaDesde: 0,
       });
     p.liberado = false;
+    for (const j of p.jogadores) zeraItens(j);
+    p.itens = [];       // itens usados nesta rodada: { id, de, para, t, bloqueado } (a tela anima e avisa)
     p.dados = {}; p.celular = p.jogadores.map(() => ({})); p.tocou = false; p.vencedor = undefined; p.anuncios = [];
     p.arena = { tipo: 'circulo', raio: 8, parede: true };
     p.fase = 'intro'; p.t = 0; p.rodada++;
     p.mod = null;
     try {
-      p.jogo.inicia(p); p.mod = sorteiaModificador(p);
+      montaDuelo(p);
+      p.jogo.inicia(vista(p)); devolveCelular(p); p.mod = sorteiaModificador(p);
+      if (p.duelo) p.jogadores.forEach((j, i) => { if (!p.duelo.includes(i)) j.pronto = true; });       // quem esta de fora nao segura a rodada esperando o "Entendi" dele
+      if (p.duelo) p.duelos++;       // so conta a vez de quem de fato jogou (minijogo que quebra no inicia nao pula ninguem)
       p.historico.push(p.jogo.id); p.historico.splice(0, p.historico.length - HISTORICO_MAX); p.noitesVistas.push(p.jogo.id);
-      if (!p.jogo.coop)             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima
-        for (const [i, j] of p.jogadores.entries()) if (j.direito) { j.oferta = sorteiaCartas(p, i); j.direito = false; }
+      if (!ehCoop(p))             // em rodada cooperativa ninguem vence o outro: a carta fica guardada para a proxima
+        for (const [i, j] of p.jogadores.entries())       // no revezamento, quem esta de fora guarda o direito para quando voltar a jogar
+          if (j.direito && (!p.duelo || p.duelo.includes(i))) { j.oferta = sorteiaCartas(p, i); j.direito = false; }
       return;
     } catch (e) { descarta(p, p.jogo, e); }
   }
@@ -810,6 +938,7 @@ function coopCabe(p, vale = 1) {
 
 // vencedor: 0 ou 1, -1 (empate ou fracasso cooperativo) ou 2 (vitoria em equipe, so em minijogo coop).
 function termina(p, vencedor) {
+  if (p.duelo && p.modo === 'vs' && vencedor >= 0) vencedor = p.duelo[vencedor];       // rodizio: o minijogo aponta um dos da vez, o ponto e do lugar de verdade
   p.vencedor = vencedor; p.t = 0; p.fase = 'resultado';
   if (p.modo !== 'classico') return terminaFesta(p);
   const js = p.jogadores, antes = js.map(j => j.pontos), vale = p.mod?.pontos ?? 1;
@@ -822,6 +951,7 @@ function termina(p, vencedor) {
     const escudo = js[o].carta === 'escudo';
     if (escudo) anuncios.push({ tipo: 'escudo', quem: o });
     else j.pontos = Math.min(p.alvo, j.pontos + vale + (j.carta === 'dobro' ? 1 : 0));
+    p.escudoSegurou = escudo;
     js[o].direito = true;
     if (!escudo) p.seq[vencedor]++;     // ponto segurado nao soma na sequencia
     p.seq[o] = 0;
@@ -845,13 +975,23 @@ function termina(p, vencedor) {
   p.eventos.push('ponto');
 }
 
-// Festa: quem venceu (ele, o time ou todos, pelo modo) ganha o ponto; sem cartas de poder nem anuncios nesta versao.
+// Festa: quem venceu (ele, o time ou todos, pelo modo) ganha o ponto.
+// Cartas de poder em Cada um por si e Duplas: Vale dobro de quem venceu soma 1 (em Duplas, para o time inteiro);
+// Escudo de quem jogou e perdeu segura o ponto; quem jogou e perdeu escolhe uma carta na proxima rodada em que jogar.
 function terminaFesta(p) {
-  const vale = p.mod?.pontos ?? 1;
+  const vale = p.mod?.pontos ?? 1, js = p.jogadores;
   p.anuncios = [];
-  p.jogadores.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale); });
-  p.campeoes = p.jogadores.flatMap((j, i) => j.pontos >= p.alvo ? [i] : []);
-  if (p.campeoes.length) p.fase = 'fim';
+  if (p.modo !== 'coop' && p.vencedor >= 0) {
+    const perdeu = (p.duelo ?? [...js.keys()]).filter(i => !venceu(p, i));
+    const escudo = perdeu.find(i => js[i].carta === 'escudo');
+    const dobro = js.some((j, i) => venceu(p, i) && j.carta === 'dobro') ? 1 : 0;
+    if (escudo !== undefined) p.anuncios.push({ tipo: 'escudo', quem: escudo });
+    else js.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale + dobro); });
+    p.escudoSegurou = escudo !== undefined;
+    for (const i of perdeu) js[i].direito = true;
+  } else js.forEach((j, i) => { if (venceu(p, i)) j.pontos = Math.min(p.alvo, j.pontos + vale); });
+  p.campeoes = js.flatMap((j, i) => j.pontos >= p.alvo ? [i] : []);
+  if (p.campeoes.length) { p.fase = 'fim'; for (const j of js) j.direito = false; }
   if (p.modo === 'coop' && p.fase !== 'fim') {       // cooperativo: a partida dura NOITES_COOP rodadas
     p.noites.jogadas++;
     if (p.vencedor === 2) p.noites.vencidas++;
@@ -878,13 +1018,16 @@ function tocouBotao(j, m, estado, contador) {
 const limpaHistorico = h => (Array.isArray(h) ? h.filter(id => typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id)) : []).slice(-HISTORICO_MAX);
 
 // Alvo de pontos da partida: 10, ou 6 quando ha menos de 6 minijogos elegiveis no modo (a tela mostra p.alvo).
-const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : PONTOS_VITORIA);
+// Em Cada um por si so um pontua por rodada: com mais gente no sofa a partida a 10 pontos passava de 25 rodadas.
+// O alvo encolhe com o numero de jogadores para a partida durar perto do Duelo (umas 15 rodadas).
+export const ALVO_VS = { 2: PONTOS_VITORIA, 3: 8, 4: 6, 5: 6 };
+const alvoDe = p => (elegiveis(p.modo, p.n).length < ELEGIVEIS_ALVO_CURTO ? PONTOS_CURTO : p.modo === 'vs' ? ALVO_VS[p.n] ?? PONTOS_VITORIA : p.modo === 'times' && p.n === MAX_JOGADORES ? ALVO_VS[MAX_JOGADORES] : PONTOS_VITORIA);
 
 export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', historico = [] } = {}) {
   confereModo(n, modo);
   const p = {
     rng, fila: [], prioridade: [], noitesVistas: [], jogo: null, historico: limpaHistorico(historico), modsVistos: {}, rodada: 0, eventos: [], erros: [], anuncios: [], n, modo,
-    noites: { jogadas: 0, vencidas: 0 }, seq: Array(n).fill(0), deficit: Array(n).fill(0), campeao: undefined,       // vitorias seguidas e maior desvantagem (para "virada")
+    noites: { jogadas: 0, vencidas: 0 }, duelos: 0, duelo: null, seq: Array(n).fill(0), deficit: Array(n).fill(0), campeao: undefined,       // vitorias seguidas e maior desvantagem (para "virada")
     jogadores: Array.from({ length: n }, novoJogador),
   };
   p.alvo = alvoDe(p);
@@ -893,10 +1036,12 @@ export function criaPartida(rng = Math.random, { n = 2, modo = 'classico', histo
 }
 
 export function reinicia(p) {
-  for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; }
+  for (const j of p.jogadores) { j.pontos = 0; j.direito = false; j.carta = null; j.escudos = 0; }
+  p.escudoSegurou = false;
+  for (const j of p.jogadores) { j.itensPartida = 0; j.itemGasto = null; }       // itens: o limite por partida recomeca
   p.seq = p.jogadores.map(() => 0); p.deficit = p.jogadores.map(() => 0); p.campeao = undefined; p.campeoes = undefined;
   esquece(p); p.noitesVistas = [];
-  p.noites = { jogadas: 0, vencidas: 0 }; p.modsVistos = {}; p.alvo = alvoDe(p);
+  p.noites = { jogadas: 0, vencidas: 0 }; p.duelos = 0; p.modsVistos = {}; p.alvo = alvoDe(p);
   recicla(p);
   proximaRodada(p);
 }
@@ -915,7 +1060,7 @@ export function configura(p, { n = p.n, modo = p.modo } = {}) {
 export function registra(jogo) {
   for (const campo of ['id', 'nome', 'dica', 'inicia', 'atualiza']) if (!jogo?.[campo]) throw new Error('minijogo sem ' + campo);
   if (jogo.festa !== undefined) {
-    const f = jogo.festa, ok = n => Number.isInteger(n) && n >= 2 && n <= 4;
+    const f = jogo.festa, ok = n => Number.isInteger(n) && n >= 2 && n <= MAX_JOGADORES;
     if (!f || !ok(f.min) || !ok(f.max) || f.min > f.max || !Array.isArray(f.modos) || !f.modos.length || !f.modos.every(m => m === 'vs' || m === 'times' || m === 'coop'))
       throw new Error('festa torto em ' + jogo.id);
   }
@@ -928,7 +1073,7 @@ export function registra(jogo) {
 export function pulaPara(p, jogo) { proximaRodada(p, jogo); }
 
 // i: 0 (azul) ou 1 (rosa). m: { x, y, d, n, b, nb, op, nop }: joystick/toque entre -1 e 1, botao A (d, contador n),
-// botao B (b, contador nb) e escolha feita na tela do celular (op, contador nop).
+// botao B (b, contador nb), escolha feita na tela do celular (op, contador nop) e item usado (it = indice em ITENS, contador ni).
 // semToque: acompanha joystick e contadores sem contar toque (tela pausada).
 export function entrada(p, i, m, semToque = false) {
   const j = p.jogadores[i];
@@ -952,15 +1097,20 @@ export function entrada(p, i, m, semToque = false) {
   if (a && aguardando(p)) { j.pronto = true; p.eventos.push('moeda'); }     // A durante a explicacao = "estou pronto"
   const escolheu = m.nop !== undefined && j.nop !== undefined && m.nop > j.nop && Number.isInteger(m.op) && m.op >= 0;
   if (m.nop !== undefined) j.nop = m.nop;
-  if (p.fase === 'jogando') {
+  const niOk = Number.isInteger(m.ni) && m.ni >= 0, usou = niOk && j.ni !== undefined && m.ni > j.ni && !semToque;       // item: mesmo esquema de contador
+  if (niOk) j.ni = m.ni;
+  if (usou && !usaItem(p, i, Number.isInteger(m.it) ? ITENS[m.it]?.id : undefined)) j.itensNegados = (j.itensNegados ?? 0) + 1;       // a tela avisa o celular que nao valeu
+  if (p.fase === 'jogando' && preso(j)) { /* atordoado ou congelado: botoes e escolhas nao valem */ }
+  else if (p.fase === 'jogando') {
     if (a) { j.querDash = ESPERA_BOTAO; j.apertouA += a; }
     if (b) { j.querPulo = ESPERA_BOTAO; j.apertouB += b; }
     if (escolheu && p.t >= j.escolhaDesde) j.escolha = m.op;     // toque atrasado na carta nao vira resposta do minijogo
   } else if (p.fase === 'intro' && escolheu && j.oferta) {
-    if (j.oferta[m.op]) { j.carta = j.oferta[m.op]; j.oferta = null; p.eventos.push('carta'); }     // carta de poder escolhida na explicacao
+    if (j.oferta[m.op]) { j.carta = j.oferta[m.op]; j.oferta = null; if (j.carta === 'escudo') j.escudos = (j.escudos ?? 0) + 1; p.eventos.push('carta'); }     // carta de poder escolhida na explicacao
     else if (m.op === j.oferta.length) { j.oferta = null; if (aguardando(p)) { j.pronto = true; p.eventos.push('moeda'); } }   // "sem carta": ja fica pronto
   }
-  j.ent = { x, y, d: !!m.d, b: !!m.b };
+  if (preso(j)) j.entGuardada = { x, y, d: !!m.d, b: !!m.b };       // o joystick fica zerado ate o efeito passar
+  else j.ent = { x, y, d: !!m.d, b: !!m.b };
 }
 
 // Com p.esperaPronto ligado (a tela liga), a rodada so comeca a contagem depois que os dois apertam A.
@@ -972,7 +1122,7 @@ export function tempoIntro(p) { return p.fase === 'intro' ? T_INTRO - (aguardand
 function resultadosValidos(p) {
   if (ehCoop(p)) return [undefined, -1, 2];
   if (p.modo === 'times') return [undefined, -1, 0, 1];
-  return [undefined, -1, ...p.jogadores.keys()];
+  return [undefined, -1, ...vista(p).jogadores.keys()];       // no rodizio o minijogo so pode apontar um dos que jogaram
 }
 
 export function passo(p, dt) {
@@ -987,10 +1137,12 @@ export function passo(p, dt) {
   }
   if (p.fase === 'fim') { fisicaSegura(p, dt); if (p.t >= T_FIM && !p.esperaRevanche) reinicia(p); return; }     // esperaRevanche (a tela liga): o podio espera a escolha de revanche
   if (p.fase === 'resultado') { fisicaSegura(p, dt); if (p.t >= T_RESULTADO) proximaRodada(p); return; }
+  passaItens(p, dt);
   let vencedor;
   try {
-    fisica(p, dt);
-    vencedor = p.jogo.atualiza(p, dt);
+    fisica(vista(p), dt);
+    vencedor = p.jogo.atualiza(vista(p), dt);
+    devolveCelular(p);
     if (!resultadosValidos(p).includes(vencedor)) throw new Error('atualiza devolveu ' + String(vencedor));
   } catch (e) { descarta(p, p.jogo, e); vencedor = -1; }
   if (vencedor === undefined && p.t > LIMITE_MOTOR) vencedor = -1;       // nenhuma rodada passa disso

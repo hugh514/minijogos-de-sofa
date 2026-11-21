@@ -30,7 +30,7 @@ const FONTE = /^\/fontes\/([a-z0-9_-]+)\.woff2$/;    // so fontes/<nome>.woff2; 
 const COMANDOS = ['pula', 'reinicia', 'menu', 'continua'];      // o que o Jogador 1 pode pedir pela pausa do celular
 
 let telas = [];
-const SLOTS = 4;                                // de 1 a 4 jogadores (o Classico usa so os dois primeiros)
+const SLOTS = 5;                                // de 1 a 5 jogadores (o Classico usa so os dois primeiros)
 const celulares = Array.from({ length: SLOTS }, () => new Set());       // conexoes SSE de cada jogador
 const perfis = Array(SLOTS).fill(null);         // ultimo perfil (nome e skin) de cada jogador, ja em JSON
 const estado = Array(SLOTS).fill('{}');         // ultimo estado de controle mandado pela tela, por jogador
@@ -65,8 +65,9 @@ function leCorpo(req, limite, usa) {
 }
 
 function inteiro(v) { return Number.isInteger(v) ? v : undefined; }
-function slot(v) { return Number.isInteger(v) && v >= 1 && v <= SLOTS ? v : undefined; }       // numero do jogador, de 1 a 4
+function slot(v) { return Number.isInteger(v) && v >= 1 && v <= SLOTS ? v : undefined; }       // numero do jogador, de 1 a 5
 function reacao(v) { return Number.isInteger(v) && v >= 0 && v <= 63 ? v : undefined; }   // indice na lista fixa de emojis da tela
+function item(v) { return Number.isInteger(v) && v >= 0 && v <= 15 ? v : undefined; }      // indice do item de rodada usado (lista ITENS do motor); ni e o contador
 function contador(v) { return Number.isInteger(v) && v >= 0 && v <= 1e9 ? v : undefined; }    // contador que so cresce (torcida)
 
 function listaJogos() {
@@ -91,6 +92,7 @@ function recebeEntrada(m) {
     j: m.j, x: +m.x || 0, y: +m.y || 0, d: !!m.d, b: !!m.b,
     n: inteiro(m.n), nb: inteiro(m.nb), op: inteiro(m.op), nop: inteiro(m.nop), s: inteiro(m.s), q: inteiro(m.q),
     r: reacao(m.r), nr: inteiro(m.nr), nt: contador(m.nt),
+    it: item(m.it), ni: contador(m.ni),
   });
   for (const t of telas) manda(t, msg);
 }
@@ -189,11 +191,11 @@ const servidor = http.createServer((req, res) => {
     return;
   }
 
-  if (url === '/perfil' && req.method === 'POST') {   // nome e skin escolhidos no celular
+  if (url === '/perfil' && req.method === 'POST') {   // nome, skin, pet e rastro escolhidos no celular
     leCorpo(req, 500, m => {
       if (!slot(m?.j)) return;
       const i = m.j - 1;
-      perfis[i] = JSON.stringify({ perfil: { j: i + 1, nome: String(m.nome ?? '').slice(0, 10), cor: inteiro(m.cor) ?? i, chapeu: inteiro(m.chapeu) ?? 0 } });
+      perfis[i] = JSON.stringify({ perfil: { j: i + 1, nome: String(m.nome ?? '').slice(0, 10), cor: inteiro(m.cor) ?? i, chapeu: inteiro(m.chapeu) ?? 0, pet: inteiro(m.pet) ?? 0, rastro: inteiro(m.rastro) ?? 0 } });
       for (const t of telas) manda(t, perfis[i]);
     });
     req.on('end', () => res.end('ok'));
@@ -203,10 +205,11 @@ const servidor = http.createServer((req, res) => {
   if (url === '/modo' && req.method === 'POST') {     // o Jogador 1 (anfitriao) escolhe o modo e manda comecar
     leCorpo(req, 200, m => {
       if (m?.j !== 1 || !MODOS.includes(m.modo)) return;
-      const msg = JSON.stringify({ escolha: { modo: m.modo, comeca: m.comeca === true } });
+      const par = [2, 3, 4].includes(m.par) ? m.par : undefined;       // Duplas: o lugar de quem joga com o Jogador 1 (sem o campo, a tela usa o lugar 3)
+      const msg = JSON.stringify({ escolha: { modo: m.modo, comeca: m.comeca === true, par } });
       for (const t of telas) manda(t, msg);
       // tela que abrir depois sabe o modo, mas nao recomeca nem cancela o inicio automatico; ao virar partida (comeca) a escolha e esquecida
-      escolha = m.comeca === true ? null : JSON.stringify({ escolha: { modo: m.modo, comeca: false, antiga: true } });
+      escolha = m.comeca === true ? null : JSON.stringify({ escolha: { modo: m.modo, comeca: false, par, antiga: true } });
     });
     req.on('end', () => res.end('ok'));
     return;

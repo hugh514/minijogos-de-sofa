@@ -48,6 +48,7 @@ Por isso, não leia estes arquivos como um documento que sempre veio antes do c�
 | [006](006-regra-dos-5-segundos/spec.md) | Regra dos 5 segundos mínimos | `jogos/minimo-5s.test.mjs`, `logica.test.mjs` |
 | [007](007-cooperativo-para-dupla-lenta/spec.md) | Cooperativo acessível para dupla lenta | `jogos/*-coop.test.mjs` |
 | [008](008-robo-de-treino/spec.md) | Robô de treino | só navegador (`e2e/teste-robo.js`) |
+| [009](009-itens-de-rodada/spec.md) | Itens de rodada | `logica-festa.test.mjs`, `controle.test.mjs`, `server.test.mjs`, `tela.test.mjs`, navegador (`e2e/teste-itens.js`) |
 
 ## Como acrescentar uma especificação
 

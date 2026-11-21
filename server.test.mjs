@@ -1,4 +1,4 @@
-// Servidor: slots de 1 a 4, validacao do jogador (j) e a rota /modo do anfitriao. Sobe uma copia na porta 8158.
+// Servidor: slots de 1 a 5, validacao do jogador (j) e a rota /modo do anfitriao. Sobe uma copia na porta 8158.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
@@ -32,33 +32,48 @@ test.before(async () => {
 });
 test.after(() => proc?.kill());
 
-test('servidor: /eventos-c aceita j de 1 a 4 e recusa o resto', async () => {
-  for (const j of [1, 2, 3, 4]) {
+test('servidor: /eventos-c aceita j de 1 a 5 e recusa o resto', async () => {
+  for (const j of [1, 2, 3, 4, 5]) {
     const s = escuta('/eventos-c?j=' + j);
     await espera(80);
     assert.ok(s.msgs.length >= 1, 'o slot ' + j + ' recebeu o estado inicial');
     s.fecha();
   }
-  for (const j of ['0', '5', 'x', '2.5', '-1', '']) assert.equal(await pede('GET', '/eventos-c?j=' + j), 400, 'j=' + j);
+  for (const j of ['0', '6', 'x', '2.5', '-1', '']) assert.equal(await pede('GET', '/eventos-c?j=' + j), 400, 'j=' + j);
   assert.equal(await pede('GET', '/eventos-c'), 400);
 });
 
-test('servidor: /in repassa os slots 1 a 4 e ignora j invalido', async () => {
+test('servidor: /in repassa os slots 1 a 5 e ignora j invalido', async () => {
   const tela = escuta('/eventos');
   await espera(80);
-  for (const j of [1, 2, 3, 4, 0, 5, '3', null, 2.5]) await pede('POST', '/in', JSON.stringify({ j, x: 0.5, y: 0, d: true }));
+  for (const j of [1, 2, 3, 4, 5, 0, 6, '3', null, 2.5]) await pede('POST', '/in', JSON.stringify({ j, x: 0.5, y: 0, d: true }));
   await espera(150);
-  assert.deepEqual(tela.msgs.filter(m => m.j).map(m => m.j), [1, 2, 3, 4]);
+  assert.deepEqual(tela.msgs.filter(m => m.j).map(m => m.j), [1, 2, 3, 4, 5]);
   tela.fecha();
 });
 
 test('servidor: /perfil guarda o perfil de cada slot e ignora j invalido', async () => {
   const quem = [];
-  for (const j of [1, 3, 4, 5, 0]) await pede('POST', '/perfil', JSON.stringify({ j, nome: 'N' + j, cor: j, chapeu: 0 }));
+  for (const j of [1, 3, 4, 5, 6, 0]) await pede('POST', '/perfil', JSON.stringify({ j, nome: 'N' + j, cor: j, chapeu: 0 }));
   const tela = escuta('/eventos');
   await espera(120);
   quem.push(...tela.msgs.filter(m => m.perfil).map(m => m.perfil.j));
-  assert.deepEqual(quem, [1, 3, 4], 'a tela nova recebe os perfis guardados, so dos slots validos');
+  assert.deepEqual(quem, [1, 3, 4, 5], 'a tela nova recebe os perfis guardados, so dos slots validos');
+  tela.fecha();
+});
+
+test('servidor: /perfil repassa pet e rastro, perfil antigo ganha 0 e o que nao e inteiro vira 0', async () => {
+  await pede('POST', '/perfil', JSON.stringify({ j: 1, nome: 'Ana', cor: 27, chapeu: 22, pet: 8, rastro: 5 }));
+  await pede('POST', '/perfil', JSON.stringify({ j: 2, nome: 'Bia', cor: 1, chapeu: 2 }));       // celular com a versao antiga na memoria
+  await pede('POST', '/perfil', JSON.stringify({ j: 3, nome: 'Caio', cor: 'x', chapeu: 1.5, pet: '3', rastro: { a: 1 } }));
+  await pede('POST', '/perfil', JSON.stringify({ j: 4, nome: '\u{1F600}'.repeat(5), cor: 27, chapeu: 22, pet: 8, rastro: 5 }));       // o maior corpo que o celular manda cabe nos 500 bytes
+  const tela = escuta('/eventos');
+  await espera(120);
+  const perfis = tela.msgs.filter(m => m.perfil).map(m => m.perfil);
+  assert.deepEqual(perfis.find(q => q.j === 1), { j: 1, nome: 'Ana', cor: 27, chapeu: 22, pet: 8, rastro: 5 });
+  assert.deepEqual(perfis.find(q => q.j === 2), { j: 2, nome: 'Bia', cor: 1, chapeu: 2, pet: 0, rastro: 0 });
+  assert.deepEqual(perfis.find(q => q.j === 3), { j: 3, nome: 'Caio', cor: 2, chapeu: 0, pet: 0, rastro: 0 });
+  assert.deepEqual(perfis.find(q => q.j === 4), { j: 4, nome: '\u{1F600}'.repeat(5), cor: 27, chapeu: 22, pet: 8, rastro: 5 });
   tela.fecha();
 });
 
@@ -77,6 +92,19 @@ test('servidor: /modo so aceita o anfitriao (j 1) e modos conhecidos, e repassa 
   await espera(120);
   assert.deepEqual(nova.msgs.filter(m => m.escolha).map(m => m.escolha), [{ modo: 'coop', comeca: false, antiga: true }], 'tela nova sabe o modo, mas como escolha antiga: nao recomeca');
   nova.fecha();
+});
+
+test('servidor: /modo repassa a dupla escolhida pelo anfitriao (par: lugar 2, 3 ou 4) e ignora valor torto', async () => {
+  const tela = escuta('/eventos');
+  await espera(80);
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: 2 }));
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: 4 }));
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: 1 }));
+  await pede('POST', '/modo', JSON.stringify({ j: 1, modo: 'times', comeca: false, par: '3; drop' }));
+  await espera(150);
+  assert.deepEqual(tela.msgs.filter(m => m.escolha && !m.escolha.antiga).map(m => m.escolha.par), [2, 4, undefined, undefined]);
+  tela.fecha();
+  await pede('POST', '/modo-limpa', '{}');
 });
 
 test('servidor: a escolha de modo e esquecida quando vira partida (comeca) ou quando a tela limpa', async () => {
@@ -100,10 +128,10 @@ test('servidor: corpo de /modo acima do limite e descartado', async () => {
   tela.fecha();
 });
 
-test('servidor: /tela entrega o estado ao celular de cada um dos 4 slots', async () => {
-  const cels = [1, 2, 3, 4].map(j => escuta('/eventos-c?j=' + j));
+test('servidor: /tela entrega o estado ao celular de cada um dos 5 slots', async () => {
+  const cels = [1, 2, 3, 4, 5].map(j => escuta('/eventos-c?j=' + j));
   await espera(100);
-  await pede('POST', '/tela', JSON.stringify({ c: [1, 2, 3, 4].map(k => ({ jogo: 'j' + k, modo: 'espera' })) }));
+  await pede('POST', '/tela', JSON.stringify({ c: [1, 2, 3, 4, 5].map(k => ({ jogo: 'j' + k, modo: 'espera' })) }));
   await espera(150);
   cels.forEach((c, k) => assert.ok(c.msgs.some(m => m.jogo === 'j' + (k + 1)), 'slot ' + (k + 1)));
   cels.forEach(c => c.fecha());
@@ -160,13 +188,13 @@ test('servidor: /lugares diz quais lugares tem celular conectado, so leitura', a
   const vazio = await baixa('/lugares');
   assert.equal(vazio.status, 200);
   assert.match(vazio.tipo, /application\/json/);
-  assert.deepEqual(JSON.parse(vazio.corpo), [false, false, false, false]);
+  assert.deepEqual(JSON.parse(vazio.corpo), [false, false, false, false, false]);
   const c2 = escuta('/eventos-c?j=2'), c4 = escuta('/eventos-c?j=4');
   await espera(100);
-  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, true, false, true]);
+  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, true, false, true, false]);
   c2.fecha(); c4.fecha();
   await espera(100);
-  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, false, false, false], 'quem saiu libera o lugar');
+  assert.deepEqual(JSON.parse((await baixa('/lugares')).corpo), [false, false, false, false, false], 'quem saiu libera o lugar');
   assert.equal(await pede('POST', '/lugares', '{}'), 404, 'nada se escreve em /lugares');
 });
 
@@ -211,4 +239,16 @@ test('servidor: /fontes serve so a fonte woff2 da pasta, nunca a licenca nem cam
     const r = await baixa(c);
     assert.equal(r.status, 404, c + ' deveria ser 404 e foi ' + r.status);
   }
+});
+
+test('servidor: /in repassa o item usado (it de 0 a 15 e contador ni inteiro) e descarta valor torto', async () => {
+  const tela = escuta('/eventos');
+  await espera(80);
+  await pede('POST', '/in', JSON.stringify({ j: 2, x: 0, y: 0, it: 3, ni: 7 }));
+  for (const [it, ni] of [[16, 1], [-1, 2], [1.5, 3], ['2', 4], [null, 5], [{}, 6], [2, '9'], [2, 1.5], [2, null], [2, {}]]) await pede('POST', '/in', JSON.stringify({ j: 3, x: 0, y: 0, it, ni }));
+  await espera(150);
+  const de = j => tela.msgs.filter(m => m.j === j);
+  assert.deepEqual(de(2).map(m => [m.it, m.ni]), [[3, 7]]);
+  assert.deepEqual(de(3).map(m => [m.it, m.ni]), [[undefined, 1], [undefined, 2], [undefined, 3], [undefined, 4], [undefined, 5], [undefined, 6], [2, undefined], [2, undefined], [2, undefined], [2, undefined]]);
+  tela.fecha();
 });
